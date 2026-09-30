@@ -8,6 +8,56 @@ export default {
   theme: {
   	extend: {
   		colors: {
+				navy: {
+					50: '#F5F7FA', // Cloud
+					100: '#E2E8F0',
+					200: '#D1D5DB', // Slate
+					300: '#CBD5E1',
+					400: '#94A3B8',
+					500: '#64748B',
+					600: '#475569',
+					700: '#334155',
+					800: '#111827', // Ink
+					900: '#0F172A',
+					950: '#0B1220', // Economic Navy
+				},
+				teal: {
+					50: '#F0FDFA',
+					100: '#CCFBFE',
+					200: '#99F6FA',
+					300: '#67E8F9', // Soft Cyan
+					400: '#33D1C3',
+					500: '#00B8A9', // Market Teal
+					600: '#009387',
+					700: '#007A70',
+					800: '#006159',
+					900: '#004C46',
+					950: '#002E2A',
+				},
+				lime: {
+					300: '#D4FF33',
+					400: '#B8F500', // Opportunity Lime
+					500: '#9ACC00',
+					600: '#7A9900',
+				},
+				amber: {
+					300: '#FBBF24',
+					400: '#F59E0B',
+					500: '#D97706',
+					600: '#B45309',
+				},
+				blue: {
+					300: '#99F6FA',
+					400: '#67E8F9', // Soft Cyan
+					500: '#22D3EE',
+					600: '#0891B2',
+				},
+				indigo: {
+					300: '#99F6FA',
+					400: '#67E8F9', // Soft Cyan
+					500: '#22D3EE',
+					600: '#0891B2',
+				},
   			background: "var(--background)",
   			foreground: "var(--foreground)",
   			card: {
@@ -41,13 +91,13 @@ export default {
   			border: "var(--border)",
   			input: "var(--input)",
   			ring: "var(--ring)",
-  			chart: {
-  				"1": "var(--chart-1)",
-  				"2": "var(--chart-2)",
-  				"3": "var(--chart-3)",
-  				"4": "var(--chart-4)",
-  				"5": "var(--chart-5)"
-  			}
+			chart: {
+				"1": "#00B8A9",
+				"2": "#B8F500",
+				"3": "#67E8F9",
+				"4": "#0B1220",
+				"5": "#D1D5DB"
+			}
   		},
   		borderRadius: {
   			lg: "var(--radius)",
