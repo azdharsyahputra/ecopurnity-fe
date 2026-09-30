@@ -161,7 +161,7 @@ export default function PlatformAdminPage() {
         <Button
           onClick={refresh}
           variant="outline"
-          className="border-slate-700 text-black hover:bg-slate-800 flex items-center gap-2 text-xs"
+          className="border-slate-700 text-slate-300 hover:bg-slate-800 flex items-center gap-2 text-xs"
         >
           <RefreshCw className="h-3.5 w-3.5" /> Refresh
         </Button>
