@@ -43,37 +43,37 @@
     --sidebar-ring: oklch(0.708 0 0)
   }
   .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0)
+    --background: #0B1220; /* Economic Navy */
+    --foreground: #F5F7FA; /* Cloud */
+    --card: #0c1524;
+    --card-foreground: #F5F7FA;
+    --popover: #111827; /* Ink */
+    --popover-foreground: #F5F7FA;
+    --primary: #00B8A9; /* Market Teal */
+    --primary-foreground: #ffffff;
+    --secondary: #67E8F9; /* Soft Cyan */
+    --secondary-foreground: #0B1220;
+    --muted: #1e293b;
+    --muted-foreground: #94a3b8;
+    --accent: #B8F500; /* Opportunity Lime */
+    --accent-foreground: #0B1220;
+    --destructive: #ef4444;
+    --border: #1e293b;
+    --input: #1e293b;
+    --ring: #00B8A9;
+    --chart-1: #00B8A9; /* Market Teal */
+    --chart-2: #B8F500; /* Opportunity Lime */
+    --chart-3: #67E8F9; /* Soft Cyan */
+    --chart-4: #0B1220; /* Economic Navy */
+    --chart-5: #D1D5DB; /* Slate */
+    --sidebar: #0B1220;
+    --sidebar-foreground: #F5F7FA;
+    --sidebar-primary: #00B8A9;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #111827;
+    --sidebar-accent-foreground: #F5F7FA;
+    --sidebar-border: #1e293b;
+    --sidebar-ring: #00B8A9;
   }
   * {
     @apply border-border;
