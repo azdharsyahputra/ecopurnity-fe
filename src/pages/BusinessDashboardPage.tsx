@@ -79,7 +79,7 @@ export default function BusinessDashboardPage() {
             <Zap className="mr-2 h-4 w-4" /> Create Opportunity Request
           </Button>
           <Link to="/registry">
-            <Button variant="outline" className="border-slate-700 text-black hover:bg-slate-800">
+            <Button variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800">
               <PlusCircle className="mr-2 h-4 w-4" /> Register Supply/Demand
             </Button>
           </Link>
