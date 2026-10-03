@@ -5,3 +5,4 @@ export { AdminMarketsPage, AdminMarketDetailPage, AdminAuctionsPage, AdminAuctio
 export { DisputesPage, DisputeCasePage } from './DisputesPage'
 export { FraudPage, FraudAlertPage } from './FraudPage'
 export { AuditTrailPage } from './AuditPage'
+export { MmApplicationsPage } from './MmApplicationsPage'

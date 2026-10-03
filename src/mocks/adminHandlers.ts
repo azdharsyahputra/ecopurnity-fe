@@ -30,7 +30,7 @@ const H = 3_600_000
 type Ctx = { actor: string; params: Record<string, string | readonly string[] | undefined>; request: Request }
 
 /** Session must carry the admin capability (403 otherwise). */
-const asAdmin = (fn: (ctx: Ctx) => Response | Promise<Response>) =>
+export const asAdmin = (fn: (ctx: Ctx) => Response | Promise<Response>) =>
   async ({ params, request }: { params: Ctx['params']; request: Request }) => {
     await delay(250)
     const user = db.users.find((u) => u.id === db.sessionUserId)
@@ -41,7 +41,7 @@ const asAdmin = (fn: (ctx: Ctx) => Response | Promise<Response>) =>
 
 const MIN_REASON = 10
 /** Punitive actions need a written reason; returns the 422 or null. */
-const reasonError = (reason: unknown) =>
+export const reasonError = (reason: unknown) =>
   typeof reason === 'string' && reason.trim().length >= MIN_REASON
     ? null
     : fail(422, 'reason_required', 'Alasan wajib diisi', { reason: `Tulis alasan minimal ${MIN_REASON} karakter; tercatat di audit trail` })

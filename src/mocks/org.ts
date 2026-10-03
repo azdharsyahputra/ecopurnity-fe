@@ -547,6 +547,9 @@ export function org(orgId: string): OrgData {
 
 export const pools = () => store.pools
 
+/** Every stored org as [orgId, data], e.g. to find invitations addressed to an email. */
+export const allOrgs = () => Object.entries(store.orgs)
+
 /** Writes the shared audit log (PRD §12.6) and keeps a copy for the org's activity feed. */
 export function orgAudit(o: OrgData, entry: Omit<AuditEntry, 'id' | 'at'>) {
   o.activity.unshift(audit(entry))

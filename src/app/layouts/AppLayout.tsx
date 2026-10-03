@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-do
 import { Bell, Check, ChevronsUpDown, Globe, LogOut, Menu, Search } from 'lucide-react'
 import { useLogout, useMe } from '@/features/auth/hooks'
 import { useNotifications } from '@/features/me/hooks'
+import { ActivationDialogs, ActivationMenuItems } from '@/features/roles/RoleActivation'
 import { activeWorkspace, href, workspacesFor, type NavItem, type Workspace } from '../nav'
 import { useUi } from '@/stores/ui'
 import { cn } from '@/lib/utils'
@@ -53,6 +54,7 @@ function WorkspaceSwitcher({ current, all, onNavigate }: { current: Workspace; a
             </DropdownMenuItem>
           ))}
         </DropdownMenuGroup>
+        <ActivationMenuItems onOpen={onNavigate} />
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => navigate('/')}>
           <Globe /> Lihat situs publik
@@ -183,6 +185,7 @@ export function AppLayout() {
             <Suspense fallback={<Skeleton className="h-96 rounded-xl" />}>
               <Outlet />
             </Suspense>
+            <ActivationDialogs />
           </div>
         </main>
       </div>

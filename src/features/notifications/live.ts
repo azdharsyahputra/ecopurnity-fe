@@ -28,6 +28,8 @@ export function useLiveNotifications(userId: string | undefined) {
   const qc = useQueryClient()
   useChannel<AppNotification>(`user:${userId ?? 'none'}:notifications`, ({ payload: n }) => {
     qc.invalidateQueries({ queryKey: ['me'] })
+    // Role changes (market maker approval) arrive as notifications; refresh the account so the switcher follows.
+    qc.invalidateQueries({ queryKey: ['auth', 'me'] })
     toast({ title: n.title, body: n.body, href: n.href, tone: NOTIFICATION_TONE[n.type] })
   })
 }

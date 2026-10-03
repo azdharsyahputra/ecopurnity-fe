@@ -49,11 +49,12 @@ const personal: Workspace = {
   ],
 }
 
-const ORG_ROLE_LABEL = { owner: 'Owner', procurement: 'Procurement', finance: 'Finance', operations: 'Operations', sales: 'Sales' }
+// Custom org roles (accepted invitations) fall back to their id.
+const ORG_ROLE_LABEL: Record<string, string> = { owner: 'Owner', procurement: 'Procurement', finance: 'Finance', operations: 'Operations', sales: 'Sales' }
 
 function orgWorkspace(org: User['orgs'][number]): Workspace {
   return {
-    id: `org:${org.orgId}`, label: org.orgName, caption: ORG_ROLE_LABEL[org.role], base: `/org/${org.orgId}`,
+    id: `org:${org.orgId}`, label: org.orgName, caption: ORG_ROLE_LABEL[org.role] ?? org.role, base: `/org/${org.orgId}`,
     icon: Building2, tone: 'blue',
     items: [
       { label: 'Overview', path: '', icon: LayoutDashboard },
@@ -88,6 +89,7 @@ const governance: Workspace = {
     { label: 'Overview', path: '', icon: LayoutDashboard },
     { label: 'Users', path: 'users', icon: Users },
     { label: 'Verification', path: 'verification', icon: FileCheck2 },
+    { label: 'Market Maker', path: 'mm-applications', icon: Compass },
     { label: 'Markets', path: 'markets', icon: Store },
     { label: 'Auctions', path: 'auctions', icon: Gavel },
     { label: 'Disputes', path: 'disputes', icon: Scale },
