@@ -36,6 +36,15 @@ export function membersForLot(lotQty: number, contributions: Member[], fillers: 
   return [...contributions, ...(each > 0 ? fillers.map((id) => ({ id, quantity: each })) : [])]
 }
 
+/**
+ * A collective pool's lot split back over its members (PRD F6): `lotQty` pro-rata to each member's demand,
+ * each line priced at the winning unit price. Lines keep the member's own fields and order.
+ */
+export function splitPool<M extends { quantity: number }>(members: M[], lotQty: number, priceIdr: number) {
+  const split = splitProRata(lotQty, members.map((m, i) => ({ id: String(i), quantity: m.quantity })))
+  return members.map((m, i) => ({ ...m, quantity: split[i].quantity, share: split[i].share, amountIdr: split[i].quantity * priceIdr }))
+}
+
 export interface Settlement {
   auctionId: string
   title: string
@@ -44,6 +53,7 @@ export interface Settlement {
   lotQty: number
   priceIdr: number
   winner: string
-  lines: { memberId: string; member: string; userId?: string; quantity: number; share: number; amountIdr: number }[]
+  /** `orgId` marks a business pool member (collective procurement); it gets its own sub-PO. */
+  lines: { memberId: string; member: string; userId?: string; orgId?: string; quantity: number; share: number; amountIdr: number }[]
   settled: { at: string; trades: number; by: string } | null
 }

@@ -2,10 +2,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
 import { api } from '@/lib/api'
 import type { AllocationLine, AuditEntry, Transaction, TransactionDetail } from '@/domain/types'
-import type { TransactionAction } from '@/domain/transaction'
+import type { TradeAction } from '@/domain/trade'
+import type { TradeScope } from '@/features/trade/hooks'
 import {
   can, deniedReason, txDeniedReason, type Action, type CollectivePool, type InventoryData, type InventoryItem, type Module, type OrgAnalytics, type OrgAuctionEvaluation,
-  type OrgAuctionInput, type OrgAuctionView, type OrgOverview, type OrgProfile, type OrgSettings, type OrgSupplier, type ProcurementAction,
+  type OrgAuctionInput, type OrgAuctionView, type OrgOverview, type OrgProfile, type OrgSettings, type OrgSupplier, type PoolSettlement, type ProcurementAction,
   type ProcurementInput, type ProcurementRequest, type SupplierAction, type SupplierDetail, type TeamData,
 } from '@/domain/org'
 import { useMe } from '@/features/auth/hooks'
@@ -45,7 +46,7 @@ export function useOrgAccess() {
     /** Reason to show on a disabled control, or undefined when allowed. */
     deny: (m: Module, a: Action) => (can(settings?.permissions, role, m, a) ? undefined : deniedReason(roleLabel, m, a)),
     /** Same for one transaction step (per-action roles, PRD §9.8). */
-    txDeny: (a: TransactionAction) => txDeniedReason(settings?.permissions, role, roleLabel, a),
+    txDeny: (a: TradeAction) => txDeniedReason(settings?.permissions, role, roleLabel, a),
   }
 }
 
@@ -104,7 +105,7 @@ export const useProcurementAction = (id: string) =>
 export type PoolView = CollectivePool & { match: boolean }
 export const usePools = () => {
   const orgId = useOrgId()
-  return useQuery({ queryKey: ['org', orgId, 'collective'], queryFn: () => api<PoolView[]>(`${base(orgId)}/collective`) })
+  return useQuery({ queryKey: ['org', orgId, 'collective'], queryFn: () => api<PoolView[]>(`${base(orgId)}/collective`), refetchInterval: 10_000 })
 }
 export const usePoolAction = () =>
   useOrgMutation((orgId, a: { id: string; type: 'join'; quantity: number; optIn: boolean } | { id: string; type: 'leave' | 'market' }) =>
@@ -150,13 +151,24 @@ export const useOrgTransactions = () => {
   const orgId = useOrgId()
   return useQuery({ queryKey: ['org', orgId, 'transactions'], queryFn: () => api<Transaction[]>(`${base(orgId)}/transactions`) })
 }
-export type OrgTransactionPage = TransactionDetail & { activity: AuditEntry[] }
+/** Trade detail plus team activity and, for a pool sub-PO, the pool's pro-rata split. */
+export type OrgTransactionPage = TransactionDetail & { activity: AuditEntry[]; collective?: PoolSettlement & { poolId: string; title: string; unit: string } }
 export const useOrgTransaction = (id: string) => {
   const orgId = useOrgId()
-  return useQuery({ queryKey: ['org', orgId, 'transactions', id], queryFn: () => api<OrgTransactionPage>(`${base(orgId)}/transactions/${id}`) })
+  // Fictional counterparties move on a timer, so keep the page fresh.
+  return useQuery({ queryKey: ['org', orgId, 'transactions', id], queryFn: () => api<OrgTransactionPage>(`${base(orgId)}/transactions/${id}`), refetchInterval: 6_000 })
 }
-export const useOrgTransactionAction = (id: string) =>
-  useOrgMutation((orgId, b: { action: TransactionAction; note?: string; file?: string }) => api<OrgTransactionPage>(`${base(orgId)}/transactions/${id}/actions`, json('POST', b)))
+/** Where this org's trade actions go (shared F6 trade UI). */
+export function useOrgTradeScope(): TradeScope {
+  const orgId = useOrgId()
+  return {
+    actionUrl: (id) => `${base(orgId)}/transactions/${id}/actions`,
+    onSuccess: (qc, t) => {
+      qc.setQueryData(['org', orgId, 'transactions', t.id], t)
+      return qc.invalidateQueries({ queryKey: ['org', orgId] })
+    },
+  }
+}
 
 // ── Analytics ──
 export const useAnalytics = (months: number, category: string) => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { membersForLot, splitProRata } from './settlement'
+import { membersForLot, splitPool, splitProRata } from './settlement'
 
 describe('aggregated settlement', () => {
   it('splits whole units in proportion and always adds up to the lot', () => {
@@ -18,5 +18,10 @@ describe('aggregated settlement', () => {
     const m = membersForLot(1000, [{ id: 'rina', quantity: 200 }], ['p1', 'p2'])
     expect(m).toEqual([{ id: 'rina', quantity: 200 }, { id: 'p1', quantity: 400 }, { id: 'p2', quantity: 400 }])
     expect(membersForLot(100, [{ id: 'x', quantity: 150 }], ['p1'])).toEqual([{ id: 'x', quantity: 150 }])
+  })
+
+  it('splits a pool lot back to its members at the winning price', () => {
+    const lines = splitPool([{ name: 'A', quantity: 60 }, { name: 'B', quantity: 40 }], 50, 1_000)
+    expect(lines).toEqual([{ name: 'A', quantity: 30, share: 0.6, amountIdr: 30_000 }, { name: 'B', quantity: 20, share: 0.4, amountIdr: 20_000 }])
   })
 })

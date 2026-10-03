@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Clock, EyeOff, MapPin, Plus, Store, UsersRound } from 'lucide-react'
 import type { CategoryId } from '@/domain/types'
 import { poolTotals } from '@/domain/org'
@@ -90,6 +90,41 @@ function CreatePoolDialog({ onClose, onCreated }: { onClose: () => void; onCreat
   )
 }
 
+/** After a market maker picks the pool up: its round, then the pro-rata split with this org's own sub-PO (PRD F6). */
+function PoolMarket({ pool }: { pool: PoolView }) {
+  const access = useOrgAccess()
+  const s = pool.settlement
+  const live = pool.round && (pool.round.status === 'live' || pool.round.status === 'extended')
+  return (
+    <div className="flex w-full flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm" style={{ background: s ? 'var(--tag-green-bg)' : 'var(--tag-teal-bg)', color: s ? 'var(--tag-green-fg)' : 'var(--tag-teal-fg)' }}>
+          <Store className="size-4" />
+          {s ? `Di-settle ${formatRelative(s.at)} oleh ${s.by}` : live ? <>Round berjalan · selesai {formatRelative(pool.round!.endsAt)}</> : 'Round ditutup · menunggu settlement market maker'}
+        </p>
+        {pool.auctionId && <Button variant="outline" className="h-9" render={<Link to={`/auctions/${pool.auctionId}`} />}>Lihat round</Button>}
+        {pool.marketId && <Button variant="ghost" className="h-9" render={<Link to={`/markets/${pool.marketId}`} />}>Lihat market</Button>}
+      </div>
+      {s && (
+        <div>
+          <h3 className="text-sm font-medium">Pembagian pro-rata · {s.winner} · {formatIdr(s.priceIdr)}/{pool.unit}</h3>
+          <ul className="mt-2 divide-y rounded-lg border text-sm">
+            {s.lines.map((l) => (
+              <li key={l.name} className={cn('flex flex-wrap items-center gap-2 px-3 py-2', l.mine && 'bg-primary/5')}>
+                <span className="font-medium">{l.mine ? 'Kamu' : l.name}</span>
+                {l.mine && l.transactionId && <Link to={`${access.base}/transactions/${l.transactionId}`} className="text-xs text-primary hover:underline">Buka sub-PO</Link>}
+                <span className="ml-auto num text-muted-foreground">{formatNumber(l.quantity)} {pool.unit} · {Math.round(l.share * 100)}%</span>
+                <span className="num w-28 text-right font-medium">{formatIdr(l.amountIdr, { compact: true })}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-1 text-xs text-muted-foreground">Tiap bisnis anggota mendapat PO, invoice, dan pengiriman sendiri ke titik tujuannya.</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 /** Your demand + other businesses = collective demand (PRD §9.5). */
 function Aggregation({ pool, marketDeny, onJoin }: { pool: PoolView; marketDeny?: string; onJoin: () => void }) {
   const act = usePoolAction()
@@ -126,7 +161,9 @@ function Aggregation({ pool, marketDeny, onJoin }: { pool: PoolView; marketDeny?
       <p className="mt-2 text-xs text-muted-foreground">Nama bisnis lain hanya tampil jika mereka mengizinkan.</p>
       <div className="mt-5 flex flex-wrap items-center gap-2 border-t pt-4">
         {pool.status === 'open' && <Button variant="outline" className="h-9" onClick={onJoin}>{t.mine ? 'Ubah demand' : 'Gabung pool'}</Button>}
-        {pool.status === 'market_requested' ? (
+        {pool.status === 'market_live' || pool.status === 'settled' ? (
+          <PoolMarket pool={pool} />
+        ) : pool.status === 'market_requested' ? (
           <p className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm" style={{ background: 'var(--tag-yellow-bg)', color: 'var(--tag-yellow-fg)' }}>
             <Clock className="size-4" /> Menunggu market maker membentuk market · diminta {formatRelative(pool.marketRequestedAt!)}
           </p>
@@ -206,6 +243,8 @@ export function CollectivePage() {
                             <CategoryTag id={p.categoryId} />
                             {t.mine > 0 && <Tag tone="blue">Kamu ikut</Tag>}
                             {p.status === 'market_requested' && <Tag tone="yellow">Menunggu market</Tag>}
+                            {p.status === 'market_live' && <Tag tone="teal">Market live</Tag>}
+                            {p.status === 'settled' && <Tag tone="green">Settled</Tag>}
                             {t.ready && p.status === 'open' && <Tag tone="green">Siap jadi market</Tag>}
                           </div>
                           <h3 className="mt-2 font-medium">{p.title}</h3>

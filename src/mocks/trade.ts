@@ -19,7 +19,7 @@ const userName = (userId: string) => db.users.find((u) => u.id === userId)?.name
 
 // ── Normalising records created before F6 ───────────────────────
 
-export function ensureF6(t: TransactionDetail): TransactionDetail {
+export function ensureF6<T extends TransactionDetail>(t: T): T {
   t.terms ??= 'escrow'
   t.agreement ??= t.status === 'agreement' ? {} : { buyerAcceptedAt: t.createdAt, supplierAcceptedAt: t.createdAt }
   t.makerFeeRate ??= t.auctionId ? 0.005 : 0
@@ -121,10 +121,17 @@ export type ActionInput = TradeActionInput
 
 export type ActionResult = { ok: true; tx: TransactionDetail } | { ok: false; status: number; code: string; message: string; fields?: Record<string, string> }
 
+/** Where an applied action is persisted and audited: the personal store by default, an org store for org trades. */
+export interface TradeSink {
+  save: () => void
+  audit: (entry: Parameters<typeof audit>[0]) => unknown
+}
+const personalSink: TradeSink = { save: () => savePersonal(), audit }
+
 const err = (status: number, code: string, message: string, fields?: Record<string, string>): ActionResult => ({ ok: false, status, code, message, fields })
 
 /** Validates and applies one action for `actorName` on `t` (the actor's own record), mirrors, notifies, audits. */
-export function applyAction(t: TransactionDetail, actorName: string, input: ActionInput): ActionResult {
+export function applyAction(t: TransactionDetail, actorName: string, input: ActionInput, sink: TradeSink = personalSink): ActionResult {
   const s = tradeState(t)
   const role = t.role
   if (!tradeActions(s, role).includes(input.action)) return err(409, 'invalid_transition', 'Aksi ini tidak tersedia untuk status sekarang')
@@ -219,9 +226,9 @@ export function applyAction(t: TransactionDetail, actorName: string, input: Acti
     if (step) Object.assign(step, { at, note })
   }
   mirror(t)
-  savePersonal()
+  sink.save()
 
-  audit({
+  sink.audit({
     actor: actorName, action: note, entity: { type: 'transaction', id: t.id, label: `${t.code} · ${t.title}` }, reason: input.note?.trim() || undefined,
     changes: before === t.status ? undefined : [{ field: 'Status', before, after: t.status }],
   })
@@ -233,31 +240,42 @@ export function applyAction(t: TransactionDetail, actorName: string, input: Acti
 
 const BOT_PRIORITY: TradeAction[] = ['accept_agreement', 'issue_invoice', 'pay', 'ship', 'upload_proof', 'confirm_receipt', 'review']
 
-/** One step for every trade waiting on a fictional counterparty (called on a timer). */
+/**
+ * The fictional counterparty's next step on `t` (the platform side's own record), applied in place.
+ * Returns the action taken, or undefined when it's not the bot's turn.
+ */
+export function botStep(t: TransactionDetail, sink: TradeSink = personalSink): TradeAction | undefined {
+  const other: Role = t.role === 'buyer' ? 'supplier' : 'buyer'
+  if (t.peer || (['completed', 'cancelled', 'disputed'].includes(t.status) && t.reviews?.[other])) return
+  if (Date.now() - new Date(t.updatedAt).getTime() < 8_000) return // let the user see each step
+  const action = BOT_PRIORITY.find((a) => tradeActions(tradeState(t), other).includes(a))
+  if (!action) return
+  // The bot acts on a copy that plays the other role, then the result is written back.
+  const view = { ...t, role: other } as TransactionDetail
+  const res = applyAction(view, t.counterparty.name, {
+    action,
+    shipment: action === 'ship' ? { quantity: tradeState(t).unscheduledQty, dropPoint: t.delivery.address, carrier: 'Armada supplier', scheduledAt: now() } : undefined,
+    file: action === 'upload_proof' ? 'surat-jalan-ttd.jpg' : undefined,
+    qc: action === 'confirm_receipt' ? { outcome: 'accepted' } : undefined,
+    review: action === 'review' ? { rating: 5, quality: 5, timeliness: 4, communication: 5, text: 'Transaksi lancar, terima kasih.' } : undefined,
+  }, sink)
+  if (!res.ok) return
+  Object.assign(t, { ...res.tx, role: t.role })
+  sink.save()
+  return action
+}
+
+export const botNotice = (t: TransactionDetail, action: TradeAction) => ({
+  type: action === 'pay' ? 'payment' as const : ['ship', 'upload_proof'].includes(action) ? 'delivery' as const : 'transaction_update' as const,
+  title: `${t.code}: ${TRADE_ACTION_LABEL[action]}`, body: `${t.counterparty.name} · ${t.title}`,
+})
+
+/** One step for every personal trade waiting on a fictional counterparty (called on a timer). */
 export function counterpartyTick() {
   for (const u of db.users) {
-    const p = personal(u.id)
-    for (const t of p.transactions) {
-      if (t.peer || ['completed', 'cancelled', 'disputed'].includes(t.status) && t.reviews?.[t.role === 'buyer' ? 'supplier' : 'buyer']) continue
-      if (Date.now() - new Date(t.updatedAt).getTime() < 8_000) continue // let the user see each step
-      const other: Role = t.role === 'buyer' ? 'supplier' : 'buyer'
-      const action = BOT_PRIORITY.find((a) => tradeActions(tradeState(t), other).includes(a))
-      if (!action) continue
-      // The bot acts on a copy that plays the other role, then the result is written back.
-      const view = { ...t, role: other } as TransactionDetail
-      const res = applyAction(view, t.counterparty.name, {
-        action,
-        shipment: action === 'ship' ? { quantity: tradeState(t).unscheduledQty, dropPoint: t.delivery.address, carrier: 'Armada supplier', scheduledAt: now() } : undefined,
-        file: action === 'upload_proof' ? 'surat-jalan-ttd.jpg' : undefined,
-        qc: action === 'confirm_receipt' ? { outcome: 'accepted' } : undefined,
-        review: action === 'review' ? { rating: 5, quality: 5, timeliness: 4, communication: 5, text: 'Transaksi lancar, terima kasih.' } : undefined,
-      })
-      if (!res.ok) continue
-      Object.assign(t, { ...res.tx, role: t.role })
-      savePersonal()
-      if (action !== 'review') {
-        notify(u.id, { type: action === 'pay' ? 'payment' : ['ship', 'upload_proof'].includes(action) ? 'delivery' : 'transaction_update', title: `${t.code}: ${TRADE_ACTION_LABEL[action]}`, body: `${t.counterparty.name} · ${t.title}`, href: `/app/transactions/${t.id}` })
-      }
+    for (const t of personal(u.id).transactions) {
+      const action = botStep(t)
+      if (action && action !== 'review') notify(u.id, { ...botNotice(t, action), href: `/app/transactions/${t.id}` })
     }
   }
 }
