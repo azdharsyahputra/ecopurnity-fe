@@ -484,12 +484,22 @@ function DisputeRow({ marketId, x }: { marketId: string; x: MmDispute }) {
   return (
     <li className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center">
       <div className="min-w-0 flex-1">
-        <p className="flex flex-wrap items-center gap-2 text-sm font-medium">{x.title} <StatusBadge entity="dispute" status={x.status} /></p>
+        <p className="flex flex-wrap items-center gap-2 text-sm font-medium">{x.title} <StatusBadge entity="dispute" status={x.status} />{x.escalatedTo && <Tag tone="purple">Ditangani admin</Tag>}</p>
         <p className="text-xs text-muted-foreground">{x.parties} · dibuka {formatRelative(x.openedAt)}</p>
         {x.resolution && <p className="mt-1 text-xs">Keputusan: {x.resolution}</p>}
       </div>
-      {x.status !== 'resolved' && (
+      {x.status !== 'resolved' && !x.escalatedTo && (
         <div className="flex shrink-0 gap-1">
+          <ReasonConfirm
+            trigger={<Button size="xs" variant="ghost">Eskalasi ke admin</Button>}
+            title={`Eskalasi ke admin: ${x.title}`}
+            impact={<>Kasus pindah ke antrean dispute admin governance (bisa refund, freeze, atau suspend). Kamu tidak bisa memutuskannya lagi, tapi statusnya tetap terlihat di sini.</>}
+            label="Alasan eskalasi"
+            field="note"
+            confirmLabel="Eskalasi"
+            error={act.error}
+            onConfirm={(note) => act.mutateAsync({ id: x.id, action: 'escalate', note }).then(() => toast({ title: 'Dispute dieskalasi ke admin', tone: 'green' }))}
+          />
           {x.status !== 'review' && <Button size="xs" variant="outline" disabled={act.isPending} onClick={() => act.mutate({ id: x.id, action: 'review' })}>Mulai review</Button>}
           <ReasonConfirm
             trigger={<Button size="xs">Putuskan</Button>}
