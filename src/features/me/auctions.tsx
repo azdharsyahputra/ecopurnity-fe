@@ -99,13 +99,13 @@ export function ParticipantBidBox({ a }: { a: AuctionDetail }) {
 
   if (me.isPending) return <Skeleton className="h-32" />
   if (!me.data) return null
-  const { qualification, bid, owner } = me.data
+  const { qualification, bid, owner, evaluateHref } = me.data
 
   if (owner)
     return (
       <div className="text-sm">
         <p className="text-muted-foreground">Kamu pembuat auction ini.</p>
-        <Button className="mt-3 h-10 w-full" render={<Link to={`/app/auctions/${a.id}/evaluate`} />}><Scale /> Bandingkan penawaran</Button>
+        <Button className="mt-3 h-10 w-full" render={<Link to={evaluateHref ?? `/app/auctions/${a.id}/evaluate`} />}><Scale /> Bandingkan penawaran</Button>
       </div>
     )
 

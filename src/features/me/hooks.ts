@@ -102,7 +102,7 @@ export const useMyAuctions = () =>
 export const useAuctionMe = (id: string, enabled: boolean) =>
   useQuery({
     queryKey: ['me', 'auction', id],
-    queryFn: () => api<{ qualification: Qualification; bid: MyBid | null; owner: boolean }>(`/auctions/${id}/me`),
+    queryFn: () => api<{ qualification: Qualification; bid: MyBid | null; owner: boolean; evaluateHref?: string }>(`/auctions/${id}/me`),
     enabled,
   })
 
