@@ -515,7 +515,7 @@ export interface AuditEntry {
   actor: string
   /** Verb phrase, e.g. "Suspend market". */
   action: string
-  entity: { type: 'user' | 'business' | 'market' | 'auction' | 'transaction' | 'dispute' | 'rule' | 'procurement' | 'supplier'; id: string; label: string }
+  entity: { type: 'user' | 'business' | 'opportunity' | 'market' | 'auction' | 'transaction' | 'dispute' | 'rule' | 'procurement' | 'supplier'; id: string; label: string }
   at: string
   /** Required for punitive actions (suspend, freeze, reject…). */
   reason?: string
