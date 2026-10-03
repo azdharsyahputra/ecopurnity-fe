@@ -47,6 +47,19 @@ const M = {
   operations: named(mm, 'OperationsPage'), pipeline: named(mm, 'PipelinePage'), createMarket: named(mm, 'CreateMarketPage'),
   market: named(mm, 'MarketOpsPage'), analytics: named(mm, 'AnalyticsPage'),
 }
+const rep = () => import('@/features/reputation/pages')
+const R = {
+  matches: named(rep, 'MatchesPage'), reputation: named(rep, 'ReputationPage'),
+  participant: named(rep, 'ParticipantProfilePage'), business: named(rep, 'BusinessProfilePage'),
+}
+const adm = () => import('@/features/admin/pages')
+const A = {
+  overview: named(adm, 'AdminOverviewPage'), users: named(adm, 'AdminUsersPage'), user: named(adm, 'AdminUserDetailPage'),
+  verification: named(adm, 'VerificationQueuePage'), verificationDetail: named(adm, 'VerificationDetailPage'),
+  markets: named(adm, 'AdminMarketsPage'), market: named(adm, 'AdminMarketDetailPage'), auctions: named(adm, 'AdminAuctionsPage'),
+  auction: named(adm, 'AdminAuctionDetailPage'), disputes: named(adm, 'DisputesPage'), dispute: named(adm, 'DisputeCasePage'),
+  fraud: named(adm, 'FraudPage'), alert: named(adm, 'FraudAlertPage'), audit: named(adm, 'AuditTrailPage'),
+}
 
 const [personal, org, marketOps, governance] = ROUTE_WORKSPACES
 
@@ -59,11 +72,6 @@ function workspaceRoutes(ws: Workspace, pages: Record<string, React.ComponentTyp
   })
 }
 
-// ponytail: public profiles are P1 in the PRD route map; placeholders until the profile feature lands.
-const PROFILE_PAGES: [string, string][] = [
-  ['b/:slug', 'Profil bisnis'],
-  ['u/:username', 'Profil participant'],
-]
 
 /** Router-aware singletons. */
 function Shell() {
@@ -98,9 +106,8 @@ export default function App() {
                 <Route path="auctions" element={<AuctionsPage />} />
                 <Route path="auctions/:id" element={<AuctionRoomPage />} />
                 <Route path="search" element={<SearchPage />} />
-                {PROFILE_PAGES.map(([path, title]) => (
-                  <Route key={path} path={path} element={<div className="px-4 py-10"><Placeholder title={title} phase="F2" /></div>} />
-                ))}
+                <Route path="b/:slug" element={<R.business />} />
+                <Route path="u/:username" element={<R.participant />} />
                 <Route path="ui" element={<UiShowcase />} />
               </Route>
 
@@ -122,6 +129,7 @@ export default function App() {
                     {workspaceRoutes(personal, {
                       '': P.dashboard, identity: P.identity, supply: P.supply, demand: P.demand, opportunities: P.opportunities,
                       markets: P.markets, auctions: P.auctions, transactions: P.transactions, notifications: P.notifications, settings: P.settings,
+                      matches: R.matches, reputation: R.reputation,
                     })}
                     <Route path="supply/new" element={<P.supplyForm />} />
                     <Route path="supply/:id" element={<P.supplyDetail />} />
@@ -138,7 +146,18 @@ export default function App() {
                     {workspaceRoutes(marketOps, { '': M.operations, opportunities: M.pipeline, 'markets/new': M.createMarket, analytics: M.analytics })}
                     <Route path="markets/:id" element={<M.market />} />
                   </Route>
-                  <Route path="admin" element={<RequireCapability cap="admin" />}>{workspaceRoutes(governance)}</Route>
+                  <Route path="admin" element={<RequireCapability cap="admin" />}>
+                    {workspaceRoutes(governance, {
+                      '': A.overview, users: A.users, verification: A.verification, markets: A.markets, auctions: A.auctions,
+                      disputes: A.disputes, fraud: A.fraud, audit: A.audit,
+                    })}
+                    <Route path="users/:id" element={<A.user />} />
+                    <Route path="verification/:id" element={<A.verificationDetail />} />
+                    <Route path="markets/:id" element={<A.market />} />
+                    <Route path="auctions/:id" element={<A.auction />} />
+                    <Route path="disputes/:id" element={<A.dispute />} />
+                    <Route path="fraud/:id" element={<A.alert />} />
+                  </Route>
                 </Route>
               </Route>
 
