@@ -14,39 +14,39 @@ const NAV_GROUPS = [
   {
     label: 'Identity & Data',
     items: [
-      { label: 'Economic Identity', path: '/', icon: User, stage: 'DATA' },
-      { label: 'Economic Registry', path: '/registry', icon: Database, stage: 'NEW DATA' },
+      { label: 'Economic Identity', path: '/legacy', icon: User, stage: 'DATA' },
+      { label: 'Economic Registry', path: '/legacy/registry', icon: Database, stage: 'NEW DATA' },
     ],
   },
   {
     label: 'Market Intelligence',
     items: [
-      { label: 'Macro Intelligence', path: '/intelligence', icon: Activity, stage: 'DISCOVERY' },
-      { label: 'Opportunity Feed', path: '/opportunities', icon: Zap, stage: 'DISCOVERY' },
-      { label: 'Opportunity Graph', path: '/graph', icon: Network, stage: 'OPPORTUNITY' },
-      { label: 'Economic Simulator', path: '/simulation', icon: Calculator, stage: 'OPPORTUNITY' },
+      { label: 'Macro Intelligence', path: '/legacy/intelligence', icon: Activity, stage: 'DISCOVERY' },
+      { label: 'Opportunity Feed', path: '/legacy/opportunities', icon: Zap, stage: 'DISCOVERY' },
+      { label: 'Opportunity Graph', path: '/legacy/graph', icon: Network, stage: 'OPPORTUNITY' },
+      { label: 'Economic Simulator', path: '/legacy/simulation', icon: Calculator, stage: 'OPPORTUNITY' },
     ],
   },
   {
     label: 'Market Operations',
     items: [
-      { label: 'Market & Auctions', path: '/auctions', icon: Gavel, stage: 'AUCTION' },
-      { label: 'Smart Allocation', path: '/allocation', icon: PieChart, stage: 'ALLOCATION' },
+      { label: 'Market & Auctions', path: '/legacy/auctions', icon: Gavel, stage: 'AUCTION' },
+      { label: 'Smart Allocation', path: '/legacy/allocation', icon: PieChart, stage: 'ALLOCATION' },
     ],
   },
   {
     label: 'Settlement',
     items: [
-      { label: 'Transactions', path: '/transactions', icon: Package, stage: 'TRANSACTION' },
-      { label: 'Reputation', path: '/reputation', icon: ShieldCheck, stage: 'REPUTATION' },
+      { label: 'Transactions', path: '/legacy/transactions', icon: Package, stage: 'TRANSACTION' },
+      { label: 'Reputation', path: '/legacy/reputation', icon: ShieldCheck, stage: 'REPUTATION' },
     ],
   },
   {
     label: 'Role Dashboards',
     items: [
-      { label: 'Business Center', path: '/business', icon: Building2, stage: 'MARKET FORMATION' },
-      { label: 'Market Maker', path: '/market-maker', icon: Briefcase, stage: 'MARKET FORMATION' },
-      { label: 'Platform Admin', path: '/admin', icon: ShieldCheck, stage: 'SYSTEM' },
+      { label: 'Business Center', path: '/legacy/business', icon: Building2, stage: 'MARKET FORMATION' },
+      { label: 'Market Maker', path: '/legacy/market-maker', icon: Briefcase, stage: 'MARKET FORMATION' },
+      { label: 'Platform Admin', path: '/legacy/admin', icon: ShieldCheck, stage: 'SYSTEM' },
     ],
   },
 ]
@@ -72,8 +72,8 @@ export default function DashboardLayout({ children }: LayoutProps) {
 
   const allItems = NAV_GROUPS.flatMap((g) => g.items)
   const currentItem = allItems.find((item) =>
-    item.path === '/'
-      ? location.pathname === '/'
+    item.path === '/legacy'
+      ? location.pathname === '/legacy'
       : location.pathname.startsWith(item.path)
   )
   const stageLabel = currentItem?.stage ?? 'LIFECYCLE'
@@ -102,8 +102,8 @@ export default function DashboardLayout({ children }: LayoutProps) {
                 <div className="space-y-0.5">
                   {group.items.map((item) => {
                     const Icon = item.icon
-                    const isActive = item.path === '/'
-                      ? location.pathname === '/'
+                    const isActive = item.path === '/legacy'
+                      ? location.pathname === '/legacy'
                       : location.pathname.startsWith(item.path)
                     return (
                       <Link

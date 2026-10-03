@@ -6,7 +6,8 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // Legacy screens are reference only and get deleted as F2–F5 rebuild them.
+  globalIgnores(['dist', 'public', 'src/legacy']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -18,5 +19,13 @@ export default defineConfig([
     languageOptions: {
       globals: globals.browser,
     },
+    rules: {
+      '@typescript-eslint/no-unused-vars': ['error', { ignoreRestSiblings: true }],
+    },
+  },
+  {
+    // shadcn primitives export their cva variants next to the component.
+    files: ['src/components/ui/**'],
+    rules: { 'react-refresh/only-export-components': 'off' },
   },
 ])
