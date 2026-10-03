@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Archive, Gavel, PackageOpen, Paperclip, Pencil, Plus, ShoppingCart, Store } from 'lucide-react'
+import { Archive, Gavel, PackageOpen, Pencil, Plus, ShoppingCart, Store } from 'lucide-react'
 import type { CategoryId, DeliveryMode, DemandListing, Listing, ListingInput, SupplyListing } from '@/domain/types'
 import { STATUS } from '@/domain/status'
 import { CATEGORIES, REGIONS } from '@/domain/catalog'
@@ -12,6 +12,8 @@ import { useListing, useListingAction, useListings, useSaveListing } from './hoo
 import { CategoryTag, OpportunityCard } from '@/features/economy/components'
 import { usePriceSuggestion } from '@/features/economy/hooks'
 import { priceVerdict } from '@/domain/pricing'
+import { attachmentsBlocker, draftsOf, toRefs, type AttachmentDraft } from '@/domain/attachments'
+import { AttachmentGallery, AttachmentsField } from '@/components/Attachments'
 import { PageHeader } from '@/components/PageHeader'
 import { AsyncView, EmptyState } from '@/components/States'
 import { StatusBadge, Tag } from '@/components/Tag'
@@ -132,18 +134,17 @@ interface Draft {
   expiresAt: string
   budget: string
   deadline: string
-  attachments: string[]
 }
 
 const emptyDraft = (): Draft => ({
   item: '', categoryId: 'agri', qty: '', unit: 'kg', spec: '', location: REGIONS[1], delivery: 'both', price: '',
-  availableFrom: toDate(new Date().toISOString()), expiresAt: toDate(inDays(30)), budget: '', deadline: toDate(inDays(21)), attachments: [],
+  availableFrom: toDate(new Date().toISOString()), expiresAt: toDate(inDays(30)), budget: '', deadline: toDate(inDays(21)),
 })
 
 function fromListing(l: Listing): Draft {
   return {
     ...emptyDraft(), item: l.item, categoryId: l.categoryId, qty: String(l.quantity.value), unit: l.quantity.unit, spec: l.spec, location: l.location,
-    delivery: l.delivery, attachments: l.attachments,
+    delivery: l.delivery,
     ...(l.kind === 'supply'
       ? { price: String(l.priceIdr), availableFrom: toDate(l.availableFrom), expiresAt: toDate(l.expiresAt) }
       : { budget: String(l.budgetIdr), deadline: toDate(l.deadline) }),
@@ -173,12 +174,14 @@ function ListingForm({ kind, existing }: { kind: Kind; existing?: Listing }) {
   const save = useSaveListing(existing?.id)
   const [d, setD, clear] = useLocalDraft<Draft>(existing ? null : `ecp-draft-${kind}-new`, existing ? fromListing(existing) : emptyDraft())
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((x) => ({ ...x, [k]: v }))
+  // Not in the saved draft: previews and in-flight uploads don't survive a reload.
+  const [atts, setAtts] = useState<AttachmentDraft[]>(() => (existing ? draftsOf(existing.attachments) : []))
   const qty = Number(d.qty)
 
   function submit() {
     const common = {
       item: d.item.trim(), categoryId: d.categoryId, quantity: { value: qty, unit: d.unit.trim() }, location: d.location, spec: d.spec.trim(),
-      delivery: d.delivery, attachments: d.attachments,
+      delivery: d.delivery, attachments: toRefs(atts),
     }
     const input: ListingInput =
       kind === 'supply'
@@ -242,21 +245,12 @@ function ListingForm({ kind, existing }: { kind: Kind; existing?: Listing }) {
 
   const step3 = (
     <div className="flex flex-col gap-4">
-      <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed p-6 text-center text-sm hover:bg-hover">
-        <Paperclip className="size-5 text-muted-foreground" />
-        <span className="font-medium">{kind === 'supply' ? 'Tambah foto atau dokumen' : 'Tambah dokumen pendukung'}</span>
-        <span className="text-xs text-muted-foreground">JPG, PNG, PDF · maks 10 MB per file</span>
-        <input type="file" multiple accept="image/*,.pdf" className="sr-only" onChange={(e) => set('attachments', [...d.attachments, ...[...(e.target.files ?? [])].map((f) => f.name)])} />
-      </label>
-      {d.attachments.length > 0 && (
-        <ul className="flex flex-wrap gap-1.5">
-          {d.attachments.map((a) => (
-            <li key={a}>
-              <Tag>{a} <button type="button" aria-label={`Hapus ${a}`} onClick={() => set('attachments', d.attachments.filter((x) => x !== a))}>×</button></Tag>
-            </li>
-          ))}
-        </ul>
-      )}
+      <AttachmentsField
+        label={kind === 'supply' ? 'Tambah foto atau dokumen' : 'Tambah dokumen pendukung'}
+        value={atts}
+        onChange={setAtts}
+        error={fieldError(save.error, 'attachments')}
+      />
       <p className="text-sm text-muted-foreground">Cek ringkasan di samping. Setelah disimpan, engine langsung mencari opportunity dan market yang cocok.</p>
     </div>
   )
@@ -270,7 +264,7 @@ function ListingForm({ kind, existing }: { kind: Kind; existing?: Listing }) {
       steps={[
         { id: 'item', title: kind === 'supply' ? 'Item & kualitas' : 'Kebutuhan', content: step1, blocker: !d.item.trim() ? 'Isi nama item' : !(qty > 0) ? 'Isi kuantitas' : undefined },
         { id: 'terms', title: kind === 'supply' ? 'Harga & ketersediaan' : 'Budget & jadwal', content: step2, blocker: kind === 'supply' ? (!(Number(d.price) > 0) ? 'Isi harga ekspektasi' : undefined) : !(Number(d.budget) > 0) ? 'Isi budget' : !d.deadline ? 'Isi deadline' : undefined },
-        { id: 'review', title: 'Lampiran & review', content: step3 },
+        { id: 'review', title: 'Lampiran & review', content: step3, blocker: attachmentsBlocker(atts) },
       ]}
       summary={
         <>
@@ -408,9 +402,7 @@ export function ListingDetailPage({ kind }: { kind: Kind }) {
                     ))}
                   </dl>
                   {l.spec && <p className="mt-4 text-sm text-muted-foreground">{l.spec}</p>}
-                  {l.attachments.length > 0 && (
-                    <div className="mt-4 flex flex-wrap gap-1.5">{l.attachments.map((a) => <Tag key={a}><Paperclip className="size-3" /> {a}</Tag>)}</div>
-                  )}
+                  <AttachmentGallery attachments={l.attachments} className="mt-4" />
                 </section>
 
                 <section>
