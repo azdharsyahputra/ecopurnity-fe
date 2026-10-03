@@ -1,6 +1,6 @@
-import { lazy, Suspense } from 'react'
-import { BrowserRouter, Outlet, Route, Routes } from 'react-router-dom'
-import { QueryClientProvider } from '@tanstack/react-query'
+import { lazy, Suspense, type ReactNode } from 'react'
+import { BrowserRouter, Outlet, Route, Routes, StaticRouter } from 'react-router-dom'
+import { QueryClientProvider, type QueryClient } from '@tanstack/react-query'
 import { queryClient } from '@/lib/api'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { CommandPalette } from '@/components/CommandPalette'
@@ -96,11 +96,16 @@ function Shell() {
   )
 }
 
-export default function App() {
+/** The browser's router, or a fixed `location` when prerendering (src/entry-server.tsx). */
+function Router({ location, children }: { location?: string; children: ReactNode }) {
+  return location === undefined ? <BrowserRouter>{children}</BrowserRouter> : <StaticRouter location={location}>{children}</StaticRouter>
+}
+
+export default function App({ location, client = queryClient }: { location?: string; client?: QueryClient }) {
   return (
-    <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={client}>
       <TooltipProvider>
-        <BrowserRouter>
+        <Router location={location}>
           <Routes>
             <Route element={<Shell />}>
               <Route element={<PublicLayout />}>
@@ -181,7 +186,7 @@ export default function App() {
               <Route path="*" element={<NotFound />} />
             </Route>
           </Routes>
-        </BrowserRouter>
+        </Router>
       </TooltipProvider>
     </QueryClientProvider>
   )

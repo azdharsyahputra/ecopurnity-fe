@@ -17,6 +17,10 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // #root holds the prerendered landing (`/` only); other paths must not flash it before the app renders.
+      if (location.pathname !== '/') document.getElementById('root').innerHTML = ''
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
