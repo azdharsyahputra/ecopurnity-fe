@@ -28,6 +28,17 @@ const users: MockUser[] = [
     id: 'usr-sari', name: 'Sari Kusuma', username: 'sari', email: 'sari@demo.ecopurnity.id', emailVerified: true,
     location: 'Jakarta', capabilities: ['admin'], orgs: [], onboarded: true, password: DEMO_PASSWORD,
   },
+  // Ajar's teammates at PT Solusi Kemasan Nusantara, so business approvals need a real second sign-in.
+  {
+    id: 'usr-maya', name: 'Maya Sari', username: 'maya', email: 'maya@demo.ecopurnity.id', emailVerified: true,
+    location: 'Bandung, Jawa Barat', capabilities: [], onboarded: true, password: DEMO_PASSWORD,
+    orgs: [{ orgId: 'org-skn', orgName: 'PT Solusi Kemasan Nusantara', role: 'finance', verified: true }],
+  },
+  {
+    id: 'usr-bima', name: 'Bima Santoso', username: 'bima', email: 'bima@demo.ecopurnity.id', emailVerified: true,
+    location: 'Bandung, Jawa Barat', capabilities: [], onboarded: true, password: DEMO_PASSWORD,
+    orgs: [{ orgId: 'org-skn', orgName: 'PT Solusi Kemasan Nusantara', role: 'procurement', verified: true }],
+  },
 ]
 
 const SESSION_KEY = 'ecp-mock-session'
@@ -107,6 +118,8 @@ export const DEMO_ACCOUNTS = [
   { name: 'Ajar Pratama', email: 'ajar@demo.ecopurnity.id', role: 'Business owner', tone: 'blue' },
   { name: 'Dimas Haryanto', email: 'dimas@demo.ecopurnity.id', role: 'Market Maker', tone: 'purple' },
   { name: 'Sari Kusuma', email: 'sari@demo.ecopurnity.id', role: 'Admin', tone: 'orange' },
+  { name: 'Maya Sari', email: 'maya@demo.ecopurnity.id', role: 'Business finance', tone: 'green' },
+  { name: 'Bima Santoso', email: 'bima@demo.ecopurnity.id', role: 'Business procurement', tone: 'yellow' },
 ].map((a) => ({ ...a, tone: a.tone as Tone, password: DEMO_PASSWORD }))
 
 export function toUser({ password, ...user }: MockUser): User {

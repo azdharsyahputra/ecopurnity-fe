@@ -15,8 +15,13 @@ if (import.meta.env.VITE_USE_MOCKS !== 'false') {
   )
 }
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+const root = document.getElementById('root')!
+const app = (
   <React.StrictMode>
     <App />
-  </React.StrictMode>,
+  </React.StrictMode>
 )
+// `/` ships prerendered (scripts/prerender.mjs): hydrate it. index.html empties #root on every
+// other path before first paint, and dev serves it empty, so those render from scratch.
+if (location.pathname === '/' && root.hasChildNodes()) ReactDOM.hydrateRoot(root, app)
+else ReactDOM.createRoot(root).render(app)

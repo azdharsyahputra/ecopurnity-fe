@@ -129,13 +129,13 @@ function seed(userId: string): PersonalData {
   base.identity.profile.bio = 'Pelaku usaha di jaringan Ecopurnity. Terbuka untuk pengadaan kolektif dan kerja sama pasokan rutin.'
   base.identity.profile.verification = { email: true, phone: true, identity: 'verified' }
   base.identity.items = [
-    { id: newId('cap'), kind: 'skill', name: 'Pengolahan pasca panen kopi', detail: 'Mahir' },
-    { id: newId('cap'), kind: 'skill', name: 'Manajemen gudang', detail: 'Menengah' },
-    { id: newId('cap'), kind: 'asset', name: 'Truk engkel', detail: '1 unit, kapasitas 2 ton' },
-    { id: newId('cap'), kind: 'asset', name: 'Gudang kering', detail: '50 m², Garut' },
-    { id: newId('cap'), kind: 'capacity', name: 'Produksi green bean', detail: '2 ton/bulan' },
-    { id: newId('cap'), kind: 'capacity', name: 'Pengiriman', detail: '2 trip/minggu' },
-    { id: newId('cap'), kind: 'resource', name: 'Stok green bean arabika', detail: '500 kg' },
+    { id: newId('cap'), kind: 'skill', name: 'Pengolahan pasca panen kopi', detail: 'Mahir', categoryId: 'agri' },
+    { id: newId('cap'), kind: 'skill', name: 'Manajemen gudang', detail: 'Menengah', categoryId: 'logistics' },
+    { id: newId('cap'), kind: 'asset', name: 'Truk engkel', detail: '1 unit, kapasitas 2 ton', categoryId: 'logistics' },
+    { id: newId('cap'), kind: 'asset', name: 'Gudang kering', detail: '50 m², Garut', categoryId: 'logistics' },
+    { id: newId('cap'), kind: 'capacity', name: 'Produksi green bean', detail: '2 ton/bulan', categoryId: 'agri' },
+    { id: newId('cap'), kind: 'capacity', name: 'Pengiriman', detail: '2 trip/minggu', categoryId: 'logistics' },
+    { id: newId('cap'), kind: 'resource', name: 'Stok green bean arabika', detail: '500 kg', categoryId: 'agri' },
   ]
   base.identity.preferences = { locations: ['Jawa Barat'], categories: ['agri', 'packaging', 'food'], minPriceIdr: 80_000, maxBudgetIdr: 50_000_000, deliveryRadiusKm: 75 }
 

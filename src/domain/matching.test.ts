@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MATCH_WEIGHTS, estimateMatchValue, scoreMatch } from './matching'
+import { MATCH_WEIGHTS, estimateMatchValue, itemCategory, scoreMatch } from './matching'
 
 const base = { categoryMatch: true, distanceKm: 10, radiusKm: 50, coverage: 1, confidence: 1 }
 
@@ -25,6 +25,12 @@ describe('matching', () => {
     expect(scoreMatch({ ...base, coverage: 5 }).parts.coverage).toBe(25)
     expect(scoreMatch({ ...base, coverage: 0.2 }).parts.coverage).toBe(5)
     expect(scoreMatch({ ...base, coverage: null }).parts.coverage).toBe(13)
+  })
+
+  it('uses the item category before guessing from keywords', () => {
+    expect(itemCategory({ name: 'Truk engkel', detail: '2 ton', categoryId: 'agri' })).toBe('agri')
+    expect(itemCategory({ name: 'Truk engkel', detail: '2 ton' })).toBe('logistics')
+    expect(itemCategory({ name: 'Desain grafis', detail: 'Mahir' })).toBeUndefined()
   })
 
   it('estimated value covers only the gap', () => {

@@ -4,7 +4,7 @@ import { api } from '@/lib/api'
 import type { AllocationLine, AuditEntry, Transaction, TransactionDetail } from '@/domain/types'
 import type { TransactionAction } from '@/domain/transaction'
 import {
-  can, deniedReason, type Action, type CollectivePool, type InventoryData, type InventoryItem, type Module, type OrgAnalytics, type OrgAuctionEvaluation,
+  can, deniedReason, txDeniedReason, type Action, type CollectivePool, type InventoryData, type InventoryItem, type Module, type OrgAnalytics, type OrgAuctionEvaluation,
   type OrgAuctionInput, type OrgAuctionView, type OrgOverview, type OrgProfile, type OrgSettings, type OrgSupplier, type ProcurementAction,
   type ProcurementInput, type ProcurementRequest, type SupplierAction, type SupplierDetail, type TeamData,
 } from '@/domain/org'
@@ -44,6 +44,8 @@ export function useOrgAccess() {
     can: (m: Module, a: Action) => can(settings?.permissions, role, m, a),
     /** Reason to show on a disabled control, or undefined when allowed. */
     deny: (m: Module, a: Action) => (can(settings?.permissions, role, m, a) ? undefined : deniedReason(roleLabel, m, a)),
+    /** Same for one transaction step (per-action roles, PRD §9.8). */
+    txDeny: (a: TransactionAction) => txDeniedReason(settings?.permissions, role, roleLabel, a),
   }
 }
 
@@ -91,8 +93,6 @@ export const useProcurement = (id: string) => {
   return useQuery({
     queryKey: ['org', orgId, 'procurement', id],
     queryFn: () => api<{ request: ProcurementRequest; activity: AuditEntry[]; pool: CollectivePool | null }>(`${base(orgId)}/procurement/${id}`),
-    // Teammates approve in the background (mock); keep the trail fresh while it waits.
-    refetchInterval: (q) => (q.state.data?.request.status === 'pending_approval' ? 4_000 : false),
   })
 }
 export const useCreateProcurement = () =>

@@ -3,8 +3,8 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Ban, ExternalLink, FileText, Gavel, Plus, Scale, Trash2, Trophy } from 'lucide-react'
 import type { AllocationLine, AuctionType, BidVisibility, CategoryId } from '@/domain/types'
 import {
-  AWARD_RULES, DEFAULT_WEIGHTS, ORG_AUCTION_STATUS, WITHDRAW_RULES, auctionValue, awardLines, awardSummary, canApprove, requiredApprovers,
-  weightedScores, type AuctionObjective, type AwardRule, type OrgAuctionEvaluation, type OrgAuctionInput, type OrgAuctionStatus, type OrgAuctionView,
+  AWARD_RULES, DEFAULT_WEIGHTS, ORG_AUCTION_STATUS, WITHDRAW_RULES, auctionValue, awardLines, awardRuleInfo, awardSummary, canApprove, higherWins,
+  requiredApprovers, weightedScores, type AuctionObjective, type AwardRule, type OrgAuctionEvaluation, type OrgAuctionInput, type OrgAuctionStatus, type OrgAuctionView,
   type ProcurementRequest, type Weights, type WithdrawRule,
 } from '@/domain/org'
 import { suggestAllocation } from '@/domain/auction'
@@ -31,7 +31,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 
 const MOCKS = import.meta.env.VITE_USE_MOCKS !== 'false'
 type Filter = '' | OrgAuctionStatus
-const higherWins = (t: AuctionType) => t === 'forward' || t === 'dutch'
 
 // ── Review (approval) dialog, deep-linked as ?review=<id> ────────
 
@@ -169,7 +168,7 @@ function AuctionWizard({ source }: { source?: ProcurementRequest }) {
   function submit() {
     const input: OrgAuctionInput = {
       title: d.title.trim(), categoryId: d.categoryId, type: d.type, objective: d.objective, multiLot: d.multiLot, lots,
-      rules: { minStepIdr: d.type === 'sealed' ? 0 : step, visibility, autoExtension: d.autoExtension, withdraw: d.withdraw, award: higherWins(d.type) ? 'lowest' : d.award, weights: d.weights },
+      rules: { minStepIdr: d.type === 'sealed' ? 0 : step, visibility, autoExtension: d.autoExtension, withdraw: d.withdraw, award: d.award, weights: d.weights },
       qualification: { documents: d.documents, minRating: Number(d.minRating), regions: d.regions }, invited: d.invited,
       schedule: { startsAt: d.startMode === 'later' && d.startsAt ? new Date(d.startsAt).toISOString() : undefined, durationMinutes: Number(d.duration) },
       procurementId: source?.id,
@@ -241,7 +240,7 @@ function AuctionWizard({ source }: { source?: ProcurementRequest }) {
           ),
         },
         {
-          id: 'rules', title: 'Aturan', blocker: d.award === 'weighted' && !higherWins(d.type) && weightSum !== 100 ? `Total bobot harus 100 (sekarang ${weightSum})` : undefined,
+          id: 'rules', title: 'Aturan', blocker: d.award === 'weighted' && weightSum !== 100 ? `Total bobot harus 100 (sekarang ${weightSum})` : undefined,
           content: (
             <div className="grid gap-4 sm:grid-cols-2">
               {d.type !== 'sealed' && <Field label={d.type === 'dutch' ? 'Penurunan harga per langkah (Rp)' : d.type === 'forward' ? 'Kenaikan minimum (Rp)' : 'Penurunan minimum (Rp)'} type="number" min={0} placeholder={String(step)} value={d.step} onChange={(e) => set('step', e.target.value)} hint="Default 0,5% dari harga lot pertama" />}
@@ -254,21 +253,17 @@ function AuctionWizard({ source }: { source?: ProcurementRequest }) {
                 {(Object.keys(WITHDRAW_RULES) as WithdrawRule[]).map((w) => <option key={w} value={w}>{WITHDRAW_RULES[w]}</option>)}
               </SelectField>
               <label className="flex items-center gap-2 self-end pb-2 text-sm"><input type="checkbox" className="accent-primary" checked={d.autoExtension} onChange={(e) => set('autoExtension', e.target.checked)} /> Perpanjangan otomatis (+5 menit jika ada bid di 2 menit terakhir)</label>
-              {higherWins(d.type) ? (
-                <p className="rounded-lg bg-muted p-3 text-sm text-muted-foreground sm:col-span-2">Auction penjualan: penawar tertinggi memenangkan tiap lot.</p>
-              ) : (
-                <div className="flex flex-col gap-2 sm:col-span-2">
-                  <span className="text-sm font-medium">Penetapan pemenang</span>
-                  <div role="radiogroup" aria-label="Penetapan pemenang" className="grid gap-2 sm:grid-cols-2">
-                    {(Object.keys(AWARD_RULES) as AwardRule[]).filter((r) => r !== 'bundled' || d.multiLot).map((r) => (
-                      <button key={r} type="button" role="radio" aria-checked={d.award === r} onClick={() => set('award', r)} className={cn('rounded-lg border p-3 text-left text-sm', d.award === r ? 'border-primary ring-3 ring-primary/20' : 'hover:bg-hover')}>
-                        <span className="font-medium">{AWARD_RULES[r].label}</span><span className="mt-0.5 block text-xs text-muted-foreground">{AWARD_RULES[r].hint}</span>
-                      </button>
-                    ))}
-                  </div>
-                  {d.award === 'weighted' && <WeightFields weights={d.weights} onChange={(w) => set('weights', w)} />}
+              <div className="flex flex-col gap-2 sm:col-span-2">
+                <span className="text-sm font-medium">Penetapan pemenang{higherWins(d.type) && <span className="font-normal text-muted-foreground"> · penjualan, harga tertinggi terbaik</span>}</span>
+                <div role="radiogroup" aria-label="Penetapan pemenang" className="grid gap-2 sm:grid-cols-2">
+                  {(Object.keys(AWARD_RULES) as AwardRule[]).filter((r) => r !== 'bundled' || d.multiLot).map((r) => (
+                    <button key={r} type="button" role="radio" aria-checked={d.award === r} onClick={() => set('award', r)} className={cn('rounded-lg border p-3 text-left text-sm', d.award === r ? 'border-primary ring-3 ring-primary/20' : 'hover:bg-hover')}>
+                      <span className="font-medium">{awardRuleInfo(r, higherWins(d.type)).label}</span><span className="mt-0.5 block text-xs text-muted-foreground">{awardRuleInfo(r, higherWins(d.type)).hint}</span>
+                    </button>
+                  ))}
                 </div>
-              )}
+                {d.award === 'weighted' && <WeightFields weights={d.weights} onChange={(w) => set('weights', w)} />}
+              </div>
             </div>
           ),
         },
@@ -325,7 +320,7 @@ function AuctionWizard({ source }: { source?: ProcurementRequest }) {
           <SummaryRow label="Judul" value={d.title} />
           <SummaryRow label="Tipe" value={`${AUCTION_TYPES[d.type].label}${d.multiLot ? ` · ${lots.length} lot` : ''}`} />
           <SummaryRow label="Nilai acuan" value={value ? formatIdr(value, { compact: true }) : ''} />
-          <SummaryRow label="Pemenang" value={higherWins(d.type) ? 'Harga tertinggi' : AWARD_RULES[d.award].label} />
+          <SummaryRow label="Pemenang" value={awardRuleInfo(d.award, higherWins(d.type)).label} />
           <SummaryRow label="Rating min." value={d.minRating === '0' ? 'Tanpa' : `★ ${d.minRating}`} />
           <SummaryRow label="Diundang" value={d.invited.length ? `${d.invited.length} supplier` : 'Terbuka'} />
           <SummaryRow label="Approval" value={approvers.length ? approvers.map(roleLabel).join(' + ') : 'Tidak perlu'} />
@@ -475,7 +470,7 @@ export function OrgEvaluatePage() {
               <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
                 <div className="flex min-w-0 flex-col gap-6">
                   {ev.lots.map((l, i) => {
-                    const scores = weightedScores(l.offers, w)
+                    const scores = weightedScores(l.offers, w, hw)
                     const smart = hw ? [] : suggestAllocation(l.offers, l.lot.quantity.value)
                     const smartTotal = smart.reduce((s, x) => s + x.quantity * x.priceIdr, 0)
                     return (
@@ -508,24 +503,22 @@ export function OrgEvaluatePage() {
                 </div>
 
                 <aside className="flex flex-col gap-6">
-                  {!hw && (
-                    <Section title="Bobot skor">
-                      <WeightFields weights={w} onChange={setWeights} />
-                      <p className="mt-2 text-xs text-muted-foreground">Harga dinilai relatif ke penawaran termurah. Mengubah bobot hanya memengaruhi simulasi.</p>
-                    </Section>
-                  )}
+                  <Section title="Bobot skor">
+                    <WeightFields weights={w} onChange={setWeights} />
+                    <p className="mt-2 text-xs text-muted-foreground">Harga dinilai relatif ke penawaran {hw ? 'tertinggi' : 'termurah'}. Mengubah bobot hanya memengaruhi simulasi.</p>
+                  </Section>
                   <Section title="Simulasi award">
-                    {hw ? <p className="text-sm text-muted-foreground">Auction penjualan: penawar tertinggi menang per lot.</p> : (
-                      <div role="radiogroup" aria-label="Aturan award" className="flex flex-col gap-2">
-                        {sim.map((s) => (
-                          <button key={s.r} type="button" role="radio" aria-checked={chosen.r === s.r} disabled={!!a.award} onClick={() => set('rule', s.r)}
-                            className={cn('rounded-lg border p-2.5 text-left text-sm', chosen.r === s.r ? 'border-primary ring-3 ring-primary/20' : 'hover:bg-hover')}>
-                            <span className="flex justify-between gap-2"><span className="font-medium">{AWARD_RULES[s.r].label}{s.r === a.rules.award && <span className="ml-1 text-xs font-normal text-muted-foreground">(aturan)</span>}</span><span className="num">{formatIdr(s.totalIdr, { compact: true })}</span></span>
-                            <span className="text-xs text-muted-foreground">{s.suppliers} supplier · tertutup {formatPercent(s.coverage)}{reserve > 0 && s.totalIdr > 0 && <> · hemat {formatIdr(Math.max(0, reserve * s.coverage - s.totalIdr), { compact: true })}</>}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                    <div role="radiogroup" aria-label="Aturan award" className="flex flex-col gap-2">
+                      {sim.map((s) => (
+                        <button key={s.r} type="button" role="radio" aria-checked={chosen.r === s.r} disabled={!!a.award} onClick={() => set('rule', s.r)}
+                          className={cn('rounded-lg border p-2.5 text-left text-sm', chosen.r === s.r ? 'border-primary ring-3 ring-primary/20' : 'hover:bg-hover')}>
+                          <span className="flex justify-between gap-2"><span className="font-medium">{awardRuleInfo(s.r, hw).label}{s.r === a.rules.award && <span className="ml-1 text-xs font-normal text-muted-foreground">(aturan)</span>}</span><span className="num">{formatIdr(s.totalIdr, { compact: true })}</span></span>
+                          <span className="text-xs text-muted-foreground">{s.suppliers} {hw ? 'pembeli' : 'supplier'} · tertutup {formatPercent(s.coverage)}{reserve > 0 && s.totalIdr > 0 && (hw
+                            ? <> · di atas reserve {formatIdr(Math.max(0, s.totalIdr - reserve * s.coverage), { compact: true })}</>
+                            : <> · hemat {formatIdr(Math.max(0, reserve * s.coverage - s.totalIdr), { compact: true })}</>)}</span>
+                        </button>
+                      ))}
+                    </div>
                     {a.award ? (
                       <div className="mt-4 border-t pt-4 text-sm">
                         <p className="font-medium">Pemenang ditetapkan</p>
@@ -538,7 +531,7 @@ export function OrgEvaluatePage() {
                         )}
                       </div>
                     ) : allClosed ? (
-                      <GuardedButton className="mt-4 h-10 w-full" reason={manageDeny} disabled={!chosen.lines.every((l) => l.length)} onClick={() => set('award', '1')}><Trophy /> Award ({hw ? 'harga tertinggi' : AWARD_RULES[chosen.r].label})</GuardedButton>
+                      <GuardedButton className="mt-4 h-10 w-full" reason={manageDeny} disabled={!chosen.lines.every((l) => l.length)} onClick={() => set('award', '1')}><Trophy /> Award ({awardRuleInfo(chosen.r, hw).label})</GuardedButton>
                     ) : (
                       <p className="mt-4 rounded-lg bg-muted p-3 text-xs text-muted-foreground">Award dibuka setelah semua lot ditutup{a.live[0] ? ` (${formatDateTime(a.live[0].endsAt)})` : ''}.</p>
                     )}
@@ -547,7 +540,7 @@ export function OrgEvaluatePage() {
               </div>
             )}
             {params.get('award') && !a.award && allClosed && !manageDeny && (
-              <AwardDialog id={a.id} lines={chosen.lines} total={chosen.totalIdr} rule={hw ? 'harga tertinggi' : AWARD_RULES[chosen.r].label} onClose={() => set('award', null)} />
+              <AwardDialog id={a.id} lines={chosen.lines} total={chosen.totalIdr} rule={awardRuleInfo(chosen.r, hw).label} onClose={() => set('award', null)} />
             )}
             {params.get('po') && a.award && !a.award.poNumber && !manageDeny && <PoPreview evaluation={ev} onClose={() => set('po', null)} />}
           </>

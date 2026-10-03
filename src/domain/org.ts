@@ -1,6 +1,7 @@
 import type { AllocationLine, AuctionType, BidVisibility, CategoryId, Offer, OrgRole, Quantity, AuditEntry, TransactionDetail } from './types'
 import type { AuctionStatus, Tone } from './status'
 import { suggestAllocation } from './auction'
+import { ACTION_LABEL, type TransactionAction } from './transaction'
 
 // Business / organization workspace (PRD §9): contract types plus the branching rules shared by
 // the UI (what to show/enable) and the mock API (what to accept). BE should enforce the same tables.
@@ -44,6 +45,32 @@ export function can(perms: Permissions | undefined, role: string, module: Module
 export const deniedReason = (roleLabel: string, module: Module, action: Action) =>
   `Peran ${roleLabel} tidak punya izin ${ACTIONS[action].toLowerCase()} ${MODULES[module]}`
 
+/** Who may take each step of an org transaction (PRD §9.8): money moves by Finance, goods by Operations. */
+export const TX_ACTION_ROLES: Partial<Record<TransactionAction, OrgRole[]>> = {
+  pay: ['owner', 'finance'],
+  issue_invoice: ['owner', 'finance', 'sales'],
+  ship: ['owner', 'operations'],
+  upload_proof: ['owner', 'operations'],
+  confirm_receipt: ['owner', 'procurement', 'operations'],
+  cancel: ['owner', 'procurement'],
+  dispute: ['owner', 'procurement'],
+}
+
+const txRoles = (action: TransactionAction) => TX_ACTION_ROLES[action] ?? ['owner'] // unlisted (new) actions: owner only until mapped
+
+/** Built-in roles follow TX_ACTION_ROLES; custom roles fall back to their `transactions.manage` permission. */
+export function canTransact(perms: Permissions | undefined, role: string, action: TransactionAction): boolean {
+  if (Object.hasOwn(ROLE_LABEL, role)) return txRoles(action).includes(role as OrgRole)
+  return can(perms, role, 'transactions', 'manage')
+}
+
+/** Reason for a disabled transaction step, or undefined when the role may take it. */
+export function txDeniedReason(perms: Permissions | undefined, role: string, roleLabel: string, action: TransactionAction) {
+  if (canTransact(perms, role, action)) return undefined
+  if (!Object.hasOwn(ROLE_LABEL, role)) return deniedReason(roleLabel, 'transactions', 'manage')
+  return `${ACTION_LABEL[action]} hanya untuk ${txRoles(action).map((r) => ROLE_LABEL[r]).join(', ')}; peranmu ${roleLabel}`
+}
+
 // ── Approval rules ───────────────────────────────────────────────
 
 export type ApprovalSubject = 'procurement' | 'auction'
@@ -81,6 +108,13 @@ export function approvalState(required: string[], approvals: Approval[]) {
 export const canApprove = (role: string, required: string[], approvals: Approval[]) => {
   const s = approvalState(required, approvals)
   return !s.rejected && s.pending.includes(role)
+}
+
+/** Users to ask for a sign-off: holders of a role that is still pending, except whoever just acted. */
+export function approverUserIds(required: string[], approvals: Approval[], members: { userId: string; role: string }[], actorId?: string): string[] {
+  const s = approvalState(required, approvals)
+  if (s.rejected) return []
+  return [...new Set(members.filter((m) => m.userId !== actorId && s.pending.includes(m.role)).map((m) => m.userId))]
 }
 
 // ── Procurement (PRD §9.4) ───────────────────────────────────────
@@ -244,12 +278,23 @@ export interface LotOffer extends Offer {
   reliability: number
 }
 
-/** 0–100 per offer. Price scores relative to the cheapest offer (cheapest = 100). Weights need not sum to 100. */
-export function weightedScores(offers: Pick<LotOffer, 'priceIdr' | 'quality' | 'delivery' | 'reliability'>[], w: Weights): number[] {
+/** Selling auctions (forward/Dutch): the highest price is the best one. */
+export const higherWins = (t: AuctionType) => t === 'forward' || t === 'dutch'
+
+/**
+ * 0–100 per offer. Price scores relative to the best price: the cheapest (= 100) when buying,
+ * the highest (= 100) when selling. Weights need not sum to 100.
+ */
+export function weightedScores(offers: Pick<LotOffer, 'priceIdr' | 'quality' | 'delivery' | 'reliability'>[], w: Weights, higher = false): number[] {
   if (!offers.length) return []
-  const min = Math.min(...offers.map((o) => o.priceIdr))
+  const prices = offers.map((o) => o.priceIdr)
+  const min = Math.min(...prices)
+  const max = Math.max(...prices)
   const total = w.price + w.quality + w.delivery + w.reliability || 1
-  return offers.map((o) => Math.round(((min / o.priceIdr) * 100 * w.price + o.quality * w.quality + o.delivery * w.delivery + o.reliability * w.reliability) / total))
+  return offers.map((o) => {
+    const price = higher ? o.priceIdr / max : min / o.priceIdr
+    return Math.round((price * 100 * w.price + o.quality * w.quality + o.delivery * w.delivery + o.reliability * w.reliability) / total)
+  })
 }
 
 export type AwardRule = 'lowest' | 'weighted' | 'split' | 'bundled'
@@ -261,37 +306,61 @@ export const AWARD_RULES: Record<AwardRule, { label: string; hint: string }> = {
   bundled: { label: 'Bundled', hint: 'Semua lot ke satu supplier dengan total termurah.' },
 }
 
+const SELLING_AWARD_RULES: Record<AwardRule, { label: string; hint: string }> = {
+  lowest: { label: 'Harga tertinggi', hint: 'Seluruh lot ke penawar tertinggi.' },
+  weighted: { label: 'Weighted score', hint: 'Skor gabungan harga (tertinggi terbaik), kualitas, pengiriman, reliabilitas.' },
+  split: { label: 'Split award', hint: 'Dibagi ke beberapa pembeli dengan harga tertinggi sesuai kapasitas.' },
+  bundled: { label: 'Bundled', hint: 'Semua lot ke satu pembeli dengan total tertinggi.' },
+}
+
+/** Label and hint of a rule, worded for selling (highest wins) when `higher`. */
+export const awardRuleInfo = (rule: AwardRule, higher = false) => (higher ? SELLING_AWARD_RULES : AWARD_RULES)[rule]
+
 const line = (o: LotOffer, quantity: number): AllocationLine => ({ offerId: o.id, supplier: o.supplier.name, quantity, priceIdr: o.priceIdr })
 
 /**
  * Award lines per lot under a rule. Bundled falls back to empty lots when no supplier bid on every lot.
- * Selling (forward/Dutch) auctions ignore the rule: the highest bid takes the whole lot.
+ * `higher` (selling: forward/Dutch) flips every rule to the best *highest* price: lowest → highest bid,
+ * split → highest bids first up to each buyer's capacity, bundled → highest total.
  */
-export function awardLines(lots: { quantity: number; offers: LotOffer[] }[], rule: AwardRule, w: Weights = DEFAULT_WEIGHTS, higherWins = false): AllocationLine[][] {
-  if (higherWins) return lots.map((l) => (l.offers.length ? [line([...l.offers].sort((x, y) => y.priceIdr - x.priceIdr)[0], l.quantity)] : []))
+export function awardLines(lots: { quantity: number; offers: LotOffer[] }[], rule: AwardRule, w: Weights = DEFAULT_WEIGHTS, higher = false): AllocationLine[][] {
+  const better = (x: LotOffer, y: LotOffer) => (higher ? y.priceIdr - x.priceIdr : x.priceIdr - y.priceIdr)
   if (rule === 'bundled') {
     const common = lots.reduce<string[] | null>((ids, l) => {
       const here = l.offers.map((o) => o.supplierId)
       return ids === null ? here : ids.filter((id) => here.includes(id))
     }, null) ?? []
-    const cost = (id: string) => lots.reduce((s, l) => s + Math.min(...l.offers.filter((o) => o.supplierId === id).map((o) => o.priceIdr)) * l.quantity, 0)
-    const best = [...new Set(common)].sort((a, b) => cost(a) - cost(b))[0]
+    const pick = higher ? Math.max : Math.min
+    const total = (id: string) => lots.reduce((s, l) => s + pick(...l.offers.filter((o) => o.supplierId === id).map((o) => o.priceIdr)) * l.quantity, 0)
+    const best = [...new Set(common)].sort((a, b) => (higher ? total(b) - total(a) : total(a) - total(b)))[0]
     return lots.map((l) => {
-      const o = l.offers.filter((x) => x.supplierId === best).sort((x, y) => x.priceIdr - y.priceIdr)[0]
+      const o = l.offers.filter((x) => x.supplierId === best).sort(better)[0]
       return o ? [line(o, l.quantity)] : []
     })
   }
   return lots.map((l) => {
     if (!l.offers.length) return []
-    if (rule === 'split') return suggestAllocation(l.offers, l.quantity)
+    if (rule === 'split') return higher ? splitHighest(l.offers, l.quantity) : suggestAllocation(l.offers, l.quantity)
     if (rule === 'weighted') {
-      const scores = weightedScores(l.offers, w)
+      const scores = weightedScores(l.offers, w, higher)
       const i = scores.indexOf(Math.max(...scores))
       return [line(l.offers[i], l.quantity)]
     }
-    const cheapest = [...l.offers].sort((x, y) => x.priceIdr - y.priceIdr)[0]
-    return [line(cheapest, l.quantity)]
+    return [line([...l.offers].sort(better)[0], l.quantity)]
   })
+}
+
+/** Selling mirror of `suggestAllocation`: highest prices first (reputation breaks ties), each up to the buyer's capacity. */
+function splitHighest(offers: LotOffer[], quantity: number): AllocationLine[] {
+  const lines: AllocationLine[] = []
+  let left = quantity
+  for (const o of [...offers].sort((x, y) => y.priceIdr - x.priceIdr || y.supplier.reputation - x.supplier.reputation)) {
+    if (left <= 0) break
+    const take = Math.min(left, o.capacity.value)
+    lines.push(line(o, take))
+    left -= take
+  }
+  return lines
 }
 
 /** Summary of an award, for the simulation table and the confirm dialog. */
