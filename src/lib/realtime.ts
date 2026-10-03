@@ -64,6 +64,7 @@ class Socket {
   private retry = 0
   private timer?: ReturnType<typeof setTimeout>
   private ping?: ReturnType<typeof setInterval>
+  private pong?: ReturnType<typeof setTimeout> // no ping ack within 10 s = dead connection (e.g. a proxy kept it open)
   private closed = false
 
   private onResync: ResyncHandler
@@ -87,6 +88,7 @@ class Socket {
     this.closed = true
     clearTimeout(this.timer)
     clearInterval(this.ping)
+    clearTimeout(this.pong)
     this.ws?.close(1000)
   }
 
@@ -110,11 +112,16 @@ class Socket {
       this.replaying.clear()
       listeners.forEach((_, channel) => this.join(channel))
       clearInterval(this.ping)
-      this.ping = setInterval(() => this.send({ type: 'ping' }), 25_000)
+      this.ping = setInterval(() => {
+        this.send({ type: 'ping' }, 'ping')
+        clearTimeout(this.pong)
+        this.pong = setTimeout(() => ws.close(4000), 10_000)
+      }, 25_000)
     }
     ws.onmessage = (e) => this.receive(JSON.parse(e.data as string) as Frame)
     ws.onclose = (e) => {
       clearInterval(this.ping)
+      clearTimeout(this.pong)
       if (this.closed || e.code === 1000 || e.code === 1008) return
       // 4401/4403: the session changed under us; the app reconnects with the new identity via resetRealtime.
       if (e.code === 4401 || e.code === 4403) this.onResync('auth')
@@ -129,6 +136,7 @@ class Socket {
       const channel = f.ref ? this.pending.get(f.ref) : undefined
       if (!channel) return
       this.pending.delete(f.ref!)
+      if (channel === 'ping') return clearTimeout(this.pong)
       const replayed = this.replaying.delete(channel)
       if (!f.ok) {
         this.lastSeq.delete(channel)
