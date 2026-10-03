@@ -1,11 +1,13 @@
 import { useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Check, FileText, Handshake, PackageCheck, Scale, Star, Truck } from 'lucide-react'
+import { useMutation, type UseMutationResult } from '@tanstack/react-query'
+import { Check, FileText, FileUp, Handshake, PackageCheck, Paperclip, Scale, Star, Truck } from 'lucide-react'
 import type { TransactionDetail } from '@/domain/types'
 import { TERMS, TRADE_ACTION_LABEL, breakdown, timelineFor, tradeActions, tradeStateOf, type QcOutcome, type TradeAction } from '@/domain/trade'
 import { statusMeta } from '@/domain/status'
 import { formatDate, formatDateTime, formatIdr, formatNumber, formatQty, formatRelative } from '@/domain/format'
 import { fieldError } from '@/lib/api'
+import { uploadErrorMessage, uploadFile, type UploadPurpose } from '@/lib/upload'
 import { cn } from '@/lib/utils'
 import { toast } from '@/stores/toast'
 import { useTradeAction, type TradeScope } from './hooks'
@@ -70,11 +72,59 @@ function ShipDialog({ t, scope, onClose }: { t: TransactionDetail; scope: TradeS
   )
 }
 
+const useUpload = (purpose: UploadPurpose) => useMutation({ mutationFn: (f: File) => uploadFile(f, purpose) })
+
+/** File input that uploads on pick (`up.data` is the upload id); shows progress, the upload error or `error` (e.g. the action's uploadId). */
+function FilePick({ up, label, hint, error }: { up: UseMutationResult<string, Error, File>; label: string; hint: string; error?: string }) {
+  const message = up.error ? uploadErrorMessage(up.error) : error
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-dashed p-3 text-sm hover:bg-hover has-focus-visible:ring-3 has-focus-visible:ring-ring/50">
+        <FileUp className="size-4 shrink-0 text-muted-foreground" />
+        <span className="min-w-0 flex-1">
+          <span className="font-medium">{label}</span>
+          <span className="block truncate text-muted-foreground">{up.isPending ? `Mengunggah ${up.variables?.name}…` : up.variables?.name ?? hint}</span>
+        </span>
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/webp,application/pdf"
+          className="sr-only"
+          onChange={(e) => {
+            const f = e.target.files?.[0]
+            if (f) up.mutate(f)
+            e.target.value = ''
+          }}
+        />
+      </label>
+      {message && <p className="text-xs text-destructive">{message}</p>}
+    </div>
+  )
+}
+
+const IMAGE_NAME = /\.(jpe?g|png|webp)$/i
+
+/** An attached file: with a presigned `url` a link (and, with `preview`, an image thumbnail); without one just its name. */
+export function Attachment({ name, url, preview, className }: { name: string; url?: string; preview?: boolean; className?: string }) {
+  const label = (
+    <span className="inline-flex min-w-0 items-center gap-1.5">
+      <Paperclip className="size-3.5 shrink-0" />
+      <span className="truncate">{name}</span>
+    </span>
+  )
+  if (!url) return <span className={cn('inline-flex min-w-0 text-muted-foreground', className)}>{label}</span>
+  return (
+    <a href={url} target="_blank" rel="noreferrer" className={cn('inline-flex min-w-0 max-w-full flex-col items-start gap-1.5 text-primary hover:underline', className)}>
+      {preview && IMAGE_NAME.test(name) && <img src={url} alt={name} loading="lazy" onError={(e) => (e.currentTarget.hidden = true)} className="max-h-40 max-w-full rounded-md border bg-muted object-contain" />}
+      {label}
+    </a>
+  )
+}
+
 function ProofDialog({ t, scope, onClose }: { t: TransactionDetail; scope: TradeScope; onClose: () => void }) {
   const act = useTradeAction(scope, t.id)
   const open = (t.shipments ?? []).filter((s) => s.status !== 'delivered')
   const [shipmentId, setShipmentId] = useState(open[0]?.id ?? '')
-  const [file, setFile] = useState('')
+  const up = useUpload('trade_proof')
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-md">
@@ -85,15 +135,11 @@ function ProofDialog({ t, scope, onClose }: { t: TransactionDetail; scope: Trade
         <SelectField label="Pengiriman" value={shipmentId} onChange={(e) => setShipmentId(e.target.value)}>
           {open.map((s) => <option key={s.id} value={s.id}>{formatNumber(s.quantity)} {t.quantity.unit} → {s.dropPoint}</option>)}
         </SelectField>
-        <label className="cursor-pointer rounded-lg border border-dashed p-3 text-sm hover:bg-hover">
-          <span className="font-medium">Bukti</span>
-          <span className="block truncate text-muted-foreground">{file || 'Pilih foto / PDF'}</span>
-          <input type="file" accept="image/*,.pdf" className="sr-only" onChange={(e) => setFile(e.target.files?.[0]?.name ?? '')} />
-        </label>
-        {fieldError(act.error, 'file') && <p className="text-xs text-destructive">{fieldError(act.error, 'file')}</p>}
+        <FilePick up={up} label="Bukti" hint="Pilih foto / PDF, maks. 10 MB" error={fieldError(act.error, 'uploadId')} />
+        <FormError error={act.error} />
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Batal</Button>
-          <Button disabled={!file || act.isPending} onClick={() => act.mutate({ action: 'upload_proof', shipmentId, file }, { onSuccess: () => { toast({ title: 'Pengiriman dikonfirmasi', tone: 'green' }); onClose() } })}>Konfirmasi</Button>
+          <Button disabled={!up.data || up.isPending || act.isPending} onClick={() => act.mutate({ action: 'upload_proof', shipmentId, uploadId: up.data }, { onSuccess: () => { toast({ title: 'Pengiriman dikonfirmasi', tone: 'green' }); onClose() } })}>Konfirmasi</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -132,7 +178,7 @@ function QcDialog({ t, scope, onClose }: { t: TransactionDetail; scope: TradeSco
 function NoteDialog({ t, scope, action, onClose }: { t: TransactionDetail; scope: TradeScope; action: 'dispute' | 'add_evidence'; onClose: () => void }) {
   const act = useTradeAction(scope, t.id)
   const [note, setNote] = useState('')
-  const [file, setFile] = useState('')
+  const up = useUpload('dispute_evidence')
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-md">
@@ -141,13 +187,11 @@ function NoteDialog({ t, scope, action, onClose }: { t: TransactionDetail; scope
           <DialogDescription>{action === 'dispute' ? 'Dana tetap ditahan selama dispute. Kedua pihak bisa mengirim bukti, lalu Admin memutuskan.' : 'Bukti terlihat oleh pihak lain dan Admin.'}</DialogDescription>
         </DialogHeader>
         <TextareaField label={action === 'dispute' ? 'Apa masalahnya?' : 'Keterangan'} rows={4} value={note} onChange={(e) => setNote(e.target.value)} error={fieldError(act.error, 'note')} />
-        <label className="cursor-pointer rounded-lg border border-dashed p-3 text-sm hover:bg-hover">
-          <span className="block truncate text-muted-foreground">{file || 'Lampiran (opsional): foto, video, dokumen'}</span>
-          <input type="file" className="sr-only" onChange={(e) => setFile(e.target.files?.[0]?.name ?? '')} />
-        </label>
+        <FilePick up={up} label="Lampiran (opsional)" hint="Foto atau PDF, maks. 10 MB" error={fieldError(act.error, 'uploadId')} />
+        <FormError error={act.error} />
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Batal</Button>
-          <Button variant={action === 'dispute' ? 'destructive' : 'default'} disabled={!note.trim() || act.isPending} onClick={() => act.mutate({ action, note, file: file || undefined }, { onSuccess: () => { toast({ title: action === 'dispute' ? 'Dispute diajukan' : 'Bukti terkirim', tone: 'orange' }); onClose() } })}>
+          <Button variant={action === 'dispute' ? 'destructive' : 'default'} disabled={!note.trim() || up.isPending || act.isPending} onClick={() => act.mutate({ action, note, uploadId: up.data }, { onSuccess: () => { toast({ title: action === 'dispute' ? 'Dispute diajukan' : 'Bukti terkirim', tone: 'orange' }); onClose() } })}>
             {action === 'dispute' ? 'Ajukan' : 'Kirim'}
           </Button>
         </DialogFooter>
@@ -332,6 +376,7 @@ export function TradeSections({ t }: { t: TransactionDetail }) {
                 <span className="min-w-0 flex-1 truncate text-muted-foreground">→ {s.dropPoint} · {s.carrier}</span>
                 <Tag tone={s.status === 'delivered' ? 'green' : 'blue'}>{s.status === 'delivered' ? 'Terkirim' : 'Dalam perjalanan'}</Tag>
                 <span className="text-xs text-muted-foreground">{formatDate(s.deliveredAt ?? s.scheduledAt)}</span>
+                {s.proof && <Attachment name={s.proof} url={s.proofUrl} className="basis-full pl-7 text-xs" />}
               </li>
             ))}
           </ul>
@@ -349,7 +394,7 @@ export function TradeSections({ t }: { t: TransactionDetail }) {
               <li key={e.id} className={cn('max-w-[90%] rounded-xl p-3 text-sm', e.by === t.role ? 'self-end bg-primary/10' : 'self-start bg-muted')}>
                 <p className="text-xs text-muted-foreground">{e.name} · {e.by === 'buyer' ? 'pembeli' : 'supplier'} · {formatRelative(e.at)}</p>
                 <p className="mt-1">{e.text}</p>
-                {'file' in e && e.file && <p className="mt-1 text-xs text-muted-foreground">Lampiran: {e.file}</p>}
+                {'file' in e && e.file && <Attachment name={e.file} url={e.url} preview className="mt-2 text-xs" />}
               </li>
             ))}
           </ul>
@@ -376,7 +421,7 @@ export function TradeSections({ t }: { t: TransactionDetail }) {
           {t.documents.map((d) => (
             <li key={d.id} className="flex items-center gap-3 py-2.5">
               <FileText className="size-4 text-muted-foreground" />
-              <span className="flex-1 truncate">{d.name}</span>
+              {d.url ? <Attachment name={d.name} url={d.url} className="flex-1" /> : <span className="flex-1 truncate">{d.name}</span>}
               <Tag>{{ order: 'Order', agreement: 'Agreement', invoice: 'Invoice', proof: 'Bukti' }[d.kind]}</Tag>
               <span className="text-xs text-muted-foreground">{formatDate(d.at)}</span>
             </li>

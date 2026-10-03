@@ -43,10 +43,13 @@ const RULES: Record<string, { types: string[]; mb: number; typeError: string }> 
   kyc_selfie: { types: IMAGE_TYPES, mb: 8, typeError: 'Format file tidak didukung. Pakai JPG, PNG, atau WebP.' },
   org_document: { types: ['application/pdf', ...IMAGE_TYPES], mb: 10, typeError: 'Format file tidak didukung. Pakai PDF, JPG, PNG, atau WebP.' },
   listing_attachment: { types: ['application/pdf', ...IMAGE_TYPES], mb: 10, typeError: 'Format file tidak didukung. Pakai PDF, JPG, PNG, atau WebP.' },
+  trade_proof: { types: ['application/pdf', ...IMAGE_TYPES], mb: 10, typeError: 'Format file tidak didukung. Pakai PDF, JPG, PNG, atau WebP.' },
+  dispute_evidence: { types: ['application/pdf', ...IMAGE_TYPES], mb: 10, typeError: 'Format file tidak didukung. Pakai PDF, JPG, PNG, atau WebP.' },
 }
 const uploads: Record<string, { owner: string; purpose: string; fileName: string; type: string; size: number; uploaded: boolean; used: boolean }> = {}
 
-function claim(userId: string, id: string | undefined, purpose: string, field: string): string | Record<string, string> {
+/** Checks an upload without using it up (consumeUpload once the feature succeeded): the file name, or field errors. */
+export function claim(userId: string, id: string | undefined, purpose: string, field: string): string | Record<string, string> {
   const u = id ? uploads[id] : undefined
   if (!u || u.owner !== userId) return { [field]: 'File tidak ditemukan. Unggah ulang.' }
   if (u.purpose !== purpose) return { [field]: 'File ini diunggah untuk keperluan lain.' }

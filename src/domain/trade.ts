@@ -114,6 +114,9 @@ export function partialRefund(unitPriceIdr: number, paidQty: number, acceptedQty
 export interface TradeActionInput {
   action: TradeAction
   note?: string
+  /** Verified upload (POST /uploads): `trade_proof` for upload_proof (required), `dispute_evidence` for dispute / add_evidence. */
+  uploadId?: string
+  /** Legacy bare file name: only the simulated counterparties (demo bot) attach this way; a user's is ignored. */
   file?: string
   shipment?: { quantity: number; dropPoint: string; carrier: string; scheduledAt: string }
   shipmentId?: string
