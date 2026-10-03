@@ -1,7 +1,7 @@
 import { delay, http, HttpResponse } from 'msw'
 import type {
   AllocationLine, AuctionDetail, AuctionEvaluation, CreateAuctionInput, DashboardSummary, DemandListing, Identity, ListingDetail,
-  ListingInput, MyBid, MyMarket, NotificationPrefs, Offer, PersonalOpportunity, Qualification, TransactionDetail,
+  ListingAttachment, ListingAttachmentInput, ListingInput, MyBid, MyMarket, NotificationPrefs, Offer, PersonalOpportunity, Qualification, TransactionDetail,
 } from '@/domain/types'
 import { tradeActions } from '@/domain/trade'
 import { lowerWins, rankOf, suggestAllocation, validateBid, withdrawBlock } from '@/domain/auction'
@@ -19,7 +19,8 @@ import { isMaker, operatedIds, ops, saveMm } from './mm'
 import { lotOwner, notifyOrgLotsClosed, orgEvaluateHref, orgRoleOf } from './org'
 import { admin } from './admin'
 import { reputationTxs } from './profileHandlers'
-import { commitGuard } from './kyc'
+import { commitGuard, consumeUpload, uploadFileInfo } from './kyc'
+import { MAX_LISTING_ATTACHMENTS } from '@/domain/attachments'
 import { reputationScore } from '@/domain/reputation'
 
 const api = (path: string) => `/api/v1${path}`
@@ -62,6 +63,31 @@ const authed = (fn: (ctx: Ctx) => Response | Promise<Response>) =>
     if (!userId || !db.users.some((u) => u.id === userId)) return fail(401, 'unauthenticated', 'Belum login')
     return fn({ userId, p: personal(userId), params, request })
   }
+
+/** The listing's new attachment set (same rules as the API), or field errors on `attachments`. */
+function resolveAttachments(userId: string, current: ListingAttachment[], refs: ListingAttachmentInput[]): ListingAttachment[] | Record<string, string> {
+  if (refs.length > MAX_LISTING_ATTACHMENTS) return { attachments: `Maksimal ${MAX_LISTING_ATTACHMENTS} lampiran` }
+  const left = new Map(current.map((a) => [a.id, a]))
+  const kept: (ListingAttachment | string)[] = []
+  for (const r of refs) {
+    if (r.id && !r.uploadId) {
+      const a = left.get(r.id)
+      if (!a) return { attachments: 'Lampiran tidak ditemukan. Muat ulang halaman.' }
+      left.delete(r.id)
+      kept.push(a)
+    } else if (r.uploadId && !r.id) kept.push(r.uploadId)
+    else return { attachments: 'Setiap lampiran berisi uploadId atau id.' }
+  }
+  // ponytail: uploads claimed before a later one fails stay used (the API rolls the whole save back).
+  const out: ListingAttachment[] = []
+  for (const k of kept) {
+    if (typeof k !== 'string') { out.push(k); continue }
+    const name = consumeUpload(userId, k, 'listing_attachment', 'attachments')
+    if (typeof name !== 'string') return name
+    out.push({ id: newId('att'), fileName: name, ...uploadFileInfo(k) })
+  }
+  return out
+}
 
 // ── Personal opportunities ───────────────────────────────────────
 
@@ -242,21 +268,26 @@ export const personalHandlers = [
     }
     return HttpResponse.json(detail)
   })),
-  http.post(api('/me/listings'), authed(async ({ p, request }) => {
+  http.post(api('/me/listings'), authed(async ({ p, userId, request }) => {
     const input = (await request.json()) as ListingInput
     if (!input.item?.trim()) return fail(422, 'validation', 'Item wajib diisi', { item: 'Item wajib diisi' })
     if (!(input.quantity?.value > 0)) return fail(422, 'validation', 'Kuantitas harus > 0', { quantity: 'Kuantitas harus lebih dari 0' })
+    const attachments = resolveAttachments(userId, [], input.attachments ?? [])
+    if (!Array.isArray(attachments)) return fail(422, 'validation', 'Periksa kembali file yang diunggah', attachments)
     const id = newId('lst')
-    const base = { ...input, id, code: `${input.kind === 'supply' ? 'SUP' : 'DEM'}-${id.slice(-3).toUpperCase()}`, createdAt: now(), updatedAt: now() }
+    const base = { ...input, attachments, id, code: `${input.kind === 'supply' ? 'SUP' : 'DEM'}-${id.slice(-3).toUpperCase()}`, createdAt: now(), updatedAt: now() }
     const listing = input.kind === 'supply' ? { ...base, kind: 'supply' as const, status: 'available' as const } : { ...base, kind: 'demand' as const, status: 'open' as const }
     p.listings.unshift({ listing: listing as never, history: [{ at: now(), status: listing.status, note: 'Dibuat' }] })
     savePersonal()
     return HttpResponse.json(listing, { status: 201 })
   })),
-  http.patch(api('/me/listings/:id'), authed(async ({ p, params, request }) => {
+  http.patch(api('/me/listings/:id'), authed(async ({ p, userId, params, request }) => {
     const s = p.listings.find((l) => l.listing.id === params.id)
     if (!s) return fail(404, 'not_found', 'Listing tidak ditemukan')
-    Object.assign(s.listing, (await request.json()) as object, { updatedAt: now() })
+    const { attachments: refs, ...patch } = (await request.json()) as Partial<ListingInput>
+    const attachments = refs ? resolveAttachments(userId, s.listing.attachments, refs) : s.listing.attachments
+    if (!Array.isArray(attachments)) return fail(422, 'validation', 'Periksa kembali file yang diunggah', attachments)
+    Object.assign(s.listing, patch, { attachments, updatedAt: now() })
     s.history.unshift({ at: now(), status: s.listing.status, note: 'Diperbarui' })
     savePersonal()
     return HttpResponse.json(s.listing)
