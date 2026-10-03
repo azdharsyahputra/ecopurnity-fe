@@ -9,13 +9,15 @@ import {
   type MmAnalytics, type MmDispute, type MmMarketOps, type MmMarketRow, type MmOverview, type MmParticipant, type ParticipantAction, type PipelineCard,
   type PipelineStage, type RoundResult,
 } from '@/domain/mm'
-import { activeVersion, addVersion, diffRules, rulesToLabeled, validateRules, VISIBILITY, type MarketRules } from '@/domain/marketRules'
+import { activeVersion, addVersion, defaultRules, diffRules, rulesToLabeled, validateRules, VISIBILITY, type MarketRules } from '@/domain/marketRules'
+import { maskMembers, type CollectivePool } from '@/domain/org'
 import { audit, auditLog } from './audit'
 import { db } from './db'
 import { economy, toAuction, toOpportunity } from './economy'
 import { actor, currentRound, emitEvent, hash, isMaker, mm, mmId, notifyMarket, operatedIds, ops, saveMm, startedRounds, type MarketOps } from './mm'
 import { allPersonal, notify, savePersonal } from './personal'
 import { admin, saveAdmin, tx as disputeTx } from './admin'
+import { org, orgAudit, orgUserIds, pools, saveOrg, type StoredPool } from './org'
 
 // Market Maker API (PRD §10). Every mutation is audited; anything that changes a participant's market notifies them.
 
@@ -150,6 +152,126 @@ const withAdminStatus = (d: MmDispute): MmDispute => {
   return c ? { ...d, status: c.transaction.dispute!.status } : d
 }
 
+/** Publishes a validated market for this maker (wizard or collective pool); `invite` adds known participants. */
+function formMarket(userId: string, input: CreateMarketInput, invite: Omit<MmParticipant, 'id' | 'status' | 'joinedAt'>[] = []): MarketDetail {
+  const o = input.opportunityId ? economy.opportunities.find((x) => x.id === input.opportunityId) : undefined
+  const user = db.users.find((u) => u.id === userId)!
+  const id = mmId('mkt')
+  const unit = input.unit.trim()
+  const status: MmParticipant['status'] = input.approval === 'auto' ? 'active' : 'pending'
+  const participants: MmParticipant[] = [
+    ...(input.autoInvite && o ? o.participantsPreview.map((p, i) => ({ ...p, id: `${id}-p${i}`, status, reputation: 80 + ((hash(p.name) >>> 3) % 18), joinedAt: now() })) : []),
+    ...invite.map((p, i) => ({ ...p, id: `${id}-i${i}`, status, joinedAt: now() })),
+  ]
+  const active = participants.filter((p) => p.status === 'active')
+  const ref = input.referencePriceIdr
+  const m: MarketDetail = {
+    id, code: `MKT-${400 + economy.markets.length}`, name: input.name.trim(), categoryId: input.categoryId, region: input.rules.region,
+    objective: input.objective, mechanism: input.mechanism, status: 'active', maker: { name: user.orgs[0]?.orgName ?? user.name, kind: 'business', verified: true },
+    demand: { value: input.demand, unit }, supply: { value: Math.max(0, input.supply), unit },
+    buyers: active.filter((p) => p.role === 'buyer').length, suppliers: active.filter((p) => p.role === 'supplier').length,
+    priceRange: { minIdr: Math.round(ref * 0.95), maxIdr: Math.round(ref * 1.05), unit }, volume30dIdr: 0, activeAuctions: 0,
+    description: `${input.name.trim()} dibentuk oleh ${user.orgs[0]?.orgName ?? user.name}${o ? ` dari opportunity ${o.code}` : ''}. Objective ${OBJECTIVES[input.objective].toLowerCase()} dengan mekanisme ${MECHANISMS[input.mechanism].label.toLowerCase()}.`,
+    rules: rulesToLabeled(input.rules, unit),
+    priceHistory: [{ week: now().slice(0, 10), medianIdr: ref, lowIdr: Math.round(ref * 0.97), highIdr: Math.round(ref * 1.03) }],
+    activity: [], auctions: [],
+  }
+  economy.markets.unshift(m)
+  mm.createdMarkets.unshift(m)
+  ;(mm.operated[userId] ??= []).push(id)
+  mm.ops[id] = {
+    participants, disputes: [], pastRounds: 0, opportunityId: o?.id,
+    ruleVersions: [{ version: 1, rules: input.rules, effectiveFromRound: 1, createdAt: now(), author: actor(userId) }],
+    settings: { approval: input.approval, supplierVerification: input.supplierVerification },
+  }
+  db.stats.activeMarkets++
+  if (o) {
+    o.status = 'market_live'
+    o.markets.push(m)
+    mm.pipeline[o.id] = { stage: 'market_live', marketId: id }
+    // Contributors carry over: their contributed listings move into the new market (PRD F6).
+    for (const [uid, p] of allPersonal()) {
+      const rel = p.opportunities[o.id]
+      if (!rel) continue
+      const listing = rel.contribution && p.listings.find((l) => l.listing.id === rel.contribution!.listingId)
+      if (listing && !['sold', 'expired', 'fulfilled', 'cancelled'].includes(listing.listing.status)) {
+        listing.listing.marketId = id
+        listing.listing.status = 'in_market'
+        listing.history.unshift({ at: now(), status: 'in_market', note: `Otomatis masuk ${m.name} dari opportunity ${o.code}` })
+        p.markets[id] = { joined: true }
+      }
+      notify(uid, {
+        type: 'new_market', title: `Market baru dari ${o.title}`,
+        body: listing ? `${m.name} sudah live; kontribusimu (${listing.listing.item}) otomatis masuk lot round pertama.` : `${m.name} sudah live. Gabung untuk ikut round pertama.`,
+        href: `/markets/${id}`,
+      })
+    }
+    savePersonal()
+  }
+  audited(userId, m, 'Publish market', {
+    changes: [
+      { field: 'Status', after: label('active') }, { field: 'Mekanisme', after: MECHANISMS[m.mechanism].label },
+      ...(o ? [{ field: 'Opportunity', before: o.code, after: 'Market Live' }] : []),
+    ],
+  })
+  emitEvent(userId, { type: 'market_formed', title: `Market terbentuk: ${m.name}` }, true)
+  saveMm()
+  return m
+}
+
+/** Opens the next round of a market as a live auction; `spec` overrides the lot spec (pool rounds carry the pool's). */
+function openRound(userId: string, m: MarketDetail, o: MarketOps, input: CreateRoundInput & { spec?: string }): AuctionDetail {
+  const round = currentRound(m.id, o) + 1
+  const rules: MarketRules = activeVersion(o.ruleVersions, round).rules
+  const type = ROUND_TYPE[m.mechanism]
+  const visibility = type === 'sealed' ? 'sealed' : rules.visibility
+  const unit = m.priceRange.unit
+  const step = Math.max(1, Math.round((input.openingPriceIdr * rules.minStepPct) / 100))
+  const id = mmId('auc')
+  const a: AuctionDetail = {
+    id, code: `AUC-${id.slice(-4).toUpperCase()}`, title: input.title.trim(), marketId: m.id, marketName: m.name, categoryId: m.categoryId,
+    type, status: 'live', visibility, lot: { item: m.name, quantity: { value: input.quantity, unit }, spec: input.spec ?? `Round ${round}, aturan market v${activeVersion(o.ruleVersions, round).version}` },
+    startsAt: now(), endsAt: new Date(Date.now() + input.durationMinutes * 60_000).toISOString(), participants: 0, bidCount: 0,
+    openingPriceIdr: input.openingPriceIdr, currentPriceIdr: visibility === 'full' || type === 'dutch' ? input.openingPriceIdr : undefined,
+    minStepIdr: step, extension: { windowMinutes: 2, extendMinutes: 5 }, bids: [],
+    rules: [
+      { label: 'Round', value: `${round} di ${m.name}` },
+      { label: 'Visibilitas bid', value: VISIBILITY[visibility] },
+      { label: type === 'dutch' ? 'Penurunan harga' : 'Langkah minimum', value: `${formatIdr(step)} per ${unit}` },
+      { label: 'Perpanjangan otomatis', value: '+5 menit jika ada bid di 2 menit terakhir' },
+      ...rulesToLabeled(rules, unit).filter((r) => ['Eligibility', 'Penetapan pemenang', 'Wilayah'].includes(r.label)),
+    ],
+  }
+  economy.auctions.unshift(a)
+  economy.bestPrice.set(id, input.openingPriceIdr)
+  mm.rounds.unshift(a)
+  m.activeAuctions++
+  const before = m.status
+  if (m.status === 'formation') m.status = 'active'
+  // The round that just started may switch the public rule list to a pending version.
+  m.rules = rulesToLabeled(rules, unit)
+  audited(userId, m, `Buka round ${round}: ${a.title}`, {
+    changes: [
+      { field: 'Round', after: `${round} (${a.code})` }, { field: 'Harga pembuka', after: formatIdr(input.openingPriceIdr) },
+      ...(before !== m.status ? [{ field: 'Status', before: label(before), after: label(m.status) }] : []),
+    ],
+  })
+  notifyMarket(m.id, { type: 'auction_invitation', title: `Round ${round} dibuka di ${m.name}`, body: `${a.title}: ${formatNumber(input.quantity)} ${unit}, harga pembuka ${formatIdr(input.openingPriceIdr)}.`, href: `/auctions/${id}` })
+  emitEvent(userId, { type: 'auction_started', title: `Round ${round} dibuka: ${a.title}`, amountIdr: input.openingPriceIdr * input.quantity }, true)
+  saveMm()
+  return a
+}
+
+/** A collective pool as a market maker sees it: members masked unless they opted in, round state attached. */
+function makerPool({ makerUserId: _m, settlement, members, ...p }: StoredPool): CollectivePool {
+  const a = p.auctionId ? economy.auctions.find((x) => x.id === p.auctionId) : undefined
+  const mask = (m: { name: string; optIn: boolean; orgId?: string }, i: number) => (m.optIn ? m.name : `Bisnis lain #${i + 1}`)
+  return {
+    ...p, members: maskMembers(members.map(({ orgId: _o, ...m }) => m)), round: a && { status: a.status, endsAt: a.endsAt },
+    settlement: settlement && { ...settlement, lines: settlement.lines.map(({ orgId: _o, transactionId: _t, ...l }, i) => ({ ...l, name: mask(l, i) })) },
+  }
+}
+
 export const mmHandlers = [
   // Operations overview (PRD §10.1)
   http.get(api('/mm/overview'), maker(({ userId }) => {
@@ -206,6 +328,38 @@ export const mmHandlers = [
     return new HttpResponse(null, { status: 204 })
   })),
 
+  // Collective pools asking for a market (PRD F6 "Settlement agregasi"): any maker can pick one up; afterwards only theirs.
+  http.get(api('/mm/pools'), maker(({ userId }) =>
+    HttpResponse.json(pools().filter((p) => p.status === 'market_requested' || p.makerUserId === userId).map(makerPool)))),
+  http.post(api('/mm/pools/:id/market'), maker(async ({ userId, params, request }) => {
+    const p = pools().find((x) => x.id === params.id)
+    if (!p) return fail(404, 'not_found', 'Pool tidak ditemukan')
+    if (p.status !== 'market_requested') return fail(409, 'invalid_transition', p.marketId ? 'Market untuk pool ini sudah dibentuk' : 'Pool ini belum meminta market')
+    const { durationMinutes } = (await request.json()) as { durationMinutes: number }
+    if (!(durationMinutes > 0)) return fail(422, 'validation', 'Pilih durasi', { durationMinutes: 'Pilih durasi' })
+    const total = p.members.reduce((s, x) => s + x.quantity, 0)
+    const lot = { value: total, unit: p.unit }
+    // One lot = the whole pool; unit, category and spec come from the pool; suppliers compete down from today's price.
+    const m = formMarket(userId, {
+      name: `Kolektif ${p.title} · ${p.region}`, objective: 'procurement', mechanism: 'collective_procurement', categoryId: p.categoryId, unit: p.unit,
+      demand: total, supply: 0, referencePriceIdr: p.baseUnitPriceIdr, autoInvite: false, approval: 'auto', supplierVerification: 'documents',
+      rules: defaultRules({ demand: lot, supply: lot, region: p.region, mechanism: 'collective_procurement' }),
+    }, maskMembers(p.members).map((x) => ({ name: x.name, kind: 'business', verified: true, role: 'buyer', reputation: 85 })))
+    const a = openRound(userId, m, ops(m.id), { title: `${p.title} · ${formatNumber(total)} ${p.unit}`, quantity: total, openingPriceIdr: p.baseUnitPriceIdr, durationMinutes, spec: p.spec })
+    Object.assign(p, { status: 'market_live', marketId: m.id, auctionId: a.id, makerUserId: userId })
+    saveOrg()
+    for (const orgId of new Set(p.members.flatMap((x) => (x.orgId ? [x.orgId] : [])))) {
+      orgAudit(org(orgId), {
+        actor: actor(userId), action: 'Market terbentuk dari pool collective', entity: { type: 'market', id: m.id, label: p.title },
+        changes: [{ field: 'Pool', before: 'Menunggu market', after: `Market live (${a.code})` }],
+      })
+      for (const uid of orgUserIds(orgId)) {
+        notify(uid, { type: 'new_market', title: `Market terbentuk: ${p.title}`, body: `${m.name} membuka round ${a.code} untuk ${formatNumber(total)} ${p.unit}. Supplier mulai bersaing.`, href: `/org/${orgId}/collective?pool=${p.id}` })
+      }
+    }
+    return HttpResponse.json({ marketId: m.id, auctionId: a.id }, { status: 201 })
+  })),
+
   // Market creation wizard (PRD §10.3)
   http.post(api('/mm/markets'), maker(async ({ userId, request }) => {
     const input = (await request.json()) as CreateMarketInput
@@ -215,67 +369,7 @@ export const mmHandlers = [
     if (!(input.referencePriceIdr > 0)) fields.referencePriceIdr = 'Isi harga acuan per unit'
     if (!(input.demand > 0)) fields.demand = 'Isi perkiraan demand'
     if (Object.keys(fields).length) return fail(422, 'validation', 'Periksa kembali isian market', fields)
-    const o = input.opportunityId ? economy.opportunities.find((x) => x.id === input.opportunityId) : undefined
-    const user = db.users.find((u) => u.id === userId)!
-    const id = mmId('mkt')
-    const unit = input.unit.trim()
-    const status: MmParticipant['status'] = input.approval === 'auto' ? 'active' : 'pending'
-    const participants: MmParticipant[] = input.autoInvite && o
-      ? o.participantsPreview.map((p, i) => ({ ...p, id: `${id}-p${i}`, status, reputation: 80 + ((hash(p.name) >>> 3) % 18), joinedAt: now() }))
-      : []
-    const active = participants.filter((p) => p.status === 'active')
-    const ref = input.referencePriceIdr
-    const m: MarketDetail = {
-      id, code: `MKT-${400 + economy.markets.length}`, name: input.name.trim(), categoryId: input.categoryId, region: input.rules.region,
-      objective: input.objective, mechanism: input.mechanism, status: 'active', maker: { name: user.orgs[0]?.orgName ?? user.name, kind: 'business', verified: true },
-      demand: { value: input.demand, unit }, supply: { value: Math.max(0, input.supply), unit },
-      buyers: active.filter((p) => p.role === 'buyer').length, suppliers: active.filter((p) => p.role === 'supplier').length,
-      priceRange: { minIdr: Math.round(ref * 0.95), maxIdr: Math.round(ref * 1.05), unit }, volume30dIdr: 0, activeAuctions: 0,
-      description: `${input.name.trim()} dibentuk oleh ${user.orgs[0]?.orgName ?? user.name}${o ? ` dari opportunity ${o.code}` : ''}. Objective ${OBJECTIVES[input.objective].toLowerCase()} dengan mekanisme ${MECHANISMS[input.mechanism].label.toLowerCase()}.`,
-      rules: rulesToLabeled(input.rules, unit),
-      priceHistory: [{ week: now().slice(0, 10), medianIdr: ref, lowIdr: Math.round(ref * 0.97), highIdr: Math.round(ref * 1.03) }],
-      activity: [], auctions: [],
-    }
-    economy.markets.unshift(m)
-    mm.createdMarkets.unshift(m)
-    ;(mm.operated[userId] ??= []).push(id)
-    mm.ops[id] = {
-      participants, disputes: [], pastRounds: 0, opportunityId: o?.id,
-      ruleVersions: [{ version: 1, rules: input.rules, effectiveFromRound: 1, createdAt: now(), author: actor(userId) }],
-      settings: { approval: input.approval, supplierVerification: input.supplierVerification },
-    }
-    db.stats.activeMarkets++
-    if (o) {
-      o.status = 'market_live'
-      o.markets.push(m)
-      mm.pipeline[o.id] = { stage: 'market_live', marketId: id }
-      // Contributors carry over: their contributed listings move into the new market (PRD F6).
-      for (const [uid, p] of allPersonal()) {
-        const rel = p.opportunities[o.id]
-        if (!rel) continue
-        const listing = rel.contribution && p.listings.find((l) => l.listing.id === rel.contribution!.listingId)
-        if (listing && !['sold', 'expired', 'fulfilled', 'cancelled'].includes(listing.listing.status)) {
-          listing.listing.marketId = id
-          listing.listing.status = 'in_market'
-          listing.history.unshift({ at: now(), status: 'in_market', note: `Otomatis masuk ${m.name} dari opportunity ${o.code}` })
-          p.markets[id] = { joined: true }
-        }
-        notify(uid, {
-          type: 'new_market', title: `Market baru dari ${o.title}`,
-          body: listing ? `${m.name} sudah live; kontribusimu (${listing.listing.item}) otomatis masuk lot round pertama.` : `${m.name} sudah live. Gabung untuk ikut round pertama.`,
-          href: `/markets/${id}`,
-        })
-      }
-      savePersonal()
-    }
-    audited(userId, m, 'Publish market', {
-      changes: [
-        { field: 'Status', after: label('active') }, { field: 'Mekanisme', after: MECHANISMS[m.mechanism].label },
-        ...(o ? [{ field: 'Opportunity', before: o.code, after: 'Market Live' }] : []),
-      ],
-    })
-    emitEvent(userId, { type: 'market_formed', title: `Market terbentuk: ${m.name}` }, true)
-    saveMm()
+    const { id } = formMarket(userId, input)
     return HttpResponse.json({ id }, { status: 201 })
   })),
 
@@ -337,44 +431,7 @@ export const mmHandlers = [
     if (!(input.durationMinutes > 0)) fields.durationMinutes = 'Pilih durasi'
     if (Object.keys(fields).length) return fail(422, 'validation', 'Periksa isian round', fields)
 
-    const round = currentRound(m.id, o) + 1
-    const rules: MarketRules = activeVersion(o.ruleVersions, round).rules
-    const type = ROUND_TYPE[m.mechanism]
-    const visibility = type === 'sealed' ? 'sealed' : rules.visibility
-    const unit = m.priceRange.unit
-    const step = Math.max(1, Math.round((input.openingPriceIdr * rules.minStepPct) / 100))
-    const id = mmId('auc')
-    const a: AuctionDetail = {
-      id, code: `AUC-${id.slice(-4).toUpperCase()}`, title: input.title.trim(), marketId: m.id, marketName: m.name, categoryId: m.categoryId,
-      type, status: 'live', visibility, lot: { item: m.name, quantity: { value: input.quantity, unit }, spec: `Round ${round}, aturan market v${activeVersion(o.ruleVersions, round).version}` },
-      startsAt: now(), endsAt: new Date(Date.now() + input.durationMinutes * 60_000).toISOString(), participants: 0, bidCount: 0,
-      openingPriceIdr: input.openingPriceIdr, currentPriceIdr: visibility === 'full' || type === 'dutch' ? input.openingPriceIdr : undefined,
-      minStepIdr: step, extension: { windowMinutes: 2, extendMinutes: 5 }, bids: [],
-      rules: [
-        { label: 'Round', value: `${round} di ${m.name}` },
-        { label: 'Visibilitas bid', value: VISIBILITY[visibility] },
-        { label: type === 'dutch' ? 'Penurunan harga' : 'Langkah minimum', value: `${formatIdr(step)} per ${unit}` },
-        { label: 'Perpanjangan otomatis', value: '+5 menit jika ada bid di 2 menit terakhir' },
-        ...rulesToLabeled(rules, unit).filter((r) => ['Eligibility', 'Penetapan pemenang', 'Wilayah'].includes(r.label)),
-      ],
-    }
-    economy.auctions.unshift(a)
-    economy.bestPrice.set(id, input.openingPriceIdr)
-    mm.rounds.unshift(a)
-    m.activeAuctions++
-    const before = m.status
-    if (m.status === 'formation') m.status = 'active'
-    // The round that just started may switch the public rule list to a pending version.
-    m.rules = rulesToLabeled(rules, unit)
-    audited(userId, m, `Buka round ${round}: ${a.title}`, {
-      changes: [
-        { field: 'Round', after: `${round} (${a.code})` }, { field: 'Harga pembuka', after: formatIdr(input.openingPriceIdr) },
-        ...(before !== m.status ? [{ field: 'Status', before: label(before), after: label(m.status) }] : []),
-      ],
-    })
-    notifyMarket(m.id, { type: 'auction_invitation', title: `Round ${round} dibuka di ${m.name}`, body: `${a.title}: ${formatNumber(input.quantity)} ${unit}, harga pembuka ${formatIdr(input.openingPriceIdr)}.`, href: `/auctions/${id}` })
-    emitEvent(userId, { type: 'auction_started', title: `Round ${round} dibuka: ${a.title}`, amountIdr: input.openingPriceIdr * input.quantity }, true)
-    saveMm()
+    const { id } = openRound(userId, m, o, input)
     return HttpResponse.json({ id }, { status: 201 })
   })),
 

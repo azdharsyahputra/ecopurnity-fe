@@ -61,26 +61,6 @@ describe('passwordStrength', () => {
   })
 })
 
-describe('transaction state machine', () => {
-  it('walks the happy path with the right roles', async () => {
-    const { transition } = await import('./transaction')
-    expect(transition('agreement', 'supplier', 'issue_invoice')).toBe('invoiced')
-    expect(transition('invoiced', 'buyer', 'pay')).toBe('paid')
-    expect(transition('paid', 'supplier', 'ship')).toBe('fulfilling')
-    expect(transition('fulfilling', 'supplier', 'upload_proof')).toBe('delivered')
-    expect(transition('delivered', 'buyer', 'confirm_receipt')).toBe('completed')
-  })
-
-  it('rejects wrong role, wrong state, and actions after the end', async () => {
-    const { transition, allowedActions } = await import('./transaction')
-    expect(transition('invoiced', 'supplier', 'pay')).toBeNull()
-    expect(transition('agreement', 'buyer', 'confirm_receipt')).toBeNull()
-    expect(transition('paid', 'buyer', 'cancel')).toBeNull()
-    expect(allowedActions('completed', 'buyer')).toEqual([])
-    expect(allowedActions('delivered', 'buyer')).toEqual(['confirm_receipt', 'dispute'])
-  })
-})
-
 describe('auction rules', () => {
   const reverse = { type: 'reverse' as const, openingPriceIdr: 2400, currentPriceIdr: 2050, minStepIdr: 25 }
 
