@@ -83,6 +83,8 @@ function closeTick() {
   for (const a of economy.auctions.filter(isLive)) {
     if (new Date(a.endsAt).getTime() > Date.now()) continue
     a.status = 'closed'
+    const m = economy.markets.find((x) => x.id === a.marketId)
+    if (m && m.activeAuctions > 0) m.activeAuctions--
     auctionEvent(a, { kind: 'closed', status: a.status })
     onAuctionClosed(a.id)
     if (economy.owners.has(a.id)) savePersonal()

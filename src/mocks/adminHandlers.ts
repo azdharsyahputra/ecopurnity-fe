@@ -230,10 +230,7 @@ const ALERT_LABEL: Record<AlertType, string> = {
   wash_trading: 'Wash trading', price_manipulation: 'Sudden price manipulation', transaction_network: 'Suspicious transaction network',
 }
 
-const alertEntity = (al: FraudAlert): AuditEntry['entity'] => {
-  const s = al.subjects[0]
-  return { type: s.type, id: s.id, label: `${s.label} · ${al.code}` }
-}
+const alertEntity = (al: FraudAlert): AuditEntry['entity'] => ({ type: 'alert', id: al.id, label: `${al.code} · ${al.title}` })
 
 // ── Handlers ─────────────────────────────────────────────────────
 
@@ -400,7 +397,7 @@ export const adminHandlers = [
     }
     admin.alerts.unshift(al)
     saveAdmin()
-    audit({ actor, action: `Buka kasus ${al.code}`, entity: { type: 'auction', id: a.id, label: `${a.code} · ${a.title}` }, reason })
+    audit({ actor, action: `Buka kasus ${al.code}`, entity: alertEntity(al), reason })
     return HttpResponse.json({ caseId: al.id })
   })),
 
