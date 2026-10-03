@@ -1,7 +1,7 @@
 import {
   BadgeCheck, Bell, Building2, ChartColumn, ClipboardList, Compass, FileCheck2, Gavel, Handshake, History, House,
   IdCard, Kanban, LayoutDashboard, PackageOpen, ReceiptText, Scale, Settings, ShieldAlert, ShieldCheck, ShoppingCart,
-  FileQuestion, MessagesSquare, Sparkles, Store, SquarePlus, Truck, UserRound, Users, UsersRound, Wallet, Warehouse, type LucideIcon,
+  FileQuestion, MessagesSquare, Repeat, Sparkles, Store, SquarePlus, Truck, UserRound, Users, UsersRound, Wallet, Warehouse, type LucideIcon,
 } from 'lucide-react'
 import type { User } from '@/domain/types'
 import type { Tone } from '@/domain/status'
@@ -39,6 +39,7 @@ const personal: Workspace = {
     { label: 'Auctions', path: 'auctions', icon: Gavel },
     { label: 'RFQ', path: 'rfq', icon: FileQuestion },
     { label: 'Transactions', path: 'transactions', icon: ReceiptText },
+    { label: 'Kontrak', path: 'contracts', icon: Repeat },
     { label: 'Keuangan', path: 'finance', icon: Wallet },
     { label: 'Reputation', path: 'reputation', icon: BadgeCheck },
   ],
