@@ -10,6 +10,7 @@ import { rfqHandlers } from './rfq'
 import { settleHandlers } from './settle'
 import { kycHandlers } from './kyc'
 import { catalogHandlers } from './catalog'
+import { contractHandlers } from './contracts'
 import { mmHandlers } from './mmHandlers'
 import { adminHandlers } from './adminHandlers'
 import { profileHandlers } from './profileHandlers'
@@ -292,5 +293,6 @@ export const handlers = [
   ...settleHandlers,
   ...kycHandlers,
   ...catalogHandlers,
+  ...contractHandlers,
   ...personalHandlers,
 ]

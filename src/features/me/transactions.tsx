@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { Check, FileText, Handshake, Link2, PackageCheck, ReceiptText, RotateCcw, Scale, Star, Truck, Wallet } from 'lucide-react'
+import { Check, FileText, Handshake, Link2, PackageCheck, ReceiptText, Repeat, RotateCcw, Scale, Star, Truck, Wallet } from 'lucide-react'
 import type { TransactionDetail } from '@/domain/types'
 import { TERMS, TRADE_ACTION_LABEL, breakdown, timelineFor, tradeActions, tradeStateOf, type QcOutcome, type TradeAction } from '@/domain/trade'
 import { statusMeta } from '@/domain/status'
@@ -272,7 +272,10 @@ function ActionPanel({ t }: { t: TransactionDetail }) {
         ),
       )}
       {t.status === 'completed' && (
-        <Button variant="ghost" className="h-9" render={<Link to={`/app/rfq/new?from=${t.id}`} />}><RotateCcw /> Pesan lagi</Button>
+        <>
+          <Button variant="ghost" className="h-9" render={<Link to={`/app/rfq/new?from=${t.id}`} />}><RotateCcw /> Pesan lagi</Button>
+          <Button variant="ghost" className="h-9" render={<Link to={`/app/contracts?from=${t.id}`} />}><Repeat /> Jadikan kontrak rutin</Button>
+        </>
       )}
       <FormError error={act.error} />
       {dialog === 'ship' && <ShipDialog t={t} onClose={close} />}
