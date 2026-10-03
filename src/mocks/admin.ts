@@ -40,6 +40,8 @@ export interface DisputeOverlay {
   resolution?: DisputeCase['resolution']
 }
 
+import type { Appeal } from '@/features/admin/types'
+
 interface AdminState {
   accounts: ExtraAccount[]
   users: Record<string, { status: AccountStatus; verified?: boolean }>
@@ -51,6 +53,8 @@ interface AdminState {
   alerts: FraudAlert[]
   seedDisputes: SeedDispute[]
   disputes: Record<string, DisputeOverlay>
+  /** userId → suspension appeal (PRD F6). */
+  appeals?: Record<string, Appeal>
 }
 
 const acct = (id: string, name: string, username: string, location: string, kind: ExtraAccount['kind'], joinedDaysAgo: number, bio: string): ExtraAccount => ({

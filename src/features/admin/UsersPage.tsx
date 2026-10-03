@@ -87,6 +87,11 @@ function UserActions({ u }: { u: AdminUserDetail }) {
           impact={<ul className="list-disc pl-4"><li>Akun tidak bisa login dan profil publik ditandai ditangguhkan</li><li>Bid aktif tidak dihapus; auction terkait bisa dibekukan terpisah</li><li>Dana escrow tetap tertahan sampai transaksi diputuskan</li></ul>}
           body={(reason) => ({ action: 'suspend', reason })} onDone={done('Akun disuspend')} />
       )}
+      {u.appeal?.status === 'pending' && (
+        <ReasonDialog {...common} name="deny_appeal" label="Tolak banding" title={`Tolak banding ${u.name}?`} confirmLabel="Tolak banding"
+          impact="Akun tetap disuspend. Alasanmu ditampilkan ke pengguna saat mencoba login; banding tidak bisa diajukan ulang."
+          body={(reason) => ({ action: 'deny_appeal', reason })} onDone={done('Banding ditolak')} />
+      )}
       {u.status !== 'active' && (
         <ReasonDialog {...common} name="restore" label="Restore" variant="default" title={`Pulihkan ${u.name}?`} confirmLabel="Pulihkan akun"
           impact="Semua pembatasan dicabut dan akun kembali aktif penuh."
@@ -135,6 +140,17 @@ export function AdminUserDetailPage() {
                     ['Bergabung', formatDate(u.joinedAt)], ['Reputasi', `${u.reputation} / 100`], ['Organisasi', u.orgs.join(', ') || '–'],
                   ]} />
                 </Panel>
+
+                {u.appeal && (
+                  <Panel title="Banding suspend">
+                    <div className="text-sm">
+                      <p className="flex items-center gap-1.5"><Tag tone={{ pending: 'orange', granted: 'green', denied: 'red' }[u.appeal.status] as 'orange'}>{{ pending: 'Menunggu', granted: 'Dikabulkan', denied: 'Ditolak' }[u.appeal.status]}</Tag> <span className="text-muted-foreground">{formatRelative(u.appeal.at)}</span></p>
+                      <p className="mt-2 whitespace-pre-line">{u.appeal.reason}</p>
+                      {u.appeal.decision && <p className="mt-2 text-muted-foreground">{u.appeal.decision.by}: {u.appeal.decision.note}</p>}
+                      {u.appeal.status === 'pending' && <p className="mt-2 text-muted-foreground">Restore untuk mengabulkan, atau tolak dengan alasan.</p>}
+                    </div>
+                  </Panel>
+                )}
 
                 <Panel title={`Laporan dari pengguna lain (${u.reports.length})`}>
                   {u.reports.length ? (

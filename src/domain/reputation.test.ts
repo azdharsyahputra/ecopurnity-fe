@@ -60,3 +60,15 @@ describe('reputation report', () => {
     expect(r.events[1].score - r.events[1].delta).toBe(BASELINE_SCORE)
   })
 })
+
+describe('reviews', () => {
+  const review = (rating: number) => ({ rating, quality: rating, timeliness: rating, communication: rating, text: '', by: 'X', at: at(0) })
+  it('counts only reviews written by the other side and weighs them in', () => {
+    const base = tx('a', 'completed', 0)
+    const good = { ...base, role: 'buyer' as const, reviews: { supplier: review(5), buyer: review(1) } }
+    const bad = { ...base, role: 'buyer' as const, reviews: { supplier: review(1) } }
+    expect(reputationScore([good]).breakdown).toMatchObject({ ratingAvg: 5, ratingCount: 1 })
+    expect(reputationScore([good]).score).toBeGreaterThan(reputationScore([bad]).score)
+    expect(reputationScore([base]).breakdown.ratingAvg).toBeNull()
+  })
+})

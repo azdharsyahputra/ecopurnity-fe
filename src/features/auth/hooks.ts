@@ -35,6 +35,9 @@ export function useLogin() {
   })
 }
 
+export const useAppeal = () =>
+  useMutation({ mutationFn: (body: { email: string; password: string; reason: string }) => api<{ ok: true }>('/auth/appeal', { method: 'POST', json: body }) })
+
 export function useLogout() {
   const qc = useQueryClient()
   return useMutation({

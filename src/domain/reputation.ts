@@ -3,7 +3,8 @@ import type { TransactionDetail } from './types'
 // Reputation (PRD §8.10), computed from a participant's transactions.
 // Shared by the mock API; the BE should use the same weights so scores match across clients.
 
-export type ReputationTx = Pick<TransactionDetail, 'id' | 'title' | 'status' | 'counterparty' | 'totalIdr' | 'createdAt' | 'updatedAt' | 'dueAt' | 'timeline' | 'dispute'>
+export type ReputationTx = Pick<TransactionDetail, 'id' | 'title' | 'status' | 'counterparty' | 'totalIdr' | 'createdAt' | 'updatedAt' | 'dueAt' | 'timeline' | 'dispute'> &
+  Partial<Pick<TransactionDetail, 'role' | 'reviews'>>
 
 export interface ReputationBreakdown {
   /** Completed ÷ finished (completed, cancelled, disputed). Null without finished transactions. */
@@ -18,6 +19,17 @@ export interface ReputationBreakdown {
   repeatRate: number | null
   /** Average hours from agreement to the next step. */
   responseHours: number | null
+  /** Average 1–5 rating counterparties gave this account (PRD F6 post-transaction loop). */
+  ratingAvg: number | null
+  ratingCount: number
+}
+
+/** Ratings this account received: on each of its transactions, the review written by the other side. */
+export function receivedRatings(txs: ReputationTx[]): number[] {
+  return txs.flatMap((t) => {
+    const r = t.role && t.reviews?.[t.role === 'buyer' ? 'supplier' : 'buyer']
+    return r ? [r.rating] : []
+  })
 }
 
 export interface ReputationCounts {
@@ -61,6 +73,7 @@ export function reputationScore(txs: ReputationTx[]): { score: number; breakdown
   const finished = txs.filter((t) => FINISHED.includes(t.status))
   const seen = new Map<string, number>()
   for (const t of txs) seen.set(t.counterparty.name, (seen.get(t.counterparty.name) ?? 0) + 1)
+  const ratings = receivedRatings(txs)
   const responses = txs
     .map((t) => t.timeline.find((s, i) => i > 0 && s.at)?.at)
     .map((at, i) => (at ? (new Date(at).getTime() - new Date(txs[i].createdAt).getTime()) / 3_600_000 : null))
@@ -74,6 +87,8 @@ export function reputationScore(txs: ReputationTx[]): { score: number; breakdown
     volumeIdr: completed.reduce((s, t) => s + t.totalIdr, 0),
     repeatRate: ratio(completed.filter((t) => (seen.get(t.counterparty.name) ?? 0) > 1).length, completed.length),
     responseHours: responses.length ? Math.round((responses.reduce((s, h) => s + h, 0) / responses.length) * 10) / 10 : null,
+    ratingAvg: ratings.length ? Math.round((ratings.reduce((s, x) => s + x, 0) / ratings.length) * 10) / 10 : null,
+    ratingCount: ratings.length,
   }
   const b = breakdown
   const raw = finished.length
@@ -84,8 +99,10 @@ export function reputationScore(txs: ReputationTx[]): { score: number; breakdown
       5 * (b.repeatRate ?? 0) +
       5 * Math.min(1, completed.length / 20)
     : BASELINE_SCORE
+  // Reviews weigh 10%: 1★ → 0, 5★ → 10 points.
+  const rated = b.ratingAvg === null ? raw : 0.9 * raw + 10 * ((b.ratingAvg - 1) / 4)
   return {
-    score: Math.round(Math.min(100, Math.max(0, raw))),
+    score: Math.round(Math.min(100, Math.max(0, rated))),
     breakdown,
     counts: { transactions: txs.length, successful: completed.length, disputes: disputes.length, cancelled: cancelled.length },
   }

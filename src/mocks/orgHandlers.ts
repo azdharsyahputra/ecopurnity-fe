@@ -12,7 +12,7 @@ import {
 import { formatIdr } from '@/domain/format'
 import { db } from './db'
 import { economy } from './economy'
-import { notify } from './personal'
+import { allPersonal, notify } from './personal'
 import { SUPPLIERS, lotAuction, makeTx, newId, org, orgAudit, pools, saveOrg, supplierById, type HistoryRow, type OrgData, type StoredPool } from './org'
 
 const api = (path: string) => `/api/v1/orgs/:orgId${path}`
@@ -159,13 +159,25 @@ function decide(c: Ctx, kind: 'procurement' | 'auction', target: Approvable & { 
 
 // ── Suppliers ────────────────────────────────────────────────────
 
+/**
+ * One rating for a supplier everywhere (PRD F6): the directory's seed rating counts as 10 reviews,
+ * plus buyers' post-transaction reviews on the platform and this org's own rating.
+ */
+function platformRating(name: string, seed: number, myRating?: number) {
+  const reviews = allPersonal().flatMap(([, p]) =>
+    p.transactions.flatMap((t) => (t.role === 'buyer' && t.counterparty.name === name && t.reviews?.buyer ? [t.reviews.buyer.rating] : [])),
+  )
+  const all = [...reviews, ...(myRating ? [myRating] : [])]
+  return Math.round(((seed * 10 + all.reduce((s, x) => s + x, 0)) / (10 + all.length)) * 10) / 10
+}
+
 function orgSuppliers(o: OrgData): OrgSupplier[] {
   return SUPPLIERS.map((s) => {
     const rel = o.suppliers[s.id]
     const txs = o.transactions.filter((t) => t.supplierId === s.id)
     const hist = o.history.filter((h) => h.supplierId === s.id)
     return {
-      ...s, relation: rel?.relation ?? 'none', myRating: rel?.myRating, transactions: txs.length + hist.length,
+      ...s, rating: platformRating(s.name, s.rating, rel?.myRating), relation: rel?.relation ?? 'none', myRating: rel?.myRating, transactions: txs.length + hist.length,
       spendIdr: txs.reduce((x, t) => x + t.totalIdr, 0) + hist.reduce((x, h) => x + h.unitPriceIdr * h.quantity.value, 0),
     }
   })
