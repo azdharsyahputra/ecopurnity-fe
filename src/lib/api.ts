@@ -37,7 +37,9 @@ export async function api<T>(path: string, init: Omit<RequestInit, 'body'> & { j
     body: json === undefined ? undefined : JSON.stringify(json),
   })
   if (!res.ok) throw new ApiError(res.status, await res.json().catch(() => undefined))
-  return res.status === 204 ? (undefined as T) : res.json()
+  // Some writes answer without a body (204, or 201 "Created (no body)").
+  const text = await res.text()
+  return (text ? JSON.parse(text) : undefined) as T
 }
 
 export const queryClient = new QueryClient({
