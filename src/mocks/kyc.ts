@@ -42,6 +42,7 @@ const RULES: Record<string, { types: string[]; mb: number; typeError: string }> 
   kyc_ktp: { types: IMAGE_TYPES, mb: 8, typeError: 'Format file tidak didukung. Pakai JPG, PNG, atau WebP.' },
   kyc_selfie: { types: IMAGE_TYPES, mb: 8, typeError: 'Format file tidak didukung. Pakai JPG, PNG, atau WebP.' },
   org_document: { types: ['application/pdf', ...IMAGE_TYPES], mb: 10, typeError: 'Format file tidak didukung. Pakai PDF, JPG, PNG, atau WebP.' },
+  listing_attachment: { types: ['application/pdf', ...IMAGE_TYPES], mb: 10, typeError: 'Format file tidak didukung. Pakai PDF, JPG, PNG, atau WebP.' },
 }
 const uploads: Record<string, { owner: string; purpose: string; fileName: string; type: string; size: number; uploaded: boolean; used: boolean }> = {}
 
@@ -53,6 +54,12 @@ function claim(userId: string, id: string | undefined, purpose: string, field: s
   if (!u.uploaded) return { [field]: 'File belum selesai diunggah.' }
   return u.fileName
 }
+
+// ponytail: uploaded bytes live in memory for the tab, so mock file URLs break after a reload (the API keeps them).
+const blobs: Record<string, Blob> = {}
+
+/** Type, size and a readable mock URL of an upload (call after consumeUpload succeeded). */
+export const uploadFileInfo = (id: string) => ({ contentType: uploads[id].type, sizeBytes: uploads[id].size, url: api(`/_mock/storage/${id}`) })
 
 /** Claims an upload for one use (other mock areas): the file name, or field errors. */
 export function consumeUpload(userId: string, id: string | undefined, purpose: string, field: string) {
@@ -89,7 +96,13 @@ export const kycHandlers = [
     const body = await request.arrayBuffer()
     if (!u || body.byteLength !== u.size) return new HttpResponse(null, { status: 403 })
     u.uploaded = true
+    blobs[String(params.id)] = new Blob([body], { type: u.type })
     return new HttpResponse(null, { status: 200 })
+  }),
+  /** Mock-only: presigned GET stand-in for files attached somewhere (listing attachments). */
+  http.get(api('/_mock/storage/:id'), ({ params }) => {
+    const b = blobs[String(params.id)]
+    return b ? new HttpResponse(b, { headers: { 'Content-Type': b.type } }) : new HttpResponse(null, { status: 404 })
   }),
 
   http.get(api('/me/kyc'), async () => {
