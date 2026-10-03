@@ -137,6 +137,8 @@ export interface Evidence {
   by: string
   text: string
   file?: string
+  /** Short-lived presigned link of the attached file. */
+  url?: string
   at: string
 }
 
