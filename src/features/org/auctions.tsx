@@ -3,8 +3,8 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Ban, ExternalLink, FileText, Gavel, Plus, Scale, Trash2, Trophy } from 'lucide-react'
 import type { AllocationLine, AuctionType, BidVisibility, CategoryId } from '@/domain/types'
 import {
-  AWARD_RULES, DEFAULT_WEIGHTS, ORG_AUCTION_STATUS, WITHDRAW_RULES, auctionValue, awardLines, awardRuleInfo, awardSummary, canApprove, higherWins,
-  requiredApprovers, weightedScores, type AuctionObjective, type AwardRule, type OrgAuctionEvaluation, type OrgAuctionInput, type OrgAuctionStatus, type OrgAuctionView,
+  AWARD_RULES, DEFAULT_WEIGHTS, ORG_AUCTION_STATUS, WITHDRAW_RULES, auctionValue, awardLines, awardRuleInfo, awardSummary, higherWins,
+  requiredApprovers, signingRoles, weightedScores, type AuctionObjective, type AwardRule, type OrgAuctionEvaluation, type OrgAuctionInput, type OrgAuctionStatus, type OrgAuctionView,
   type ProcurementRequest, type Weights, type WithdrawRule,
 } from '@/domain/org'
 import { suggestAllocation } from '@/domain/auction'
@@ -17,7 +17,7 @@ import { toast } from '@/stores/toast'
 import {
   useCreateOrgAuction, useIssuePo, useOrgAccess, useOrgAuctionDecision, useOrgAuctions, useOrgAward, useOrgEvaluation, useProcurements, useSuppliers,
 } from './hooks'
-import { ApprovalTrail, CheckChips, DecisionButtons, FilterPills, GuardedButton, GuardedLink, OrgAuctionBadge, Section } from './ui'
+import { ApprovalTrail, CheckChips, DecisionButtons, FilterPills, GuardedButton, GuardedLink, OnBehalfNote, OrgAuctionBadge, Section } from './ui'
 import { PageHeader } from '@/components/PageHeader'
 import { AsyncView, EmptyState } from '@/components/States'
 import { DataTable } from '@/components/DataTable'
@@ -37,7 +37,8 @@ type Filter = '' | OrgAuctionStatus
 function ReviewDialog({ a, onClose }: { a: OrgAuctionView; onClose: () => void }) {
   const access = useOrgAccess()
   const decide = useOrgAuctionDecision()
-  const mine = canApprove(access.role, a.requiredApprovers, a.approvals)
+  const signing = signingRoles(access.role, a.requiredApprovers, a.approvals, access.settings?.activeRoles)
+  const mine = signing.length > 0
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-lg">
@@ -50,12 +51,15 @@ function ReviewDialog({ a, onClose }: { a: OrgAuctionView; onClose: () => void }
         </ul>
         <ApprovalTrail required={a.requiredApprovers} approvals={a.approvals} roles={access.settings?.roles ?? []} />
         {mine ? (
-          <DecisionButtons
-            subject={a.code}
-            error={decide.error}
-            impact={<>Auction senilai <b>{formatIdr(a.valueIdr)}</b> langsung live setelah semua approval terpenuhi; supplier yang lolos kualifikasi bisa menawar.</>}
-            onDecide={(action, note) => decide.mutateAsync({ id: a.id, action, note }).then(() => { toast({ title: action === 'approve' ? 'Auction disetujui' : 'Auction ditolak', body: a.code, tone: 'green' }); onClose() })}
-          />
+          <div>
+            <OnBehalfNote signing={signing} own={access.role} roles={access.settings?.roles ?? []} />
+            <DecisionButtons
+              subject={a.code}
+              error={decide.error}
+              impact={<>Auction senilai <b>{formatIdr(a.valueIdr)}</b> langsung live setelah semua approval terpenuhi; supplier yang lolos kualifikasi bisa menawar.</>}
+              onDecide={(action, note) => decide.mutateAsync({ id: a.id, action, note }).then(() => { toast({ title: action === 'approve' ? 'Auction disetujui' : 'Auction ditolak', body: a.code, tone: 'green' }); onClose() })}
+            />
+          </div>
         ) : <p className="text-sm text-muted-foreground">{a.status === 'pending_approval' ? `Tidak menunggu persetujuan ${access.roleLabel}.` : 'Approval selesai.'}</p>}
       </DialogContent>
     </Dialog>

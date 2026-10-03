@@ -84,6 +84,13 @@ export function ApprovalTrail({ required, approvals, roles }: { required: string
   )
 }
 
+/** Approval deadlock rule: which roles without an active member an owner's decision also covers. */
+export function OnBehalfNote({ signing, own, roles }: { signing: string[]; own: string; roles: OrgRoleDef[] }) {
+  const others = signing.filter((r) => r !== own).map((r) => roles.find((x) => x.id === r)?.label ?? r)
+  if (!others.length) return null
+  return <p className="mb-2 text-xs text-muted-foreground">Keputusanmu juga berlaku atas nama {others.join(', ')}: belum ada anggota aktif dengan peran itu.</p>
+}
+
 /** Approve (with impact summary) or reject (reason required) — shared by procurement and auctions. */
 export function DecisionButtons({ subject, impact, onDecide, error }: { subject: string; impact: ReactNode; onDecide: (action: 'approve' | 'reject', note?: string) => Promise<unknown>; error: unknown }) {
   const [open, setOpen] = useState(false)

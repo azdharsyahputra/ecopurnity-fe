@@ -1,7 +1,7 @@
 import type { AuctionDetail, AuditEntry, CategoryId, PublicBid, TransactionDetail } from '@/domain/types'
 import type { TransactionStatus } from '@/domain/status'
 import {
-  DEFAULT_PERMISSIONS, DEFAULT_WEIGHTS, ROLE_LABEL, auctionValue, awardRuleInfo, higherWins, requiredApprovers, type ApprovalRule, type CollectivePool, type InventoryData,
+  DEFAULT_PERMISSIONS, DEFAULT_WEIGHTS, ROLE_LABEL, WITHDRAW_RULES, auctionValue, awardRuleInfo, can, higherWins, requiredApprovers, type ApprovalRule, type CollectivePool, type InventoryData,
   type OrgAuction, type OrgLot, type OrgMember, type OrgSettings, type PoolMember, type PoolSettlement, type ProcurementRequest, type Supplier,
   type SupplierRelation,
 } from '@/domain/org'
@@ -11,6 +11,7 @@ import { audit } from './audit'
 import { db } from './db'
 import { economy } from './economy'
 import { ensureF6 } from './trade'
+import { notify } from './personal'
 
 // Business workspace mock data (PRD §9). One persisted blob per org plus the shared collective pools.
 // ponytail: whole-store JSON in localStorage, rewritten on every mutation; fine for two demo orgs.
@@ -33,7 +34,8 @@ export interface HistoryRow {
 }
 
 export interface OrgData {
-  settings: OrgSettings
+  /** activeRoles is derived from members (settingsView), never stored. */
+  settings: Omit<OrgSettings, 'activeRoles'>
   members: (OrgMember & { userId?: string })[]
   /** Demo user who owns this org's economy auctions (economy.owners). */
   ownerUserId: string
@@ -127,7 +129,7 @@ const RULES = (): ApprovalRule[] => [
   { id: 'rule-auction-200jt', label: 'Auction > Rp 200 jt', minAmountIdr: 200_000_000, approvers: ['owner', 'procurement'], appliesTo: ['auction'] },
 ]
 
-const baseSettings = (name: string, industry: string, location: string, categories: CategoryId[]): OrgSettings => ({
+const baseSettings = (name: string, industry: string, location: string, categories: CategoryId[]): OrgData['settings'] => ({
   profile: {
     name, industry, location, legal: { nib: '', npwp: '', akta: '' }, description: '', categories,
     hours: { days: [0, 1, 2, 3, 4], from: '08:00', to: '17:00' }, documents: [], verification: 'unverified',
@@ -194,6 +196,7 @@ export function lotAuction(orgName: string, oa: OrgAuction, lot: OrgLot, i: numb
       ...(oa.rules.minStepIdr ? [{ label: oa.type === 'forward' ? 'Kenaikan minimum' : 'Penurunan minimum', value: formatIdr(oa.rules.minStepIdr) }] : []),
       { label: 'Perpanjangan otomatis', value: oa.rules.autoExtension ? '+5 menit jika ada bid di 2 menit terakhir' : 'Tidak ada' },
       { label: 'Kualifikasi', value: `Rating ≥ ${oa.qualification.minRating}${oa.qualification.documents.length ? `, dokumen: ${oa.qualification.documents.join(', ')}` : ''}${oa.qualification.regions.length ? `, wilayah: ${oa.qualification.regions.join(', ')}` : ''}` },
+      { label: 'Penarikan bid', value: WITHDRAW_RULES[oa.rules.withdraw] },
       { label: 'Penetapan pemenang', value: awardRuleInfo(oa.rules.award, higherWins(oa.type)).label },
     ],
     bids: [],
@@ -537,12 +540,45 @@ for (const o of Object.values(store.orgs)) {
   }
 }
 
-/** Org evaluate page for an economy lot id (`<orgAuctionId>-l<n>`), or undefined for non-org auctions. */
-export function orgEvaluateHref(economyAuctionId: string) {
+/** The org and business auction a public lot (economy auction id) belongs to, or undefined for other auctions. */
+export function lotOwner(economyAuctionId: string) {
   for (const [orgId, o] of Object.entries(store.orgs)) {
-    if (o.economyAuctions.some((a) => a.id === economyAuctionId)) return `/org/${orgId}/auctions/${economyAuctionId.replace(/-l\d+$/, '')}/evaluate`
+    const oa = o.auctions.find((x) => x.lots.some((l) => l.auctionId === economyAuctionId))
+    if (oa) return { orgId, o, oa }
   }
   return undefined
+}
+
+/** Org evaluate page (the business auction, all lots) for an economy lot id, or undefined for non-org auctions. */
+export function orgEvaluateHref(economyAuctionId: string) {
+  const l = lotOwner(economyAuctionId)
+  return l && `/org/${l.orgId}/auctions/${l.oa.id}/evaluate`
+}
+
+/** The user's role in an org (platform accounts only), or undefined. */
+export const orgRoleOf = (orgId: string, userId: string) => db.users.find((u) => u.id === userId)?.orgs.find((m) => m.orgId === orgId)?.role
+
+/** Role ids held by an active member (OrgSettings.activeRoles, input of the approval deadlock rule). */
+export const activeRoles = (o: OrgData) => [...new Set(o.members.filter((m) => m.status === 'active').map((m) => m.role))]
+export const settingsView = (o: OrgData): OrgSettings => ({ ...o.settings, activeRoles: activeRoles(o) })
+
+/**
+ * A lot closed: once the business auction's last lot is done, tell the members who can view auctions (owner always)
+ * to evaluate it. Returns whether the lot belongs to an org (its owner path is then handled here).
+ */
+export function notifyOrgLotsClosed(economyAuctionId: string) {
+  const l = lotOwner(economyAuctionId)
+  if (!l) return false
+  const lots = l.oa.lots.map((x) => economy.auctions.find((a) => a.id === x.auctionId))
+  if (lots.some((a) => !a || ['live', 'extended', 'scheduled', 'qualification'].includes(a.status))) return true
+  const body = `${lots.map((a, i) => `Lot ${lots.length > 1 ? `${i + 1} ` : ''}${l.oa.lots[i].item} ditutup, ${a!.participants} penawaran.`).join(' ')} Evaluasi dan tetapkan pemenang.`
+  for (const u of db.users) {
+    const role = orgRoleOf(l.orgId, u.id)
+    if (role && can(l.o.settings.permissions, role, 'auctions', 'view')) {
+      notify(u.id, { type: 'auction_ending', title: `${l.oa.title} ditutup`, body, href: `/org/${l.orgId}/auctions/${l.oa.id}/evaluate` })
+    }
+  }
+  return true
 }
 
 export function org(orgId: string): OrgData {
