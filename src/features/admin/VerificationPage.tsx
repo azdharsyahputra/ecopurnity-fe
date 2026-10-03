@@ -68,7 +68,10 @@ function DocumentViewer({ v }: { v: VerificationRequest }) {
           <FileText className="size-4 text-muted-foreground" />
           <span className="min-w-0 flex-1 truncate font-medium">{doc.fileName}</span>
           <Tag>{DOC_KIND[doc.kind]}</Tag>
+          {doc.url && <a href={doc.url} target="_blank" rel="noreferrer" className="text-xs font-medium text-primary hover:underline">Buka file</a>}
         </figcaption>
+        {doc.url && !/\.pdf$/i.test(doc.fileName) && <img src={doc.url} alt={doc.fileName} className="mb-3 max-h-80 w-full rounded object-contain" />}
+        {v.nik && <p className="mb-3 font-mono text-sm"><span className="font-sans text-xs text-muted-foreground">NIK </span>{v.nik}</p>}
         <p className="text-center text-xs tracking-widest text-muted-foreground uppercase">{DOC_KIND[doc.kind]}</p>
         <dl className="mt-4 flex flex-col gap-2 font-mono text-sm">
           {doc.fields.map((f) => {
