@@ -27,6 +27,19 @@ const KINDS: [CapacityKind, LucideIcon, Tone, string, string, string][] = [
 const DAYS = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min']
 const TABS = ['profile', 'capacity', 'preferences', 'verification'] as const
 const TAB_LABEL = { profile: 'Profil', capacity: 'Kapasitas', preferences: 'Preferensi', verification: 'Verifikasi' }
+type ItemDraft = { name: string; detail: string; categoryId: CategoryId | '' }
+const blankItem = (): ItemDraft => ({ name: '', detail: '', categoryId: '' })
+const selectClass = 'h-8 rounded-md border border-input bg-background px-1.5 text-sm dark:bg-input/30'
+
+/** Category for Smart Matching; empty = let the engine guess from the name. */
+function CategorySelect({ label, value, onChange, className }: { label: string; value: CategoryId | ''; onChange: (v: CategoryId | '') => void; className?: string }) {
+  return (
+    <select aria-label={label} value={value} onChange={(e) => onChange(e.target.value as CategoryId | '')} className={cn(selectClass, className)}>
+      <option value="">Kategori…</option>
+      {(Object.keys(CATEGORIES) as CategoryId[]).map((c) => <option key={c} value={c}>{CATEGORIES[c].label}</option>)}
+    </select>
+  )
+}
 
 function Editor({ initial }: { initial: Identity }) {
   const [params, setParams] = useSearchParams()
@@ -34,7 +47,7 @@ function Editor({ initial }: { initial: Identity }) {
   const [d, setD] = useState(initial)
   const save = useSaveIdentity()
   const dirty = JSON.stringify(d) !== JSON.stringify(initial)
-  const [draft, setDraft] = useState<Record<CapacityKind, { name: string; detail: string }>>({ skill: { name: '', detail: '' }, asset: { name: '', detail: '' }, capacity: { name: '', detail: '' }, resource: { name: '', detail: '' } })
+  const [draft, setDraft] = useState<Record<CapacityKind, ItemDraft>>({ skill: blankItem(), asset: blankItem(), capacity: blankItem(), resource: blankItem() })
   const profile = (k: keyof Identity['profile'], v: string) => setD({ ...d, profile: { ...d.profile, [k]: v } })
   const prefs = (patch: Partial<Identity['preferences']>) => setD({ ...d, preferences: { ...d.preferences, ...patch } })
 
@@ -84,21 +97,24 @@ function Editor({ initial }: { initial: Identity }) {
                   {d.items.filter((i) => i.kind === kind).map((i) => (
                     <li key={i.id} className="flex items-center gap-2 py-2 text-sm">
                       <span className="min-w-0 flex-1"><span className="font-medium">{i.name}</span> <span className="text-muted-foreground">· {i.detail}</span></span>
+                      <CategorySelect label={`Kategori ${i.name}`} className="h-7 w-28 text-xs" value={i.categoryId ?? ''} onChange={(v) => setD({ ...d, items: d.items.map((x) => (x.id === i.id ? { ...x, categoryId: v || undefined } : x)) })} />
                       <Button variant="ghost" size="icon-xs" aria-label={`Hapus ${i.name}`} onClick={() => setD({ ...d, items: d.items.filter((x) => x.id !== i.id) })}><Trash2 /></Button>
                     </li>
                   ))}
                 </ul>
                 <form
-                  className="mt-2 flex gap-2"
+                  className="mt-2 flex flex-wrap gap-2"
                   onSubmit={(e) => {
                     e.preventDefault()
-                    if (!draft[kind].name.trim()) return
-                    setD({ ...d, items: [...d.items, { id: `cap-${Date.now()}`, kind, ...draft[kind] }] })
-                    setDraft({ ...draft, [kind]: { name: '', detail: '' } })
+                    const { name, detail, categoryId } = draft[kind]
+                    if (!name.trim()) return
+                    setD({ ...d, items: [...d.items, { id: `cap-${Date.now()}`, kind, name, detail, categoryId: categoryId || undefined }] })
+                    setDraft({ ...draft, [kind]: blankItem() })
                   }}
                 >
                   <input aria-label={`${title} baru`} placeholder={ph} value={draft[kind].name} onChange={(e) => setDraft({ ...draft, [kind]: { ...draft[kind], name: e.target.value } })} className="h-8 min-w-0 flex-1 rounded-md border border-input bg-transparent px-2 text-sm" />
                   <input aria-label={`Detail ${title}`} placeholder={phDetail} value={draft[kind].detail} onChange={(e) => setDraft({ ...draft, [kind]: { ...draft[kind], detail: e.target.value } })} className="h-8 w-32 rounded-md border border-input bg-transparent px-2 text-sm" />
+                  <CategorySelect label={`Kategori ${title} baru`} className="w-32" value={draft[kind].categoryId} onChange={(v) => setDraft({ ...draft, [kind]: { ...draft[kind], categoryId: v } })} />
                   <Button type="submit" size="icon-sm" variant="outline" aria-label={`Tambah ${title}`}><Plus /></Button>
                 </form>
               </section>
