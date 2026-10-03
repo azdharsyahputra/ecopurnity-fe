@@ -198,7 +198,7 @@ function caseRefs(): CaseRef[] {
         { role: t.role, name, kind: 'person', verified: !!user?.emailVerified, userId },
         { role: other, ...t.counterparty, userId: t.peer?.userId ?? dbUserId(t.counterparty.name) },
       ]
-      const partyEvidence = (t.dispute!.evidence ?? []).map((e) => ({ id: e.id, side: e.by, by: e.name, text: e.file ? `${e.text} (lampiran: ${e.file})` : e.text, at: e.at }))
+      const partyEvidence = (t.dispute!.evidence ?? []).map((e) => ({ id: e.id, side: e.by, by: e.name, text: e.text, file: e.file, url: e.url, at: e.at }))
       return {
         tx: t, overlay, save: () => { mirror(t); savePersonal(); saveAdmin() },
         case: {

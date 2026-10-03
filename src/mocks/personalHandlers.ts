@@ -10,7 +10,7 @@ import { formatIdr } from '@/domain/format'
 import { publish } from '@/lib/realtime'
 import { db } from './db'
 import { bidderLabel, economy, toAuction, toOpportunity } from './economy'
-import { applyAction, createTrade, ensureF6, financeOf, setBank, tradeState, withdraw, type ActionInput } from './trade'
+import { applyUserAction, createTrade, ensureF6, financeOf, setBank, tradeState, withdraw, type ActionInput } from './trade'
 import { cancelPayment, createPayment, currentPayment, PAY_VIA_GATEWAY } from './payments'
 import type { PaymentInput } from '@/domain/payment'
 import { allPersonal, completeness, newId, notify, personal, savePersonal, type PersonalData } from './personal'
@@ -596,7 +596,7 @@ export const personalHandlers = [
     if (!t) return fail(404, 'not_found', 'Transaksi tidak ditemukan')
     const input = (await request.json()) as ActionInput
     if (input.action === 'pay') return fail(409, 'payment_required', PAY_VIA_GATEWAY)
-    const res = applyAction(t, actorName(userId), input)
+    const res = applyUserAction(t, userId, actorName(userId), input)
     return res.ok ? HttpResponse.json(res.tx) : fail(res.status, res.code, res.message, res.fields)
   })),
 

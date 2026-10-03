@@ -42,10 +42,13 @@ const RULES: Record<string, { types: string[]; mb: number; typeError: string }> 
   kyc_ktp: { types: IMAGE_TYPES, mb: 8, typeError: 'Format file tidak didukung. Pakai JPG, PNG, atau WebP.' },
   kyc_selfie: { types: IMAGE_TYPES, mb: 8, typeError: 'Format file tidak didukung. Pakai JPG, PNG, atau WebP.' },
   org_document: { types: ['application/pdf', ...IMAGE_TYPES], mb: 10, typeError: 'Format file tidak didukung. Pakai PDF, JPG, PNG, atau WebP.' },
+  trade_proof: { types: ['application/pdf', ...IMAGE_TYPES], mb: 10, typeError: 'Format file tidak didukung. Pakai PDF, JPG, PNG, atau WebP.' },
+  dispute_evidence: { types: ['application/pdf', ...IMAGE_TYPES], mb: 10, typeError: 'Format file tidak didukung. Pakai PDF, JPG, PNG, atau WebP.' },
 }
-const uploads: Record<string, { owner: string; purpose: string; fileName: string; type: string; size: number; uploaded: boolean; used: boolean }> = {}
+const uploads: Record<string, { owner: string; purpose: string; fileName: string; type: string; size: number; uploaded: boolean; used: boolean; data?: ArrayBuffer }> = {}
 
-function claim(userId: string, id: string | undefined, purpose: string, field: string): string | Record<string, string> {
+/** Checks an upload without using it up (consumeUpload once the feature succeeded): the file name, or field errors. */
+export function claim(userId: string, id: string | undefined, purpose: string, field: string): string | Record<string, string> {
   const u = id ? uploads[id] : undefined
   if (!u || u.owner !== userId) return { [field]: 'File tidak ditemukan. Unggah ulang.' }
   if (u.purpose !== purpose) return { [field]: 'File ini diunggah untuk keperluan lain.' }
@@ -89,7 +92,13 @@ export const kycHandlers = [
     const body = await request.arrayBuffer()
     if (!u || body.byteLength !== u.size) return new HttpResponse(null, { status: 403 })
     u.uploaded = true
+    u.data = body
     return new HttpResponse(null, { status: 200 })
+  }),
+  /** Mock-only: the presigned GET of a stored file (in memory: gone after a reload). */
+  http.get(api('/_mock/storage/:id'), ({ params }) => {
+    const u = uploads[String(params.id)]
+    return u?.data ? new HttpResponse(u.data, { headers: { 'Content-Type': u.type } }) : new HttpResponse(null, { status: 404 })
   }),
 
   http.get(api('/me/kyc'), async () => {
