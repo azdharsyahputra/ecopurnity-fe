@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Ban, ClipboardList, Gavel, Plus, Send, UsersRound } from 'lucide-react'
 import type { CategoryId } from '@/domain/types'
 import {
-  PIPELINE, VISIBILITY, canConvertToAuction, pipelineStage, poolTotals, procurementActions, requiredApprovers, type PipelineStage,
+  PIPELINE, VISIBILITY, canConvertToAuction, pipelineStage, poolTotals, procurementActions, requiredApprovers, signingRoles, type PipelineStage,
   type ProcurementInput, type ProcurementRequest, type Visibility,
 } from '@/domain/org'
 import { CATEGORIES } from '@/domain/catalog'
@@ -14,7 +14,7 @@ import { useLocalDraft } from '@/lib/useLocalDraft'
 import { toast } from '@/stores/toast'
 import { useCreateProcurement, useOrgAccess, useProcurement, useProcurementAction, useProcurements, useSuppliers } from './hooks'
 import { fromDate, inDays, toDate } from './utils'
-import { ApprovalTrail, CheckChips, DecisionButtons, FilterPills, GuardedLink, ProcurementBadge, Section } from './ui'
+import { ApprovalTrail, CheckChips, DecisionButtons, FilterPills, GuardedLink, OnBehalfNote, ProcurementBadge, Section } from './ui'
 import { CategoryTag } from '@/features/economy/components'
 import { PageHeader } from '@/components/PageHeader'
 import { AsyncView, EmptyState } from '@/components/States'
@@ -244,7 +244,7 @@ export function ProcurementDetailPage() {
   return (
     <AsyncView query={query} skeleton={<Skeleton className="h-96 rounded-xl" />}>
       {({ request: r, activity, pool }) => {
-        const actions = procurementActions(r, access.role, access.settings?.permissions)
+        const actions = procurementActions(r, access.role, access.settings?.permissions, access.settings?.activeRoles)
         const done = (title: string) => () => toast({ title, body: r.code, tone: 'green' })
         const roles = access.settings?.roles ?? []
         const totals = pool && poolTotals(pool)
@@ -302,6 +302,7 @@ export function ProcurementDetailPage() {
                   {actions.includes('approve') && (
                     <div className="mt-4 border-t pt-4">
                       <p className="mb-2 text-sm">Menunggu persetujuanmu sebagai <b>{access.roleLabel}</b>.</p>
+                      <OnBehalfNote signing={signingRoles(access.role, r.requiredApprovers, r.approvals, access.settings?.activeRoles)} own={access.role} roles={roles} />
                       <DecisionButtons
                         subject={r.code}
                         error={act.error}
