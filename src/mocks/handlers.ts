@@ -2,7 +2,6 @@ import { delay, http, HttpResponse } from 'msw'
 import type { CategoryId, ExplorerRange, OnboardingInput, Page, SearchType } from '@/domain/types'
 import { db, saveUsers, toUser, type MockUser } from './db'
 import { aggregates, economy, explorerOverview, marketDetail, search, toAuction, toOpportunity } from './economy'
-import { legacyHandlers } from './legacy'
 import { admin } from './admin'
 import { applyOnboarding, personal } from './personal'
 import { personalHandlers } from './personalHandlers'
@@ -262,5 +261,4 @@ export const handlers = [
   ...profileHandlers,
   ...orgHandlers,
   ...personalHandlers,
-  ...legacyHandlers,
 ]
