@@ -105,7 +105,7 @@ const auctionDetails: AuctionDetail[] = AUCTION_ROWS.map((row, i) => {
       { label: 'Tipe', value: `${AUCTION_TYPES[type].label} auction` },
       { label: 'Visibilitas bid', value: { full: 'Harga terlihat, identitas disamarkan', rank_only: 'Peserta hanya melihat peringkat', sealed: 'Tertutup sampai penutupan' }[visibility] },
       ...(step ? [{ label: type === 'dutch' ? 'Penurunan harga' : 'Kenaikan minimum', value: `${formatIdr(step)} per ${unit}` }] : []),
-      { label: 'Perpanjangan otomatis', value: '+5 menit jika ada bid di 2 menit terakhir' },
+      { label: 'Perpanjangan otomatis', value: '+5 menit jika ada bid di 2 menit terakhir, maks. 3 kali' },
       { label: 'Kualifikasi', value: 'Akun terverifikasi, reputasi ≥ 80, dokumen spesifikasi' },
       { label: 'Penetapan pemenang', value: type === 'sealed' ? 'Skor harga 70% + kualitas 30%' : AUCTION_TYPES[type].best },
     ],

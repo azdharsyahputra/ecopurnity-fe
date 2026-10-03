@@ -40,7 +40,7 @@ export function StatTile({
     <div className={cn('rounded-xl border bg-card p-4', className)}>
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         {icon && <IconChip icon={icon} tone={tone} size="sm" />}
-        <span className="truncate">{label}</span>
+        <span className="line-clamp-2">{label}</span>
       </div>
       {loading ? (
         <Skeleton className="mt-3 h-8 w-24" />

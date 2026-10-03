@@ -169,7 +169,7 @@ export function ParticipantBidBox({ a }: { a: AuctionDetail }) {
           <ul className="list-disc space-y-1 pl-4">
             <li>Nilai total: <b>{formatIdr(total)}</b> untuk {formatQty(a.lot.quantity)}</li>
             <li>Bid terdepan tidak bisa ditarik; bid lain bisa ditarik sampai 30 menit sebelum tutup</li>
-            <li>Bid di 2 menit terakhir memperpanjang auction 5 menit</li>
+            <li>Bid di 2 menit terakhir memperpanjang auction 5 menit (maks. 3 kali)</li>
           </ul>
         }
         confirmLabel="Kirim bid"
