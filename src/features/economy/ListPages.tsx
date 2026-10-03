@@ -1,13 +1,18 @@
-import { Gavel, SearchX, Sparkles, Store } from 'lucide-react'
+import { FileQuestion, Gavel, LayoutGrid, MessageSquare, SearchX, Sparkles, Store } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import type { UseQueryResult } from '@tanstack/react-query'
 import type { Page } from '@/domain/types'
 import { PageHeader } from '@/components/PageHeader'
 import { AsyncView, EmptyState } from '@/components/States'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useAuctions, useMarkets, useOpportunities } from './hooks'
+import { useAuctions, useListings, useMarkets, useOpportunities } from './hooks'
+import type { PublicListing } from '@/domain/types'
+import { useMe } from '@/features/auth/hooks'
+import { useStartConversation } from '@/features/rfq/hooks'
+import { Button } from '@/components/ui/button'
 import { useUrlFilters } from './utils'
-import { AuctionCard, CardGrid, FilterBar, MarketCard, OpportunityCard, Pagination } from './components'
+import { AuctionCard, CardGrid, FilterBar, ListingCard, MarketCard, OpportunityCard, Pagination } from './components'
 
 function ListShell<T>({
   header,
@@ -114,6 +119,53 @@ export function AuctionsPage() {
       }
       query={useAuctions(filters)}
       render={(a) => <AuctionCard key={a.id} a={a} />}
+    />
+  )
+}
+
+function ListingAction({ l }: { l: PublicListing }) {
+  const { data: me } = useMe()
+  const navigate = useNavigate()
+  const start = useStartConversation()
+  if (me && l.owner.userId === me.id) return <Button size="sm" variant="ghost" className="w-full" render={<Link to={`/app/${l.kind}/${l.id}`} />}>Listing kamu</Button>
+  if (l.kind === 'supply') {
+    const q = new URLSearchParams({ listing: l.id, item: l.item, category: l.categoryId, qty: String(l.quantity.value), unit: l.quantity.unit, inviteName: l.owner.name, ...(l.owner.userId && { inviteUserId: l.owner.userId }) })
+    return <Button size="sm" variant="outline" className="w-full" render={<Link to={`/app/rfq/new?${q}`} />}><FileQuestion /> Minta penawaran</Button>
+  }
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      className="w-full"
+      disabled={start.isPending}
+      onClick={() => {
+        if (!me) return navigate(`/login?returnTo=${encodeURIComponent('/listings')}`)
+        start.mutate(
+          { subject: `Penawaran untuk ${l.code} · ${l.item}`, with: { name: l.owner.name, userId: l.owner.userId, kind: 'business', verified: l.owner.verified }, text: `Halo, saya bisa memenuhi ${l.item} (${l.quantity.value.toLocaleString('id-ID')} ${l.quantity.unit}). Boleh diskusi spesifikasi dan harga?` },
+          { onSuccess: (c) => navigate(`/app/messages/${c.id}`) },
+        )
+      }}
+    >
+      <MessageSquare /> Kirim penawaran
+    </Button>
+  )
+}
+
+export function ListingsPage() {
+  const { filters } = useUrlFilters()
+  return (
+    <ListShell
+      header={
+        <PageHeader
+          title="Katalog"
+          description="Supply dan demand yang dibuka pelaku usaha. Minta penawaran ke supplier atau tawarkan barangmu ke pembeli, langsung tanpa market."
+          icon={LayoutGrid}
+          tone="green"
+        />
+      }
+      filters={<FilterBar placeholder="Cari barang atau pelaku usaha…" statuses={[['supply', 'Supply'], ['demand', 'Demand']]} statusLabel={['Jenis', 'Semua jenis']} />}
+      query={useListings(filters)}
+      render={(l) => <ListingCard key={l.id} l={l} action={<ListingAction l={l} />} />}
     />
   )
 }

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, MapPin, PackageOpen, ShoppingCart, Tag as TagIcon, Users, Wallet } from 'lucide-react'
 import { Area, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
@@ -5,8 +6,13 @@ import type { MarketDetail } from '@/domain/types'
 import { MECHANISMS, OBJECTIVES } from '@/domain/catalog'
 import { formatDate, formatIdr, formatNumber, formatQty } from '@/domain/format'
 import { useAuthGate } from '@/features/auth/hooks'
-import { useMarket } from './hooks'
-import { AuctionCard, CardGrid, CategoryTag, GapMeter, RulesList } from './components'
+import { useDirectOrder, useListings, useMarket } from './hooks'
+import type { PublicListing } from '@/domain/types'
+import { fieldError } from '@/lib/api'
+import { toast } from '@/stores/toast'
+import { Field, FormError } from '@/components/form'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { AuctionCard, CardGrid, CategoryTag, GapMeter, ListingCard, RulesList } from './components'
 import { AsyncView, EmptyState } from '@/components/States'
 import { StatTile } from '@/components/StatTile'
 import { StatusBadge, Tag } from '@/components/Tag'
@@ -29,6 +35,48 @@ function Actions({ m, className }: { m: MarketDetail; className?: string }) {
       <Button variant="outline" className="h-9" onClick={() => gate('mengirim supply ke market ini', go('supply'))}>Submit supply</Button>
       <Button className="h-9 px-4" onClick={() => gate('bergabung ke market ini', go('join'))}>Join market</Button>
     </div>
+  )
+}
+
+function OrderDialog({ m, l, onClose }: { m: MarketDetail; l: PublicListing; onClose: () => void }) {
+  const order = useDirectOrder(m.id)
+  const navigate = useNavigate()
+  const [qty, setQty] = useState(String(l.quantity.value))
+  const n = Number(qty)
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Pesan {l.item}</DialogTitle>
+          <DialogDescription>Harga terpasang {formatIdr(l.unitPriceIdr)}/{l.quantity.unit} dari {l.owner.name}. Dana masuk escrow dan dilepas setelah kamu konfirmasi terima.</DialogDescription>
+        </DialogHeader>
+        <form className="grid gap-3" onSubmit={(e) => { e.preventDefault(); order.mutate({ listingId: l.id, quantity: n }, { onSuccess: (r) => { toast({ title: 'Order dibuat', tone: 'green' }); navigate(`/app/transactions/${r.transactionId}`) } }) }}>
+          <Field label={`Kuantitas (${l.quantity.unit})`} type="number" min={1} max={l.quantity.value} value={qty} onChange={(e) => setQty(e.target.value)} error={fieldError(order.error, 'quantity')} hint={`Tersedia ${formatQty(l.quantity)}`} />
+          <p className="text-sm">Subtotal <b className="num">{formatIdr(n > 0 ? n * l.unitPriceIdr : 0)}</b> <span className="text-muted-foreground">+ PPN 11% di invoice</span></p>
+          <FormError error={order.error} />
+          <DialogFooter><Button type="submit" disabled={order.isPending || !(n > 0)}>Pesan sekarang</Button></DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function DirectOffers({ m }: { m: MarketDetail }) {
+  const gate = useAuthGate()
+  const query = useListings({ market: m.id, status: 'supply', pageSize: 6 })
+  const [picked, setPicked] = useState<PublicListing | null>(null)
+  return (
+    <section>
+      <h2 className="mb-3 font-medium">Penawaran langsung</h2>
+      <AsyncView query={query} skeleton={<Skeleton className="h-40 rounded-xl" />} isEmpty={(p) => p.data.length === 0} empty={<EmptyState title="Belum ada penawaran" description="Supplier yang join market ini bisa memasang harga untuk dipesan langsung." />}>
+        {(p) => (
+          <CardGrid className="lg:grid-cols-2">
+            {p.data.map((l) => <ListingCard key={l.id} l={l} action={<Button size="sm" className="w-full" disabled={m.status !== 'active'} onClick={() => gate('memesan di market ini', () => setPicked(l))}><ShoppingCart /> Pesan</Button>} />)}
+          </CardGrid>
+        )}
+      </AsyncView>
+      {picked && <OrderDialog m={m} l={picked} onClose={() => setPicked(null)} />}
+    </section>
   )
 }
 
@@ -90,6 +138,8 @@ function Content({ m }: { m: MarketDetail }) {
               </ComposedChart>
             </ResponsiveContainer>
           </ChartCard>
+
+          {m.mechanism === 'direct_market' && <DirectOffers m={m} />}
 
           <section>
             <h2 className="mb-3 font-medium">Auction di market ini</h2>

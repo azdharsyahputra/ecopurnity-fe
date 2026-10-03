@@ -5,6 +5,7 @@ import { economy } from './economy'
 import { onAuctionClosed, onCompetitorBid } from './personalHandlers'
 import { savePersonal } from './personal'
 import { counterpartyTick, seedPairs } from './trade'
+import { contractTick } from './contracts'
 
 // Fake event source standing in for the WebSocket server.
 // ponytail: random but plausible bidding on a timer; scripted scenarios come if QA needs repeatable runs.
@@ -96,6 +97,7 @@ function closeTick() {
 export function startMockRealtime() {
   seedPairs()
   setInterval(counterpartyTick, 4_000)
+  setInterval(contractTick, 5_000)
   setInterval(() => {
     const s = db.stats
     s.activeParticipants += jitter(s.activeParticipants)
