@@ -429,7 +429,7 @@ export const mmHandlers = [
     if (action === 'escalate') {
       if (!note?.trim()) return fail(422, 'validation', 'Tulis alasan eskalasi', { note: 'Jelaskan kenapa perlu admin' })
       const [buyer = 'Pembeli', supplier = 'Supplier'] = d.parties.split(' vs ')
-      const id = `dsp-mm-${d.id}`
+      const id = `dsp-mm-${hash(d.id).toString(36)}`
       const t = disputeTx(`trx-mm-${hash(d.id).toString(36)}`, `${d.title} · ${x.m.name}`, buyer, supplier, 'disputed', 1, 'lot', x.m.priceRange.maxIdr, 7)
       t.dispute = { status: 'open', reason: d.title, openedAt: d.openedAt }
       const by = actor(userId)
