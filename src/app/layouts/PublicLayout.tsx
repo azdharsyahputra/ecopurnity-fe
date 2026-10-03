@@ -102,7 +102,7 @@ export function PublicLayout() {
       <footer className="border-t">
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between md:px-6">
           <Logo className="text-foreground" />
-          <p>Find markets that don't exist yet. © {new Date().getFullYear()} Ecopurnity</p>
+          <p suppressHydrationWarning>Find markets that don't exist yet. © {new Date().getFullYear()} Ecopurnity</p>
         </div>
       </footer>
     </div>
