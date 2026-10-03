@@ -11,6 +11,7 @@ import { publish } from '@/lib/realtime'
 import { db } from './db'
 import { economy, toAuction, toOpportunity } from './economy'
 import { allPersonal, completeness, newId, notify, personal, savePersonal, type PersonalData } from './personal'
+import { audit } from './audit'
 
 const api = (path: string) => `/api/v1${path}`
 const fail = (status: number, code: string, message: string, fields?: Record<string, string>) =>
@@ -133,6 +134,8 @@ const ACTION_NOTE: Record<TransactionAction, string> = {
   issue_invoice: 'Invoice diterbitkan', pay: 'Dana masuk escrow', ship: 'Barang dikirim', upload_proof: 'Bukti pengiriman diunggah',
   confirm_receipt: 'Diterima pembeli, dana dilepas', cancel: 'Dibatalkan', dispute: 'Dispute diajukan',
 }
+
+const actorName = (userId: string) => db.users.find((u) => u.id === userId)?.name ?? 'Pengguna'
 
 // ── Handlers ─────────────────────────────────────────────────────
 
@@ -425,6 +428,7 @@ export const personalHandlers = [
     economy.owners.set(id, userId)
     economy.bestPrice.set(id, input.openingPriceIdr)
     p.ownedAuctions.unshift(a)
+    audit({ actor: actorName(userId), action: 'Buka auction', entity: { type: 'auction', id, label: a.title }, changes: [{ field: 'Harga pembuka', after: formatIdr(input.openingPriceIdr) }] })
     d.auctionId = id
     d.status = 'in_market'
     s.history.unshift({ at: now(), status: 'in_market', note: `Auction ${a.code} dibuat` })
@@ -472,6 +476,10 @@ export const personalHandlers = [
     const { lines } = (await request.json()) as { lines: AllocationLine[] }
     if (!lines?.length) return fail(422, 'validation', 'Pilih minimal satu supplier')
     a.status = 'awarded'
+    audit({
+      actor: actorName(userId), action: 'Tetapkan pemenang', entity: { type: 'auction', id: a.id, label: a.title },
+      changes: lines.map((l) => ({ field: l.supplier, after: `${l.quantity.toLocaleString('id-ID')} × ${formatIdr(l.priceIdr)}` })),
+    })
     const ids = lines.map((l) =>
       createTransaction(userId, {
         title: `${a.lot.item} ${l.quantity.toLocaleString('id-ID')} ${a.lot.quantity.unit}`, role: 'buyer',
@@ -510,6 +518,7 @@ export const personalHandlers = [
     if (!next) return fail(409, 'invalid_transition', 'Aksi ini tidak tersedia untuk status sekarang')
     if (action === 'upload_proof' && !file) return fail(422, 'validation', 'Pilih file bukti', { file: 'Pilih file bukti pengiriman' })
     if (action === 'dispute' && !note?.trim()) return fail(422, 'validation', 'Jelaskan alasannya', { note: 'Jelaskan alasan dispute' })
+    audit({ actor: actorName(db.sessionUserId!), action: ACTION_NOTE[action], entity: { type: 'transaction', id: t.id, label: `${t.code} · ${t.title}` }, reason: note, changes: [{ field: 'Status', before: t.status, after: next }] })
     t.status = next
     t.updatedAt = now()
     const step = t.timeline.find((s) => s.status === next)
