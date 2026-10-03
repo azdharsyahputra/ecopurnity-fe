@@ -122,4 +122,5 @@ export const PUBLIC_NAV = [
   { label: 'Opportunities', to: '/opportunities' },
   { label: 'Markets', to: '/markets' },
   { label: 'Auctions', to: '/auctions' },
+  { label: 'Katalog', to: '/listings' },
 ]

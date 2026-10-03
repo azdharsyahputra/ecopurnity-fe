@@ -27,6 +27,7 @@ const ExplorerPage = named(economy, 'ExplorerPage')
 const OpportunitiesPage = named(economy, 'OpportunitiesPage')
 const OpportunityDetailPage = named(economy, 'OpportunityDetailPage')
 const MarketsPage = named(economy, 'MarketsPage')
+const ListingsPage = named(economy, 'ListingsPage')
 const MarketDetailPage = named(economy, 'MarketDetailPage')
 const AuctionsPage = named(economy, 'AuctionsPage')
 const AuctionRoomPage = named(economy, 'AuctionRoomPage')
@@ -116,6 +117,7 @@ export default function App({ location, client = queryClient }: { location?: str
                 <Route path="opportunities" element={<OpportunitiesPage />} />
                 <Route path="opportunities/:id" element={<OpportunityDetailPage />} />
                 <Route path="markets" element={<MarketsPage />} />
+                <Route path="listings" element={<ListingsPage />} />
                 <Route path="markets/:id" element={<MarketDetailPage />} />
                 <Route path="auctions" element={<AuctionsPage />} />
                 <Route path="auctions/:id" element={<AuctionRoomPage />} />

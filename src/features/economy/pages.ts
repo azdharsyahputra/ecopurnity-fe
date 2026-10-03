@@ -1,5 +1,5 @@
 export { ExplorerPage } from './ExplorerPage'
-export { OpportunitiesPage, MarketsPage, AuctionsPage } from './ListPages'
+export { OpportunitiesPage, MarketsPage, AuctionsPage, ListingsPage } from './ListPages'
 export { OpportunityDetailPage } from './OpportunityDetailPage'
 export { MarketDetailPage } from './MarketDetailPage'
 export { AuctionRoomPage } from './AuctionRoomPage'
