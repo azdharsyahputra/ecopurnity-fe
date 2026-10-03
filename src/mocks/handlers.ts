@@ -6,6 +6,7 @@ import { admin } from './admin'
 import { applyOnboarding } from './personal'
 import { personalHandlers } from './personalHandlers'
 import { rfqHandlers } from './rfq'
+import { settleHandlers } from './settle'
 import { mmHandlers } from './mmHandlers'
 import { adminHandlers } from './adminHandlers'
 import { profileHandlers } from './profileHandlers'
@@ -262,5 +263,6 @@ export const handlers = [
   ...profileHandlers,
   ...orgHandlers,
   ...rfqHandlers,
+  ...settleHandlers,
   ...personalHandlers,
 ]

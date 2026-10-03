@@ -12,7 +12,7 @@ import { bidderLabel, economy, toAuction, toOpportunity } from './economy'
 import { applyAction, createTrade, ensureF6, financeOf, setBank, tradeState, withdraw, type ActionInput } from './trade'
 import { allPersonal, completeness, newId, notify, personal, savePersonal, type PersonalData } from './personal'
 import { audit } from './audit'
-import { ops, saveMm } from './mm'
+import { isMaker, operatedIds, ops, saveMm } from './mm'
 import { orgEvaluateHref } from './org'
 import { admin } from './admin'
 import { reputationTxs } from './profileHandlers'
@@ -634,6 +634,8 @@ export function onAuctionClosed(auctionId: string) {
     notify(ownerId, { type: 'auction_ending', title: `${a.title} sudah ditutup`, body: `${a.bidCount} bid masuk. Bandingkan penawaran dan tetapkan pemenang.`, href: orgEvaluateHref(a.id) ?? `/app/auctions/${a.id}/evaluate` })
   }
   if (ownerId) return // participants' bids on a buyer's auction are settled when the buyer awards
+  // Rounds of a market run by a market maker account are settled per member (PRD F6, mocks/settle.ts).
+  const collective = db.users.some((u) => isMaker(u.id) && operatedIds(u.id).includes(a.marketId))
   for (const [userId, p] of allPersonal()) {
     const b = p.bids[auctionId]
     if (!b || b.status === 'withdrawn') continue
@@ -641,7 +643,9 @@ export function onAuctionClosed(auctionId: string) {
     const won = a.type === 'sealed' ? Math.random() < 0.5 : b.status === 'leading' && best === b.priceIdr
     b.status = won ? 'won' : 'lost'
     b.updatedAt = now()
-    if (won) {
+    if (won && collective) {
+      notify(userId, { type: 'winning_bid', title: `Kamu memenangkan ${a.title}`, body: `Harga ${formatIdr(b.priceIdr)}/${a.lot.quantity.unit}. Transaksi per anggota dibuat saat market maker melakukan settlement kolektif.`, href: `/auctions/${a.id}` })
+    } else if (won) {
       const tx = createTransaction(userId, {
         title: `${a.lot.item} ${a.lot.quantity.value.toLocaleString('id-ID')} ${a.lot.quantity.unit}`, role: lowerWins(a.type) ? 'supplier' : 'buyer',
         counterparty: { name: economy.markets.find((m) => m.id === a.marketId)?.maker.name ?? a.marketName, kind: 'business', verified: true },
