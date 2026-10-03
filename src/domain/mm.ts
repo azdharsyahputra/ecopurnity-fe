@@ -87,10 +87,12 @@ export interface MmDispute {
   status: DisputeStatus
   openedAt: string
   resolution?: string
+  /** Admin dispute case id once a market maker escalated it (PRD F6); status then follows the admin case. */
+  escalatedTo?: string
 }
 
 export type ParticipantAction = 'approve' | 'reject' | 'verify' | 'suspend'
-export type DisputeAction = 'review' | 'resolve'
+export type DisputeAction = 'review' | 'resolve' | 'escalate'
 export type MarketStatusAction = 'pause' | 'resume' | 'close'
 
 /** A round's recorded prices. Closed rounds are history: read-only everywhere. */

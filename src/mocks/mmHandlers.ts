@@ -6,7 +6,7 @@ import { MECHANISMS, OBJECTIVES } from '@/domain/catalog'
 import { formatIdr, formatNumber } from '@/domain/format'
 import {
   canMove, lowLiquidity, PIPELINE_STAGES, ROUND_TYPE, type CreateMarketInput, type CreateRoundInput, type DisputeAction, type MarketStatusAction, type MmAlert,
-  type MmAnalytics, type MmMarketOps, type MmMarketRow, type MmOverview, type MmParticipant, type ParticipantAction, type PipelineCard,
+  type MmAnalytics, type MmDispute, type MmMarketOps, type MmMarketRow, type MmOverview, type MmParticipant, type ParticipantAction, type PipelineCard,
   type PipelineStage, type RoundResult,
 } from '@/domain/mm'
 import { activeVersion, addVersion, diffRules, rulesToLabeled, validateRules, VISIBILITY, type MarketRules } from '@/domain/marketRules'
@@ -15,6 +15,7 @@ import { db } from './db'
 import { economy, toAuction, toOpportunity } from './economy'
 import { actor, currentRound, emitEvent, hash, isMaker, mm, mmId, notifyMarket, operatedIds, ops, saveMm, startedRounds, type MarketOps } from './mm'
 import { allPersonal, notify, savePersonal } from './personal'
+import { admin, saveAdmin, tx as disputeTx } from './admin'
 
 // Market Maker API (PRD §10). Every mutation is audited; anything that changes a participant's market notifies them.
 
@@ -143,6 +144,11 @@ const counts = (m: Market, p: MmParticipant, delta: 1 | -1) => {
 }
 
 const PARTICIPANT_VERB: Record<ParticipantAction, string> = { approve: 'Approve', reject: 'Tolak', verify: 'Verifikasi supplier', suspend: 'Suspend' }
+
+const withAdminStatus = (d: MmDispute): MmDispute => {
+  const c = d.escalatedTo && admin.seedDisputes.find((s) => s.id === d.escalatedTo)
+  return c ? { ...d, status: c.transaction.dispute!.status } : d
+}
 
 export const mmHandlers = [
   // Operations overview (PRD §10.1)
@@ -280,7 +286,7 @@ export const mmHandlers = [
     const { m, o } = x
     const detail: MmMarketOps = {
       market: { ...m, auctions: economy.auctions.filter((a) => a.marketId === m.id).map(toAuction) },
-      participants: o.participants, disputes: o.disputes, ruleVersions: o.ruleVersions, currentRound: currentRound(m.id, o),
+      participants: o.participants, disputes: o.disputes.map(withAdminStatus), ruleVersions: o.ruleVersions, currentRound: currentRound(m.id, o),
       rounds: economy.auctions.filter((a) => a.marketId === m.id).map(toAuction), results: results(m, o), settings: o.settings, alerts: alerts(m, o),
     }
     return HttpResponse.json(detail)
@@ -418,7 +424,24 @@ export const mmHandlers = [
     const d = x?.o.disputes.find((y) => y.id === params.did)
     if (!x || !d) return fail(404, 'not_found', 'Dispute tidak ditemukan')
     const { action, note } = (await request.json()) as { action: DisputeAction; note?: string }
+    if (d.escalatedTo) return fail(409, 'escalated', 'Dispute ini sudah ditangani admin')
     if (d.status === 'resolved' || (action === 'review' && d.status === 'review')) return fail(409, 'invalid_transition', 'Dispute sudah di tahap ini')
+    if (action === 'escalate') {
+      if (!note?.trim()) return fail(422, 'validation', 'Tulis alasan eskalasi', { note: 'Jelaskan kenapa perlu admin' })
+      const [buyer = 'Pembeli', supplier = 'Supplier'] = d.parties.split(' vs ')
+      const id = `dsp-mm-${d.id}`
+      const t = disputeTx(`trx-mm-${hash(d.id).toString(36)}`, `${d.title} · ${x.m.name}`, buyer, supplier, 'disputed', 1, 'lot', x.m.priceRange.maxIdr, 7)
+      t.dispute = { status: 'open', reason: d.title, openedAt: d.openedAt }
+      const by = actor(userId)
+      admin.seedDisputes.push({ id, parties: [{ role: 'buyer', name: buyer, kind: 'business', verified: true }, { role: 'supplier', name: supplier, kind: 'business', verified: true }], marketId: x.m.id, openedBy: by, transaction: t })
+      admin.disputes[id] = { evidence: [{ id: `${id}-mm`, side: 'buyer', by, text: `Catatan market maker: ${note.trim()}`, at: now() }], timeline: [{ at: now(), by, label: 'Dieskalasi dari market maker' }] }
+      saveAdmin()
+      d.escalatedTo = id
+      audited(userId, x.m, `Eskalasi dispute ke admin: ${d.title}`, { reason: note.trim(), changes: [{ field: 'Penanganan', before: 'Market maker', after: 'Admin governance' }] })
+      saveMm()
+      for (const u of db.users.filter((u) => u.capabilities.includes('admin'))) notify(u.id, { type: 'transaction_update', title: `Eskalasi dispute dari ${x.m.name}`, body: d.title, href: `/admin/disputes/${id}` })
+      return HttpResponse.json(withAdminStatus(d))
+    }
     if (action === 'resolve' && !note?.trim()) return fail(422, 'validation', 'Isi keputusan', { note: 'Tulis keputusan moderasi; dikirim ke kedua pihak' })
     const before = d.status
     d.status = action === 'review' ? 'review' : 'resolved'

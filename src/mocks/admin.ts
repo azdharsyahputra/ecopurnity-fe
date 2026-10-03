@@ -61,7 +61,7 @@ const acct = (id: string, name: string, username: string, location: string, kind
   id, name, username, email: `${username.replace(/\W/g, '')}@mail.demo`, location, kind, joinedAt: ago(joinedDaysAgo * D), bio,
 })
 
-function tx(id: string, title: string, buyer: string, supplier: string, status: TransactionStatus, qty: number, unit: string, price: number, daysAgo: number): TransactionDetail {
+export function tx(id: string, title: string, buyer: string, supplier: string, status: TransactionStatus, qty: number, unit: string, price: number, daysAgo: number): TransactionDetail {
   const order: TransactionStatus[] = ['agreement', 'invoiced', 'paid', 'fulfilling', 'delivered', 'completed']
   const reached = status === 'disputed' ? 4 : order.indexOf(status)
   return {
