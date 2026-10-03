@@ -569,3 +569,54 @@ export interface AuditEntry {
   /** Field-level diff: what changed, before → after. */
   changes?: { field: string; before?: string; after?: string }[]
 }
+
+// ── RFQ & direct trade (PRD F6) ──────────────────────────────────
+
+export type TradeParty = PartyRef & { userId?: string }
+
+export type QuoteStatus = 'submitted' | 'countered' | 'accepted' | 'declined' | 'withdrawn'
+
+export interface Quote {
+  id: string
+  supplier: TradeParty
+  priceIdr: number
+  quantity: number
+  leadTimeDays: number
+  terms: PaymentTerms
+  note: string
+  status: QuoteStatus
+  /** Buyer's counter-offer price per unit, while status is `countered`. */
+  counterPriceIdr?: number
+  at: string
+  history: { at: string; by: string; text: string }[]
+}
+
+export interface Rfq {
+  id: string
+  code: string
+  buyer: TradeParty
+  item: string
+  categoryId: CategoryId
+  quantity: Quantity
+  /** Buyer's target price per unit (optional, shown to suppliers). */
+  targetPriceIdr?: number
+  deadline: string
+  location: string
+  spec: string
+  status: 'open' | 'awarded' | 'closed'
+  invited: TradeParty[]
+  quotes: Quote[]
+  createdAt: string
+  conversationId: string
+  transactionId?: string
+  source?: { kind: 'repeat' | 'listing' | 'match' | 'logistics'; id: string }
+}
+
+export interface Conversation {
+  id: string
+  subject: string
+  participants: TradeParty[]
+  link?: { type: 'rfq' | 'match' | 'transaction'; id: string; href: string }
+  messages: { id: string; by: string; userId?: string; text: string; at: string }[]
+  updatedAt: string
+}
