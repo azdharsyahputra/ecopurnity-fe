@@ -1,6 +1,6 @@
 import { delay, http, HttpResponse } from 'msw'
-import type { AllocationLine, AuctionDetail, AuditEntry, CategoryId } from '@/domain/types'
-import { allowedActions, transition, type TransactionAction } from '@/domain/transaction'
+import type { AllocationLine, AuctionDetail, CategoryId, TransactionDetail } from '@/domain/types'
+import type { TradeActionInput } from '@/domain/trade'
 import { CATEGORIES } from '@/domain/catalog'
 import {
   approvalState, approverUserIds, auctionValue, can, canApprove, deniedReason, higherWins, inventoryFromCsv, orgAuctionStatus, pipelineCounts, procurementActions,
@@ -13,7 +13,8 @@ import { formatIdr } from '@/domain/format'
 import { db } from './db'
 import { economy } from './economy'
 import { allPersonal, notify } from './personal'
-import { SUPPLIERS, lotAuction, makeTx, newId, org, orgAudit, pools, saveOrg, supplierById, type HistoryRow, type OrgData, type StoredPool } from './org'
+import { SUPPLIERS, allOrgs, lotAuction, makeTx, newId, org, orgAudit, orgUserIds, pools, saveOrg, supplierById, type HistoryRow, type OrgData, type StoredPool } from './org'
+import { applyAction, botNotice, botStep, ensureF6, type TradeSink } from './trade'
 
 const api = (path: string) => `/api/v1/orgs/:orgId${path}`
 const fail = (status: number, code: string, message: string, fields?: Record<string, string>) => HttpResponse.json({ error: { code, message, fields } }, { status })
@@ -185,10 +186,22 @@ function orgSuppliers(o: OrgData): OrgSupplier[] {
 
 // ── Pools ────────────────────────────────────────────────────────
 
-const viewPool = (p: StoredPool, orgId: string) => ({
-  ...p,
-  members: p.members.map(({ orgId: owner, ...m }, i) => (owner === orgId ? { ...m, mine: true } : m.optIn ? m : { ...m, name: `Bisnis lain #${i + 1}` })),
-})
+/** A pool as one member org sees it: other businesses masked unless they opted in, own sub-PO linked after settlement. */
+const viewPool = (p: StoredPool, orgId: string) => {
+  const mask = <M extends { name: string; optIn: boolean }>({ orgId: owner, ...m }: M & { orgId?: string }, i: number) =>
+    owner === orgId ? { ...m, mine: true } : m.optIn ? m : { ...m, name: `Bisnis lain #${i + 1}` }
+  const a = p.auctionId ? economy.auctions.find((x) => x.id === p.auctionId) : undefined
+  const { makerUserId: _m, settlement, ...rest } = p
+  return {
+    ...rest,
+    members: p.members.map(mask),
+    round: a && { status: a.status, endsAt: a.endsAt },
+    settlement: settlement && {
+      ...settlement,
+      lines: settlement.lines.map(({ transactionId, ...l }, i) => (l.orgId === orgId ? { ...mask(l, i), transactionId } : mask(l, i))),
+    },
+  }
+}
 
 function joinPool(o: OrgData, orgId: string, p: StoredPool, quantity: number, optIn: boolean) {
   const mine = p.members.find((m) => m.orgId === orgId)
@@ -263,10 +276,25 @@ function analytics(o: OrgData, months: number, category?: string): OrgAnalytics 
   }
 }
 
-const ACTION_NOTE: Record<TransactionAction, string> = {
-  issue_invoice: 'Invoice diterbitkan', pay: 'Dana masuk escrow', ship: 'Barang dikirim', upload_proof: 'Bukti pengiriman diunggah',
-  confirm_receipt: 'Diterima, dana dilepas', cancel: 'Dibatalkan', dispute: 'Dispute diajukan',
+const orgSink = (o: OrgData): TradeSink => ({ save: saveOrg, audit: (e) => orgAudit(o, e) })
+
+/** Org trade with the pool split it came from (collective procurement), for the detail page. */
+function txPage(o: OrgData, orgId: string, t: TransactionDetail) {
+  const p = t.group && pools().find((x) => x.id === t.group!.id)
+  return { ...ensureF6(t), activity: o.activity.filter((e) => e.entity.id === t.id), collective: p?.settlement ? { poolId: p.id, title: p.title, unit: p.unit, ...viewPool(p, orgId).settlement! } : undefined }
 }
+
+// Fictional suppliers/buyers on org trades are played by the same bot as personal ones (PRD F6).
+setInterval(() => {
+  for (const [orgId, o] of allOrgs()) {
+    for (const t of o.transactions) {
+      const action = botStep(ensureF6(t), orgSink(o))
+      if (!action || action === 'review') continue
+      for (const userId of orgUserIds(orgId)) notify(userId, { ...botNotice(t, action), href: `/org/${orgId}/transactions/${t.id}` })
+    }
+  }
+}, 4_000)
+
 const NPWP = /^\d{2}\.\d{3}\.\d{3}\.\d-\d{3}\.\d{3}$/
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const ACTIVE_PROCUREMENT = ['pending_approval', 'approved', 'published', 'in_auction', 'in_collective']
@@ -701,38 +729,20 @@ export const orgHandlers = [
   })),
 
   // Transactions (PRD §9.8)
-  http.get(api('/transactions'), orgAuthed(({ o }) => HttpResponse.json(o.transactions.map(({ timeline: _t, documents: _d, payment: _p, delivery: _v, dispute: _x, ...t }) => t)))),
-  http.get(api('/transactions/:tid'), orgAuthed(({ o, params }) => {
+  http.get(api('/transactions'), orgAuthed(({ o }) =>
+    HttpResponse.json(o.transactions.map(ensureF6).map(({ timeline: _t, documents: _d, payment: _p, delivery: _v, dispute: _x, shipments: _s, reviews: _r, ...t }) => t)))),
+  http.get(api('/transactions/:tid'), orgAuthed(({ o, orgId, params }) => {
     const t = o.transactions.find((x) => x.id === params.tid)
-    return t ? HttpResponse.json({ ...t, activity: o.activity.filter((e) => e.entity.id === t.id) }) : fail(404, 'not_found', 'Transaksi tidak ditemukan')
+    return t ? HttpResponse.json(txPage(o, orgId, t)) : fail(404, 'not_found', 'Transaksi tidak ditemukan')
   })),
   http.post(api('/transactions/:tid/actions'), orgAuthed(async (c) => {
     const t = c.o.transactions.find((x) => x.id === c.params.tid)
     if (!t) return fail(404, 'not_found', 'Transaksi tidak ditemukan')
-    const { action, note, file } = await body<{ action: TransactionAction; note?: string; file?: string }>(c.request)
-    const denied = txDeniedReason(c.o.settings.permissions, c.role, c.roleLabel, action)
+    const input = await body<TradeActionInput>(c.request)
+    const denied = txDeniedReason(c.o.settings.permissions, c.role, c.roleLabel, input.action)
     if (denied) return fail(403, 'forbidden', denied)
-    const next = transition(t.status, t.role, action)
-    if (!next || !allowedActions(t.status, t.role).includes(action)) return fail(409, 'invalid_transition', 'Aksi ini tidak tersedia untuk status sekarang')
-    if (action === 'upload_proof' && !file) return fail(422, 'validation', 'Pilih file bukti', { file: 'Pilih file bukti pengiriman' })
-    if (action === 'dispute' && !note?.trim()) return fail(422, 'validation', 'Jelaskan alasannya', { note: 'Jelaskan alasan dispute' })
-    const before = t.status
-    t.status = next
-    t.updatedAt = now()
-    const step = t.timeline.find((s) => s.status === next)
-    if (step) Object.assign(step, { at: now(), note: ACTION_NOTE[action] })
-    if (action === 'issue_invoice') t.documents.push({ id: newId('doc'), kind: 'invoice', name: `INV-${t.code.slice(4)}.pdf`, at: now() })
-    if (action === 'pay') t.payment = { status: 'escrow', paidAt: now() }
-    if (action === 'ship') t.delivery.eta = new Date(Date.now() + 2 * 864e5).toISOString()
-    if (action === 'upload_proof') {
-      t.delivery.proof = file
-      t.documents.push({ id: newId('doc'), kind: 'proof', name: file!, at: now() })
-    }
-    if (action === 'confirm_receipt') t.payment.status = 'released'
-    if (action === 'cancel' && t.payment.status === 'escrow') t.payment.status = 'refunded'
-    if (action === 'dispute') t.dispute = { status: 'open', reason: note!, openedAt: now() }
-    orgAudit(c.o, { actor: c.actor, action: ACTION_NOTE[action], entity: { type: 'transaction', id: t.id, label: `${t.code} ${t.title}` }, reason: action === 'dispute' ? note : undefined, changes: [{ field: 'Status', before, after: next }] })
-    return HttpResponse.json({ ...t, activity: c.o.activity.filter((e: AuditEntry) => e.entity.id === t.id) })
+    const res = applyAction(ensureF6(t), c.actor, input, orgSink(c.o))
+    return res.ok ? HttpResponse.json(txPage(c.o, c.orgId, t)) : fail(res.status, res.code, res.message, res.fields)
   })),
 
   // Analytics (PRD §9.9)
