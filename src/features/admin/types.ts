@@ -65,7 +65,10 @@ export interface VerificationRequest {
   /** What the applicant typed into the form. */
   form: LabeledValue[]
   /** What the uploaded documents say (OCR in the real BE). Labels that also appear in `form` are compared. */
-  documents: { kind: DocKind; fileName: string; fields: LabeledValue[] }[]
+  /** `url`: short-lived download link, detail only. */
+  documents: { kind: DocKind; fileName: string; fields: LabeledValue[]; url?: string }[]
+  /** Decrypted NIK of a personal request, detail only (every view is audited). */
+  nik?: string
   decision?: { at: string; by: string; note: string }
 }
 
