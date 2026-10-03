@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
-  approvalState, approverUserIds, awardLines, awardSummary, can, canApprove, canTransact, inventoryFromCsv, parseCsv, pipelineCounts, poolTotals,
-  procurementActions, projectedUnitPrice, requiredApprovers, scaleDiscount, statusAfterApproval, toCsv, txDeniedReason, weightedScores,
+  approvalBy, approvalState, approverUserIds, awardLines, awardSummary, can, canApprove, canTransact, inventoryFromCsv, parseCsv, pipelineCounts, poolTotals,
+  procurementActions, projectedUnitPrice, requiredApprovers, scaleDiscount, signingRoles, statusAfterApproval, toCsv, txDeniedReason, weightedScores,
   type ApprovalRule, type LotOffer,
 } from './org'
+import { withdrawBlock } from './auction'
 
 const RULES: ApprovalRule[] = [
   { id: 'r1', label: '> 50 jt', minAmountIdr: 50_000_000, approvers: ['finance', 'owner'], appliesTo: ['procurement', 'auction'] },
@@ -61,6 +62,34 @@ describe('approval rules', () => {
     expect(canApprove('finance', req, [ok('finance')])).toBe(false)
   })
 
+  it('lets the owner sign for a required role nobody holds (no deadlock)', () => {
+    const req = ['finance', 'owner']
+    expect(signingRoles('owner', req, [], ['owner', 'sales'])).toEqual(['owner', 'finance'])
+    expect(signingRoles('owner', req, [], ['owner', 'finance'])).toEqual(['owner'])
+    expect(signingRoles('owner', req, [])).toEqual(['owner'])
+    expect(signingRoles('owner', ['finance'], [], ['owner'])).toEqual(['finance'])
+    expect(signingRoles('sales', req, [], ['owner', 'sales'])).toEqual([])
+    expect(signingRoles('owner', req, [{ ...ok('owner'), decision: 'rejected' }], ['owner'])).toEqual([])
+    expect(canApprove('owner', ['finance'], [], ['owner'])).toBe(true)
+    expect(approverUserIds(['finance'], [], [{ userId: 'ajar', role: 'owner' }, { userId: 'fajar', role: 'sales' }])).toEqual(['ajar'])
+    expect(procurementActions({ status: 'pending_approval', requiredApprovers: ['finance'], approvals: [] }, 'owner', undefined, ['owner'])).toEqual(['approve', 'reject', 'cancel'])
+    expect(approvalBy('Ajar', 'Owner', 'Finance', true)).toBe('Ajar · Owner (atas nama Finance)')
+    expect(approvalBy('Ajar', 'Owner', 'Owner', false)).toBe('Ajar (Owner)')
+  })
+
+  it('applies the withdraw rule of the auction', () => {
+    const now = Date.parse('2026-10-01T10:00:00Z')
+    const a = (min: number, status: 'live' | 'closed' = 'live') => ({ status, endsAt: new Date(now + min * 60_000).toISOString() })
+    expect(withdrawBlock(a(60), 'outbid', undefined, now)).toBeNull()
+    expect(withdrawBlock(a(20), 'outbid', undefined, now)).toBe('Bid terdepan atau 30 menit terakhir tidak bisa ditarik')
+    expect(withdrawBlock(a(60), 'leading', 'before_last_30', now)).toBe('Bid terdepan atau 30 menit terakhir tidak bisa ditarik')
+    expect(withdrawBlock(a(1), 'outbid', 'anytime', now)).toBeNull()
+    expect(withdrawBlock(a(60), 'leading', 'anytime', now)).toBe('Bid terdepan tidak bisa ditarik')
+    expect(withdrawBlock(a(60), 'outbid', 'never', now)).toBe('Bid di auction ini mengikat, tidak bisa ditarik')
+    expect(withdrawBlock(a(60), 'withdrawn', 'anytime', now)).toBe('Bid sudah ditarik')
+    expect(withdrawBlock(a(60, 'closed'), 'outbid', 'anytime', now)).toBe('Auction tidak sedang berjalan')
+  })
+
   it('asks the users holding a still-pending role, not the one who just acted', () => {
     const members = [{ userId: 'ajar', role: 'owner' }, { userId: 'maya', role: 'finance' }, { userId: 'bima', role: 'procurement' }]
     expect(approverUserIds(['finance', 'owner'], [], members, 'bima')).toEqual(['ajar', 'maya'])
@@ -109,7 +138,8 @@ describe('scoring and award rules', () => {
 
   it('awards per rule', () => {
     const lots = [{ quantity: 100, offers: [offer('a', 100, 60, 50), offer('b', 105, 100, 100)] }]
-    expect(awardLines(lots, 'lowest')[0]).toEqual([{ offerId: 'a', supplier: 'a', quantity: 100, priceIdr: 100 }])
+    // Never above an offer's capacity (the API refuses it); the rest of the lot stays uncovered.
+    expect(awardLines(lots, 'lowest')[0]).toEqual([{ offerId: 'a', supplier: 'a', quantity: 60, priceIdr: 100 }])
     expect(awardLines(lots, 'weighted', { price: 20, quality: 80, delivery: 0, reliability: 0 })[0][0].offerId).toBe('b')
     expect(awardLines(lots, 'split')[0].map((l) => l.quantity)).toEqual([60, 40])
     expect(awardLines(lots, 'lowest', undefined, true)[0][0].offerId).toBe('b')

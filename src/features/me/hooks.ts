@@ -114,7 +114,7 @@ export function useAuctionAction(id: string) {
     mutationFn: (
       a:
         | { type: 'qualify'; documentName: string; acceptRules: boolean }
-        | { type: 'bid'; priceIdr: number }
+        | { type: 'bid'; priceIdr: number; quantity?: number }
         | { type: 'withdraw' }
         | { type: 'accept' },
     ) => {
@@ -122,7 +122,7 @@ export function useAuctionAction(id: string) {
         case 'qualify':
           return api<unknown>(`/auctions/${id}/qualification`, json('POST', { documentName: a.documentName, acceptRules: a.acceptRules }))
         case 'bid':
-          return api<unknown>(`/auctions/${id}/bids`, json('POST', { priceIdr: a.priceIdr }))
+          return api<unknown>(`/auctions/${id}/bids`, json('POST', { priceIdr: a.priceIdr, quantity: a.quantity }))
         case 'withdraw':
           return api<unknown>(`/auctions/${id}/bids/mine`, json('DELETE'))
         case 'accept':
