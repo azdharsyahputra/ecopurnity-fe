@@ -224,6 +224,12 @@ export const economy = {
   opportunities: opportunityDetails,
   markets: marketDetails,
   auctions: auctionDetails,
+  /** Best competing price per auction, including ones the public can't see (rank_only, sealed). */
+  bestPrice: new Map<string, number>(
+    auctionDetails.map((a) => [a.id, a.currentPriceIdr ?? Math.round(a.openingPriceIdr * (a.type === 'forward' ? 1.04 : 0.93))]),
+  ),
+  /** auctionId → userId for auctions created by participants (buyer flow). */
+  owners: new Map<string, string>(),
 }
 
 export function marketDetail(id: string): MarketDetail | undefined {

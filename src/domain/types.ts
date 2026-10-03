@@ -1,7 +1,10 @@
 // API contract types (PRD §13). camelCase JSON, ISO 8601 UTC times, money as integer Rupiah.
 // Feature-specific entities are added here as each feature is built.
 
-import type { AuctionStatus, MarketStatus, OpportunityStatus } from './status'
+import type {
+  AuctionStatus, BidStatus, DemandStatus, DisputeStatus, MarketStatus, OpportunityStatus, QualificationStatus, SupplyStatus,
+  TransactionStatus,
+} from './status'
 
 export interface Quantity {
   value: number
@@ -200,6 +203,8 @@ export interface PublicBid {
   bidder: string
   priceIdr: number
   at: string
+  /** Only ever true for the signed-in user's own bids. */
+  mine?: boolean
 }
 
 export interface AuctionDetail extends Auction {
@@ -268,4 +273,236 @@ export interface OnboardingInput {
   maxBudgetIdr?: number
   organization?: { name: string; industry: string; location: string }
   marketMakerApplication?: { organization: string; reason: string }
+}
+
+// ── Personal workspace: identity (PRD §8.2) ──────────────────────
+
+export type CapacityKind = 'skill' | 'asset' | 'capacity' | 'resource'
+
+export interface CapacityItem {
+  id: string
+  kind: CapacityKind
+  name: string
+  /** Level, quantity per period, condition… e.g. "500 unit/bulan". */
+  detail: string
+}
+
+export interface Identity {
+  profile: {
+    name: string
+    username: string
+    location: string
+    bio: string
+    verification: { email: boolean; phone: boolean; identity: 'none' | 'pending' | 'verified' }
+  }
+  items: CapacityItem[]
+  /** Days 0 = Senin … 6 = Minggu; hours as HH:mm. */
+  availability: { days: number[]; from: string; to: string }
+  preferences: {
+    locations: string[]
+    categories: CategoryId[]
+    minPriceIdr?: number
+    maxBudgetIdr?: number
+    deliveryRadiusKm: number
+  }
+  /** 0–1, drives the "lengkapi profil" prompt. */
+  completeness: number
+}
+
+// ── Supply & demand (PRD §8.3–8.4) ───────────────────────────────
+
+export type DeliveryMode = 'pickup' | 'deliver' | 'both'
+
+interface ListingBase {
+  id: string
+  code: string
+  item: string
+  categoryId: CategoryId
+  quantity: Quantity
+  location: string
+  spec: string
+  delivery: DeliveryMode
+  /** File names; real uploads arrive with the BE. */
+  attachments: string[]
+  marketId?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface SupplyListing extends ListingBase {
+  kind: 'supply'
+  status: SupplyStatus
+  /** Expected price per unit. */
+  priceIdr: number
+  availableFrom: string
+  expiresAt?: string
+}
+
+export interface DemandListing extends ListingBase {
+  kind: 'demand'
+  status: DemandStatus
+  /** Total budget for the whole quantity. */
+  budgetIdr: number
+  deadline: string
+  auctionId?: string
+}
+
+export type Listing = SupplyListing | DemandListing
+
+export type ListingInput =
+  | Omit<SupplyListing, 'id' | 'code' | 'status' | 'createdAt' | 'updatedAt' | 'marketId'>
+  | Omit<DemandListing, 'id' | 'code' | 'status' | 'createdAt' | 'updatedAt' | 'marketId' | 'auctionId'>
+
+export type ListingDetail = Listing & {
+  history: { at: string; status: string; note: string }[]
+  matches: Opportunity[]
+  markets: Market[]
+}
+
+// ── Personal opportunities & markets (PRD §8.5–8.7) ──────────────
+
+export interface MatchReason {
+  label: string
+  detail: string
+}
+
+export interface PersonalOpportunity extends Opportunity {
+  reasons: MatchReason[]
+  distanceKm: number
+  /** Estimated monthly value for this user if they take part. */
+  personalValueIdr: number
+  relation: 'none' | 'following' | 'joined'
+  contribution?: { kind: 'supply' | 'demand'; listingId: string; quantity: Quantity }
+}
+
+export interface MyMarket extends Market {
+  joined: boolean
+  /** Alert when the median price crosses this value. */
+  watchPriceIdr?: number
+  myListings: number
+}
+
+// ── Auctions as participant (PRD §8.8) ───────────────────────────
+
+export interface Qualification {
+  auctionId: string
+  status: QualificationStatus
+  checks: { id: string; label: string; done: boolean; detail?: string }[]
+}
+
+export interface MyBid {
+  auction: Auction
+  priceIdr: number
+  status: BidStatus
+  /** 1 = best. Absent for sealed auctions until they close. */
+  rank?: number
+  submittedAt: string
+  updatedAt: string
+  canWithdraw: boolean
+}
+
+export interface Offer {
+  id: string
+  supplier: PartyRef & { reputation: number }
+  priceIdr: number
+  /** Most this supplier can deliver. */
+  capacity: Quantity
+  submittedAt: string
+}
+
+export interface AllocationLine {
+  offerId: string
+  supplier: string
+  quantity: number
+  priceIdr: number
+}
+
+export interface AuctionEvaluation {
+  auction: AuctionDetail
+  demand?: DemandListing
+  offers: Offer[]
+  /** Smart Allocation: cheapest reliable split that covers the lot. */
+  suggestion: { lines: AllocationLine[]; totalIdr: number; savingsIdr: number; reason: string }
+}
+
+export interface CreateAuctionInput {
+  demandId: string
+  type: 'reverse' | 'sealed'
+  durationMinutes: number
+  openingPriceIdr: number
+  minStepIdr: number
+  visibility: BidVisibility
+  invite: string[]
+}
+
+// ── Transactions (PRD §8.9) ──────────────────────────────────────
+
+export interface Transaction {
+  id: string
+  code: string
+  title: string
+  role: 'buyer' | 'supplier'
+  counterparty: PartyRef
+  status: TransactionStatus
+  quantity: Quantity
+  unitPriceIdr: number
+  totalIdr: number
+  createdAt: string
+  updatedAt: string
+  dueAt: string
+  auctionId?: string
+}
+
+export interface TransactionDetail extends Transaction {
+  timeline: { status: TransactionStatus; at?: string; note?: string }[]
+  documents: { id: string; kind: 'order' | 'agreement' | 'invoice' | 'proof'; name: string; at: string }[]
+  payment: { status: 'unpaid' | 'escrow' | 'released' | 'refunded'; paidAt?: string }
+  delivery: { address: string; eta?: string; proof?: string }
+  dispute?: { status: DisputeStatus; reason: string; openedAt: string }
+}
+
+// ── Notifications (PRD §8.11) ────────────────────────────────────
+
+export type NotificationType =
+  | 'opportunity_detected'
+  | 'new_market'
+  | 'auction_invitation'
+  | 'outbid'
+  | 'winning_bid'
+  | 'auction_ending'
+  | 'transaction_update'
+  | 'payment'
+  | 'delivery'
+  | 'reputation_update'
+
+export interface AppNotification {
+  id: string
+  type: NotificationType
+  title: string
+  body: string
+  href: string
+  at: string
+  read: boolean
+}
+
+export type NotificationPrefs = Record<NotificationType, { inApp: boolean; email: boolean }>
+
+// ── Dashboard (PRD §8.1) ─────────────────────────────────────────
+
+export interface DashboardSummary {
+  stats: {
+    activeOpportunities: number
+    activeBids: number
+    openDemands: number
+    currentOffers: number
+    runningTransactions: number
+    earnings30dIdr: number
+    savings30dIdr: number
+    reputation: number
+  }
+  actions: { id: string; tone: 'red' | 'orange' | 'blue' | 'lime'; title: string; detail: string; href: string }[]
+  topMatches: PersonalOpportunity[]
+  liveBids: MyBid[]
+  activity: ActivityEvent[]
+  connections: { count: number; sample: PartyRef[] }
 }

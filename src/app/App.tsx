@@ -4,6 +4,9 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from '@/lib/api'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { CommandPalette } from '@/components/CommandPalette'
+import { Toaster } from '@/components/Toaster'
+import { useMe } from '@/features/auth/hooks'
+import { useLiveNotifications } from '@/features/notifications/live'
 import { FullPageLoader } from '@/components/States'
 import { AuthGateDialog } from '@/features/auth/AuthGate'
 import { LoginPage } from '@/features/auth/LoginPage'
@@ -30,13 +33,23 @@ const AuctionsPage = named(economy, 'AuctionsPage')
 const AuctionRoomPage = named(economy, 'AuctionRoomPage')
 const SearchPage = named(() => import('@/features/search/SearchPage'), 'SearchPage')
 const OnboardingPage = named(() => import('@/features/auth/OnboardingPage'), 'OnboardingPage')
+const me = () => import('@/features/me/pages')
+const P = {
+  dashboard: named(me, 'DashboardPage'), identity: named(me, 'IdentityPage'), opportunities: named(me, 'MyOpportunitiesPage'),
+  markets: named(me, 'MyMarketsPage'), auctions: named(me, 'MyAuctionsPage'), createAuction: named(me, 'CreateAuctionPage'),
+  evaluate: named(me, 'EvaluatePage'), transactions: named(me, 'TransactionsPage'), transaction: named(me, 'TransactionDetailPage'),
+  notifications: named(me, 'NotificationsPage'), settings: named(me, 'SettingsPage'), supply: named(me, 'SupplyPage'),
+  demand: named(me, 'DemandPage'), supplyForm: named(me, 'SupplyFormPage'), demandForm: named(me, 'DemandFormPage'),
+  supplyDetail: named(me, 'SupplyDetailPage'), demandDetail: named(me, 'DemandDetailPage'),
+}
 
 const [personal, org, marketOps, governance] = ROUTE_WORKSPACES
 
-/** Placeholder routes for every nav item of a workspace; replaced page by page in F2–F5. */
-function workspaceRoutes(ws: Workspace) {
+/** One route per nav item: the built page from `pages`, or a phase placeholder until it exists. */
+function workspaceRoutes(ws: Workspace, pages: Record<string, React.ComponentType> = {}) {
   return [...ws.items, ...(ws.footer ?? [])].map((item) => {
-    const el = <Placeholder title={item.label} icon={item.icon} tone={ws.tone} phase={ws.phase} />
+    const Page = pages[item.path]
+    const el = Page ? <Page /> : <Placeholder title={item.label} icon={item.icon} tone={ws.tone} phase={ws.phase} />
     return item.path ? <Route key={item.path} path={item.path} element={el} /> : <Route key="index" index element={el} />
   })
 }
@@ -49,6 +62,8 @@ const PROFILE_PAGES: [string, string][] = [
 
 /** Router-aware singletons. */
 function Shell() {
+  const { data: me } = useMe()
+  useLiveNotifications(me?.id)
   return (
     <>
       <Suspense fallback={<FullPageLoader />}>
@@ -56,6 +71,7 @@ function Shell() {
       </Suspense>
       <CommandPalette />
       <AuthGateDialog />
+      <Toaster />
     </>
   )
 }
@@ -97,7 +113,21 @@ export default function App() {
               <Route element={<RequireAuth />}>
                 <Route path="onboarding" element={<OnboardingPage />} />
                 <Route element={<AppLayout />}>
-                  <Route path="app">{workspaceRoutes(personal)}</Route>
+                  <Route path="app">
+                    {workspaceRoutes(personal, {
+                      '': P.dashboard, identity: P.identity, supply: P.supply, demand: P.demand, opportunities: P.opportunities,
+                      markets: P.markets, auctions: P.auctions, transactions: P.transactions, notifications: P.notifications, settings: P.settings,
+                    })}
+                    <Route path="supply/new" element={<P.supplyForm />} />
+                    <Route path="supply/:id" element={<P.supplyDetail />} />
+                    <Route path="supply/:id/edit" element={<P.supplyForm />} />
+                    <Route path="demand/new" element={<P.demandForm />} />
+                    <Route path="demand/:id" element={<P.demandDetail />} />
+                    <Route path="demand/:id/edit" element={<P.demandForm />} />
+                    <Route path="auctions/new" element={<P.createAuction />} />
+                    <Route path="auctions/:id/evaluate" element={<P.evaluate />} />
+                    <Route path="transactions/:id" element={<P.transaction />} />
+                  </Route>
                   <Route path="org/:orgId" element={<RequireOrg />}>{workspaceRoutes(org)}</Route>
                   <Route path="mm" element={<RequireCapability cap="market_maker" />}>
                     {workspaceRoutes(marketOps)}

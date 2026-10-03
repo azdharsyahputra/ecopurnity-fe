@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, CheckCircle2, Circle, EyeOff, Gavel, Lock, Package, Timer, TrendingDown, TrendingUp, Users } from 'lucide-react'
+import { Link, useParams } from 'react-router-dom'
+import { ArrowLeft, EyeOff, Gavel, Lock, Package, Timer, TrendingDown, TrendingUp, Users } from 'lucide-react'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { AuctionDetail } from '@/domain/types'
 import { AUCTION_TYPES } from '@/domain/catalog'
@@ -9,6 +9,7 @@ import { useAuthGate, useMe } from '@/features/auth/hooks'
 import { useAuction } from './hooks'
 import { auctionPriceLabel } from './utils'
 import { RulesList } from './components'
+import { ParticipantBidBox } from '@/features/me/auctions'
 import { AsyncView } from '@/components/States'
 import { StatTile } from '@/components/StatTile'
 import { StatusBadge, Tag } from '@/components/Tag'
@@ -29,10 +30,11 @@ const pricesHidden = (a: AuctionDetail) => a.visibility !== 'full'
 function BidBox({ a }: { a: AuctionDetail }) {
   const { data: me } = useMe()
   const gate = useAuthGate()
-  const navigate = useNavigate()
   const unit = a.lot.quantity.unit
   const dir = a.type === 'forward' ? 1 : -1
   const suggested = (a.currentPriceIdr ?? a.openingPriceIdr) + dir * a.minStepIdr
+
+  if (me) return <ParticipantBidBox a={a} />
 
   if (!isLive(a)) {
     return (
@@ -40,31 +42,6 @@ function BidBox({ a }: { a: AuctionDetail }) {
         {a.status === 'scheduled' || a.status === 'qualification'
           ? <>Auction dimulai <b className="text-foreground">{formatDateTime(a.startsAt)}</b>. Kualifikasi dibuka sebelum mulai.</>
           : 'Auction sudah ditutup. Hasil penetapan tercatat di audit trail market.'}
-      </div>
-    )
-  }
-
-  if (me) {
-    // ponytail: qualification + live bidding are the F2 participant flow (PRD §8.8); this shows the checklist.
-    const checks: [string, boolean][] = [
-      ['Email terverifikasi', me.emailVerified],
-      ['Reputasi ≥ 80', false],
-      ['Dokumen spesifikasi diunggah', false],
-    ]
-    return (
-      <div>
-        <p className="text-sm font-medium">Kamu belum terkualifikasi</p>
-        <ul className="mt-3 flex flex-col gap-2 text-sm">
-          {checks.map(([label, ok]) => (
-            <li key={label} className="flex items-center gap-2">
-              {ok ? <CheckCircle2 className="size-4 text-primary" /> : <Circle className="size-4 text-muted-foreground" />}
-              <span className={ok ? 'text-muted-foreground line-through' : undefined}>{label}</span>
-            </li>
-          ))}
-        </ul>
-        <Button className="mt-4 h-10 w-full" onClick={() => navigate(`/app/auctions?qualify=${a.id}`)}>
-          Mulai kualifikasi
-        </Button>
       </div>
     )
   }
@@ -210,7 +187,7 @@ function Content({ a }: { a: AuctionDetail }) {
               <ol className="mt-2 divide-y" aria-live="polite" aria-relevant="additions">
                 {a.bids.slice(0, 10).map((b, i) => (
                   <li key={b.id} className="flex items-center gap-3 py-2.5 text-sm animate-in fade-in slide-in-from-top-1">
-                    <span className="flex-1 truncate">{b.bidder}</span>
+                    <span className="flex-1 truncate">{b.mine ? <Tag tone="blue">Kamu</Tag> : b.bidder}</span>
                     {i === 0 && <Tag tone="green">Terbaik</Tag>}
                     <span className="num font-medium">{formatIdr(b.priceIdr)}</span>
                     <span className="w-24 text-right text-xs text-muted-foreground">{formatRelative(b.at)}</span>

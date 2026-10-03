@@ -3,6 +3,8 @@ import type { CategoryId, ExplorerRange, OnboardingInput, Page, SearchType } fro
 import { db, saveUsers, toUser, type MockUser } from './db'
 import { aggregates, economy, explorerOverview, marketDetail, search, toAuction, toOpportunity } from './economy'
 import { legacyHandlers } from './legacy'
+import { applyOnboarding, personal } from './personal'
+import { personalHandlers } from './personalHandlers'
 
 const api = (path: string) => `/api/v1${path}`
 
@@ -146,6 +148,7 @@ export const handlers = [
     const input = (await request.json()) as OnboardingInput
     user.location = input.location
     user.onboarded = true
+    applyOnboarding(user.id, input)
     if (input.organization) {
       user.orgs.push({ orgId: `org-${token()}`, orgName: input.organization.name, role: 'owner', verified: false })
     }
@@ -216,7 +219,10 @@ export const handlers = [
   http.get(api('/auctions/:id'), async ({ params }) => {
     await delay(250)
     const a = economy.auctions.find((x) => x.id === params.id)
-    return a ? HttpResponse.json(a) : fail(404, 'not_found', 'Auction tidak ditemukan')
+    if (!a) return fail(404, 'not_found', 'Auction tidak ditemukan')
+    // Flag the viewer's own bids so the room can say "Kamu".
+    const me = db.sessionUserId && db.users.some((u) => u.id === db.sessionUserId) ? personal(db.sessionUserId).bids[a.id] : undefined
+    return HttpResponse.json(me ? { ...a, bids: a.bids.map((b) => (b.mine || (b.priceIdr === me.priceIdr && b.bidder === 'Kamu') ? { ...b, mine: true } : b)) } : a)
   }),
 
   http.get(api('/explorer/overview'), async ({ request }) => {
@@ -242,5 +248,6 @@ export const handlers = [
     return HttpResponse.json(hits.slice(0, limit))
   }),
 
+  ...personalHandlers,
   ...legacyHandlers,
 ]
