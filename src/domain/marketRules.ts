@@ -100,16 +100,21 @@ export function pendingVersion(versions: RuleVersion[], round: number): RuleVers
 
 const isoDay = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
-/** First version for a market: this week's Mon–Fri window, 1% of demand as minimum order, 40% of supply as cap. */
+/**
+ * First version for a market: today until this week's Friday (next week's Mon–Fri on a weekend), 1% of demand as
+ * minimum order, 40% of supply as cap.
+ */
 export function defaultRules(m: { demand: Quantity; supply: Quantity; region: string; mechanism: MarketMechanism }, today = new Date()): MarketRules {
+  const weekend = today.getDay() === 0 || today.getDay() === 6
   const monday = new Date(today)
-  monday.setDate(today.getDate() - ((today.getDay() + 6) % 7))
+  monday.setDate(today.getDate() - ((today.getDay() + 6) % 7) + (weekend ? 7 : 0))
   const friday = new Date(monday)
   friday.setDate(monday.getDate() + 4)
+  const start = weekend ? monday : today
   return {
     eligibility: 'verified_docs', visibility: m.mechanism === 'sealed_bid' ? 'sealed' : 'full', minStepPct: 1,
     minQuantity: Math.max(1, Math.round(m.demand.value * 0.01)), maxQuantity: Math.max(1, Math.round(m.supply.value * 0.4)),
-    windowStart: isoDay(monday), windowEnd: isoDay(friday), region: m.region, radiusKm: 75,
+    windowStart: isoDay(start), windowEnd: isoDay(friday), region: m.region, radiusKm: 75,
     award: m.mechanism === 'forward_auction' ? 'highest_price' : m.mechanism === 'sealed_bid' ? 'score' : m.mechanism === 'collective_procurement' ? 'pro_rata' : 'lowest_price',
   }
 }
