@@ -10,7 +10,6 @@ import { cn } from '@/lib/utils'
 import { toast } from '@/stores/toast'
 import { useIdentity, useKyc, useKycAction, useSaveIdentity } from './hooks'
 import { uploadFile, uploadErrorMessage } from '@/lib/upload'
-import { MOCKS } from '@/features/auth/ui'
 import { KYC_LEVELS, type KycLevel } from '@/domain/kyc'
 import { PageHeader } from '@/components/PageHeader'
 import { AsyncView } from '@/components/States'
@@ -42,42 +41,6 @@ function CategorySelect({ label, value, onChange, className }: { label: string; 
       <option value="">Kategori…</option>
       {(Object.keys(CATEGORIES) as CategoryId[]).map((c) => <option key={c} value={c}>{CATEGORIES[c].label}</option>)}
     </select>
-  )
-}
-
-function PhoneDialog({ otpPending, onClose }: { otpPending: boolean; onClose: () => void }) {
-  const act = useKycAction()
-  const [phone, setPhone] = useState('')
-  const [code, setCode] = useState('')
-  const [sent, setSent] = useState(otpPending)
-  return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Verifikasi nomor HP</DialogTitle>
-          <DialogDescription>Kode OTP 6 digit dikirim lewat WhatsApp atau SMS, berlaku 5 menit.</DialogDescription>
-        </DialogHeader>
-        <form
-          className="grid gap-3"
-          onSubmit={(e) => {
-            e.preventDefault()
-            if (!sent) act.mutate({ type: 'phone', phone }, { onSuccess: () => setSent(true) })
-            else act.mutate({ type: 'otp', code }, { onSuccess: () => { toast({ title: 'Nomor HP terverifikasi', tone: 'green' }); onClose() } })
-          }}
-        >
-          {!sent ? (
-            <Field label="Nomor HP" inputMode="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} error={fieldError(act.error, 'phone')} hint="Contoh: 0812xxxxxxxx" />
-          ) : (
-            <Field label="Kode OTP" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} error={fieldError(act.error, 'code')} hint={MOCKS ? 'Mode demo: kodenya 246810' : 'Cek SMS/WhatsApp kamu'} />
-          )}
-          <FormError error={act.error} />
-          <DialogFooter>
-            {sent && <Button type="button" variant="ghost" onClick={() => setSent(false)}>Ganti nomor</Button>}
-            <Button type="submit" disabled={act.isPending}>{sent ? 'Verifikasi' : 'Kirim kode'}</Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
   )
 }
 
@@ -150,7 +113,6 @@ function Verification() {
         const v = k.verification
         const steps = [
           ['email', 'Email', v.email, 'Kode 6 digit dikirim ke email'],
-          ['phone', 'Nomor HP', v.phone, 'Kode OTP ke WhatsApp/SMS'],
           ['identity', 'Identitas (KTP)', v.identity === 'verified', v.identity === 'pending' ? 'Sedang ditinjau tim governance' : 'Foto KTP + selfie'],
         ] as const
         return (
@@ -159,8 +121,8 @@ function Verification() {
               <p className="text-sm text-muted-foreground">Batas per transaksi saat ini</p>
               <p className="num mt-1 text-2xl font-semibold">{formatIdr(k.limitIdr)}</p>
               <p className="mt-1 text-sm">Level <b>{k.label}</b>{k.next && <span className="text-muted-foreground"> · {k.next}</span>}</p>
-              <ol className="mt-3 grid grid-cols-3 gap-1.5" aria-label="Level verifikasi">
-                {([0, 1, 2] as KycLevel[]).map((l) => (
+              <ol className="mt-3 grid grid-cols-2 gap-1.5" aria-label="Level verifikasi">
+                {([0, 1] as KycLevel[]).map((l) => (
                   <li key={l} className={cn('rounded-md border px-2 py-1.5 text-xs', l <= k.level ? 'border-primary bg-primary/10 text-foreground' : 'text-muted-foreground')}>
                     <span className="block font-medium">{KYC_LEVELS[l].label}</span>
                     <span className="num">s.d. {formatIdr(KYC_LEVELS[l].limitIdr, { compact: true })}</span>
@@ -179,7 +141,6 @@ function Verification() {
                 </li>
               ))}
             </ul>
-            {open === 'phone' && !v.phone && <PhoneDialog otpPending={k.otpPending} onClose={() => setOpen('')} />}
             {open === 'identity' && v.identity === 'none' && <IdentityDialog onClose={() => setOpen('')} />}
           </div>
         )

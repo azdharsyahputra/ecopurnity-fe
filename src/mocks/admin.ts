@@ -192,7 +192,7 @@ function seed(): AdminState {
     {
       id: 'frd-1033', code: 'FRD-1033', type: 'fake_accounts', source: 'system', title: 'Tiga akun baru dengan perangkat yang sama', score: 74, confidence: 0.86, status: 'investigating', detectedAt: ago(28 * H),
       subjects: [{ type: 'user', id: 'usr-x-budi1', label: 'Budi Santoso' }, { type: 'user', id: 'usr-x-budi2', label: 'Budi Santosa' }, { type: 'user', id: 'usr-x-budi3', label: 'B. Santoso' }],
-      evidence: ['Ketiga akun dibuat dalam 48 jam dari perangkat yang sama', 'Nomor telepon berbeda satu digit', 'Hanya menawar di market pupuk dengan harga di bawah HPP'],
+      evidence: ['Ketiga akun dibuat dalam 48 jam dari perangkat yang sama', 'Alamat email berbeda satu karakter', 'Hanya menawar di market pupuk dengan harga di bawah HPP'],
       graph: graph(
         [
           { id: 'b1', label: 'budi.s01', kind: 'person', flagged: true }, { id: 'b2', label: 'budi.s02', kind: 'person', flagged: true }, { id: 'b3', label: 'bsantoso', kind: 'person', flagged: true },

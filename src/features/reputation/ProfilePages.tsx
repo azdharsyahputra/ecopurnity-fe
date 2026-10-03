@@ -77,7 +77,6 @@ export function ParticipantProfilePage() {
                 <ul className="mt-2 flex flex-wrap gap-1.5" aria-label="Verifikasi">
                   {p.verification.identity === 'verified' && <li><Tag tone="teal"><BadgeCheck className="size-3" /> Identitas terverifikasi</Tag></li>}
                   {p.verification.email && <li><Tag>Email terverifikasi</Tag></li>}
-                  {p.verification.phone && <li><Tag>Telepon terverifikasi</Tag></li>}
                 </ul>
               </div>
             </header>
