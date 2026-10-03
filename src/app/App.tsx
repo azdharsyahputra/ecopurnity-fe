@@ -17,10 +17,9 @@ import { AuthLayout } from './layouts/AuthLayout'
 import { AppLayout } from './layouts/AppLayout'
 import { GuestOnly, RequireAuth, RequireCapability, RequireOrg } from './guards'
 import { ROUTE_WORKSPACES, type Workspace } from './nav'
-import { NotFound, Placeholder } from './Placeholder'
+import { NotFound } from './NotFound'
 
 const UiShowcase = lazy(() => import('@/features/showcase/UiShowcase').then((m) => ({ default: m.UiShowcase })))
-const LegacyRoutes = lazy(() => import('@/legacy/LegacyRoutes'))
 // Public economy pages pull in recharts; keep them out of the landing bundle.
 const named = <K extends string>(load: () => Promise<Record<K, React.ComponentType>>, key: K) => lazy(() => load().then((m) => ({ default: m[key] })))
 const economy = () => import('@/features/economy/pages')
@@ -71,12 +70,12 @@ const O = {
 
 const [personal, org, marketOps, governance] = ROUTE_WORKSPACES
 
-/** One route per nav item: the built page from `pages`, or a phase placeholder until it exists. */
-function workspaceRoutes(ws: Workspace, pages: Record<string, React.ComponentType> = {}) {
+/** One route per nav item of a workspace; every item must have a page. */
+function workspaceRoutes(ws: Workspace, pages: Record<string, React.ComponentType>) {
   return [...ws.items, ...(ws.footer ?? [])].map((item) => {
     const Page = pages[item.path]
-    const el = Page ? <Page /> : <Placeholder title={item.label} icon={item.icon} tone={ws.tone} phase={ws.phase} />
-    return item.path ? <Route key={item.path} path={item.path} element={el} /> : <Route key="index" index element={el} />
+    if (!Page) throw new Error(`No page for ${ws.base}/${item.path}`)
+    return item.path ? <Route key={item.path} path={item.path} element={<Page />} /> : <Route key="index" index element={<Page />} />
   })
 }
 
@@ -179,8 +178,6 @@ export default function App() {
                   </Route>
                 </Route>
               </Route>
-
-              <Route path="legacy/*" element={<LegacyRoutes />} />
               <Route path="*" element={<NotFound />} />
             </Route>
           </Routes>

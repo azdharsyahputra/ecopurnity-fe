@@ -21,15 +21,13 @@ export interface Workspace {
   base: string
   icon: LucideIcon
   tone: Tone
-  /** PRD roadmap phase that builds this workspace's pages. */
-  phase: string
   items: NavItem[]
   footer?: NavItem[]
 }
 
 // Routes follow the PRD §4 route map.
 const personal: Workspace = {
-  id: 'personal', label: 'Personal', caption: 'My Economy', base: '/app', icon: UserRound, tone: 'teal', phase: 'F2',
+  id: 'personal', label: 'Personal', caption: 'My Economy', base: '/app', icon: UserRound, tone: 'teal',
   items: [
     { label: 'My Economy', path: '', icon: House },
     { label: 'Identity', path: 'identity', icon: IdCard },
@@ -53,7 +51,7 @@ const ORG_ROLE_LABEL = { owner: 'Owner', procurement: 'Procurement', finance: 'F
 function orgWorkspace(org: User['orgs'][number]): Workspace {
   return {
     id: `org:${org.orgId}`, label: org.orgName, caption: ORG_ROLE_LABEL[org.role], base: `/org/${org.orgId}`,
-    icon: Building2, tone: 'blue', phase: 'F3',
+    icon: Building2, tone: 'blue',
     items: [
       { label: 'Overview', path: '', icon: LayoutDashboard },
       { label: 'Procurement', path: 'procurement', icon: ClipboardList },
@@ -72,7 +70,7 @@ function orgWorkspace(org: User['orgs'][number]): Workspace {
 }
 
 const marketOps: Workspace = {
-  id: 'mm', label: 'Market Ops', caption: 'Market Maker', base: '/mm', icon: Compass, tone: 'purple', phase: 'F4',
+  id: 'mm', label: 'Market Ops', caption: 'Market Maker', base: '/mm', icon: Compass, tone: 'purple',
   items: [
     { label: 'Operations', path: '', icon: LayoutDashboard },
     { label: 'Opportunity pipeline', path: 'opportunities', icon: Kanban },
@@ -82,7 +80,7 @@ const marketOps: Workspace = {
 }
 
 const governance: Workspace = {
-  id: 'admin', label: 'Governance', caption: 'Admin', base: '/admin', icon: ShieldCheck, tone: 'orange', phase: 'F5',
+  id: 'admin', label: 'Governance', caption: 'Admin', base: '/admin', icon: ShieldCheck, tone: 'orange',
   items: [
     { label: 'Overview', path: '', icon: LayoutDashboard },
     { label: 'Users', path: 'users', icon: Users },
