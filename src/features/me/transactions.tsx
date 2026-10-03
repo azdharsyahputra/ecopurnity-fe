@@ -140,7 +140,7 @@ export function TransactionDetailPage() {
             icon={ReceiptText}
             tone="purple"
           />
-          <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
             <div className="flex min-w-0 flex-col gap-6">
               <section className="rounded-xl border bg-card p-4 md:p-5">
                 <h2 className="font-medium">Progres</h2>

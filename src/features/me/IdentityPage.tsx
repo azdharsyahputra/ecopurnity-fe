@@ -48,7 +48,7 @@ function Editor({ initial }: { initial: Identity }) {
 
       <div className="mt-6">
         {tab === 'profile' && (
-          <section className="grid gap-6 md:grid-cols-[1fr_16rem]">
+          <section className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_16rem]">
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Nama" value={d.profile.name} onChange={(e) => profile('name', e.target.value)} error={fieldError(save.error, 'name')} />
               <Field label="Username" value={d.profile.username} onChange={(e) => profile('username', e.target.value)} hint={`ecopurnity.id/u/${d.profile.username}`} />

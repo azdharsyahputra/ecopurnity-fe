@@ -63,7 +63,7 @@ export function OperationsPage() {
 
       <AsyncView query={query} skeleton={<Skeleton className="mt-6 h-72 rounded-xl" />}>
         {(d) => (
-          <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_20rem]">
+          <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
             <section className="min-w-0">
               <h2 className="mb-3 font-medium">Market saya</h2>
               {d.markets.length ? (

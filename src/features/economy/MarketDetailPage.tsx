@@ -66,7 +66,7 @@ function Content({ m }: { m: MarketDetail }) {
         <StatTile label="Volume 30 hari" icon={Wallet} tone="lime" value={formatIdr(m.volume30dIdr, { compact: true })} className="col-span-2 md:col-span-1" />
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_20rem]">
+      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="flex min-w-0 flex-col gap-6">
           <ChartCard
             title="Harga per minggu"

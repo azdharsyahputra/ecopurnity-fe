@@ -416,7 +416,7 @@ export function EvaluatePage() {
               tone="orange"
               actions={<Button variant="outline" className="h-9" render={<Link to={`/auctions/${a.id}`} />}>Buka auction room</Button>}
             />
-            <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
               <section className="min-w-0">
                 <h2 className="mb-3 font-medium">Penawaran ({offers.length})</h2>
                 {offers.length ? (

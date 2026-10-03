@@ -3,6 +3,7 @@ import type { CategoryId, ExplorerRange, OnboardingInput, Page, SearchType } fro
 import { db, saveUsers, toUser, type MockUser } from './db'
 import { aggregates, economy, explorerOverview, marketDetail, search, toAuction, toOpportunity } from './economy'
 import { legacyHandlers } from './legacy'
+import { admin } from './admin'
 import { applyOnboarding, personal } from './personal'
 import { personalHandlers } from './personalHandlers'
 import { mmHandlers } from './mmHandlers'
@@ -13,6 +14,8 @@ const api = (path: string) => `/api/v1${path}`
 
 const fail = (status: number, code: string, message: string, fields?: Record<string, string>) =>
   HttpResponse.json({ error: { code, message, fields } }, { status })
+
+const SUSPENDED = 'Akun ini disuspend oleh tim governance. Hubungi dukungan untuk banding.'
 
 const noContent = () => new HttpResponse(null, { status: 204 })
 
@@ -43,6 +46,7 @@ export const handlers = [
   http.get(api('/auth/me'), async () => {
     await delay(150)
     const user = sessionUser()
+    if (user && admin.users[user.id]?.status === 'suspended') return fail(403, 'account_suspended', SUSPENDED)
     return user ? HttpResponse.json(toUser(user)) : fail(401, 'unauthenticated', 'Belum login')
   }),
 
@@ -52,6 +56,7 @@ export const handlers = [
     const user = db.users.find((u) => u.email === email.trim().toLowerCase() && u.password === password)
     // Same message for unknown email and wrong password.
     if (!user) return fail(401, 'invalid_credentials', 'Email atau password salah')
+    if (admin.users[user.id]?.status === 'suspended') return fail(403, 'account_suspended', SUSPENDED)
     db.setSession(user.id)
     return HttpResponse.json(toUser(user))
   }),

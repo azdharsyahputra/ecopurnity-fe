@@ -65,7 +65,7 @@ function Content({ o }: { o: OpportunityDetail }) {
         <StatTile label="Nilai potensi" icon={Wallet} tone="lime" value={formatIdr(o.potentialValueIdr, { compact: true })} hint="per bulan" className="col-span-2 md:col-span-1" />
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_20rem]">
+      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="flex min-w-0 flex-col gap-6">
           <section className="rounded-xl border bg-card p-4 md:p-5">
             <h2 className="font-medium">Demand vs supply</h2>

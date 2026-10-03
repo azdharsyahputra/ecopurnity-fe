@@ -88,7 +88,7 @@ export function ParticipantProfilePage() {
             )}
             {p.bio && <p className="mt-4 max-w-2xl text-sm">{p.bio}</p>}
 
-            <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_20rem]">
+            <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
               <div className="flex min-w-0 flex-col gap-6">
                 <section>
                   <h2 className="mb-3 font-medium">Supply aktif</h2>
@@ -173,7 +173,7 @@ export function BusinessProfilePage() {
             </header>
             <p className="mt-4 max-w-2xl text-sm">{b.description}</p>
 
-            <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_20rem]">
+            <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
               <div className="flex min-w-0 flex-col gap-6">
                 <section>
                   <h2 className="mb-3 font-medium">Market</h2>
