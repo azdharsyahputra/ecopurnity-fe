@@ -8,7 +8,7 @@ import { formatIdr } from '@/domain/format'
 import { audit } from './audit'
 import { db } from './db'
 import { newId, notify, personal, savePersonal } from './personal'
-import { claim, consumeUpload } from './kyc'
+import { claim, consumeUpload, uploadFileInfo } from './kyc'
 
 // Settlement engine for the mock (PRD F6). One trade, two records when both sides are platform accounts:
 // every action is applied to the actor's record and mirrored to the peer's. Fictional counterparties are
@@ -254,7 +254,7 @@ export function applyUserAction(t: TransactionDetail, userId: string, actorName:
     if (typeof r !== 'string') return err(422, 'validation', 'Periksa kembali file yang diunggah', r)
     file = r
   }
-  const res = applyAction(t, actorName, { ...input, file, fileUrl: file && `/api/v1/_mock/storage/${input.uploadId}` }, sink)
+  const res = applyAction(t, actorName, { ...input, file, fileUrl: file && uploadFileInfo(input.uploadId!).url }, sink)
   if (res.ok && file) consumeUpload(userId, input.uploadId, purpose!, 'uploadId')
   return res
 }
