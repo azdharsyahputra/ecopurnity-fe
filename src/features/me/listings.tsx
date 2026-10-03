@@ -10,6 +10,8 @@ import { cn } from '@/lib/utils'
 import { useLocalDraft } from '@/lib/useLocalDraft'
 import { useListing, useListingAction, useListings, useSaveListing } from './hooks'
 import { CategoryTag, OpportunityCard } from '@/features/economy/components'
+import { usePriceSuggestion } from '@/features/economy/hooks'
+import { priceVerdict } from '@/domain/pricing'
 import { PageHeader } from '@/components/PageHeader'
 import { AsyncView, EmptyState } from '@/components/States'
 import { StatusBadge, Tag } from '@/components/Tag'
@@ -148,6 +150,24 @@ function fromListing(l: Listing): Draft {
   }
 }
 
+/** Market price band for the category and unit; `perUnit` is what the user typed, per unit. */
+function PriceHint({ category, unit, item, perUnit, exclude, onUse }: { category: CategoryId; unit: string; item: string; perUnit: number; exclude?: string; onUse: (medianIdr: number) => void }) {
+  const { data: s } = usePriceSuggestion(category, unit, item, exclude)
+  if (!s) return null
+  const verdict = perUnit > 0 ? priceVerdict(perUnit, s) : null
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border bg-muted/40 px-3 py-2 text-sm sm:col-span-2" role="status">
+      <span>
+        Harga pasar {formatIdr(s.lowIdr)}–{formatIdr(s.highIdr)}/{unit}, median <b className="num">{formatIdr(s.medianIdr)}</b>
+        <span className="text-muted-foreground"> · {s.sample} data</span>
+      </span>
+      {verdict && verdict !== 'fair' && <Tag tone={verdict === 'low' ? 'orange' : 'yellow'}>{verdict === 'low' ? 'Di bawah pasar' : 'Di atas pasar'}</Tag>}
+      {verdict === 'fair' && <Tag tone="green">Wajar</Tag>}
+      <Button type="button" size="xs" variant="ghost" className="ml-auto" onClick={() => onUse(s.medianIdr)}>Pakai median</Button>
+    </div>
+  )
+}
+
 function ListingForm({ kind, existing }: { kind: Kind; existing?: Listing }) {
   const navigate = useNavigate()
   const save = useSaveListing(existing?.id)
@@ -194,6 +214,7 @@ function ListingForm({ kind, existing }: { kind: Kind; existing?: Listing }) {
     kind === 'supply' ? (
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label={`Harga ekspektasi per ${d.unit || 'unit'} (Rp)`} type="number" min={0} inputMode="numeric" value={d.price} onChange={(e) => set('price', e.target.value)} />
+        <PriceHint category={d.categoryId} unit={d.unit} item={d.item} perUnit={Number(d.price)} exclude={existing?.id} onUse={(m) => set('price', String(m))} />
         <SelectField label="Lokasi" value={d.location} onChange={(e) => set('location', e.target.value)}>
           {REGIONS.map((r) => <option key={r}>{r}</option>)}
         </SelectField>
@@ -208,6 +229,7 @@ function ListingForm({ kind, existing }: { kind: Kind; existing?: Listing }) {
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Budget total (Rp)" type="number" min={0} inputMode="numeric" value={d.budget} onChange={(e) => set('budget', e.target.value)} hint={qty > 0 && Number(d.budget) > 0 ? `≈ ${formatIdr(Math.round(Number(d.budget) / qty))} per ${d.unit}` : undefined} />
         <Field label="Deadline" type="date" value={d.deadline} onChange={(e) => set('deadline', e.target.value)} />
+        {qty > 0 && <PriceHint category={d.categoryId} unit={d.unit} item={d.item} perUnit={Number(d.budget) / qty} exclude={existing?.id} onUse={(m) => set('budget', String(m * qty))} />}
         <SelectField label="Lokasi pengiriman" value={d.location} onChange={(e) => set('location', e.target.value)}>
           {REGIONS.map((r) => <option key={r}>{r}</option>)}
         </SelectField>
