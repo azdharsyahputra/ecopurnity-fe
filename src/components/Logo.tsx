@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import logo from '@/assets/ecopurnity.png'
+import logo from '@/assets/ecopurnity-96.png'
 import { cn } from '@/lib/utils'
 
 export function Logo({ to = '/', className }: { to?: string; className?: string }) {
