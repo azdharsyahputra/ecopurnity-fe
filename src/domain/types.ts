@@ -506,3 +506,19 @@ export interface DashboardSummary {
   activity: ActivityEvent[]
   connections: { count: number; sample: PartyRef[] }
 }
+
+// ── Audit trail (PRD §12.6) ──────────────────────────────────────
+
+export interface AuditEntry {
+  id: string
+  /** Who did it, e.g. "Sari Kusuma (Admin)" or "Sistem". */
+  actor: string
+  /** Verb phrase, e.g. "Suspend market". */
+  action: string
+  entity: { type: 'user' | 'business' | 'market' | 'auction' | 'transaction' | 'dispute' | 'rule' | 'procurement' | 'supplier'; id: string; label: string }
+  at: string
+  /** Required for punitive actions (suspend, freeze, reject…). */
+  reason?: string
+  /** Field-level diff: what changed, before → after. */
+  changes?: { field: string; before?: string; after?: string }[]
+}
