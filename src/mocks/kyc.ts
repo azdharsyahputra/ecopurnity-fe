@@ -5,17 +5,13 @@ import { audit } from './audit'
 import { db } from './db'
 import { personal, savePersonal } from './personal'
 
-// Personal verification (PRD F6): phone OTP, KTP + selfie into the admin verification queue, and the
+// Personal verification (PRD F6, email only): KTP + selfie into the admin verification queue, and the
 // per-level commitment limits enforced at bid / accept / buyer auction / quote acceptance.
 
 const api = (path: string) => `/api/v1${path}`
 const fail = (status: number, code: string, message: string, fields?: Record<string, string>) =>
   HttpResponse.json({ error: { code, message, fields } }, { status })
 const now = () => new Date().toISOString()
-
-// ponytail: fixed demo OTP until the BE wires an SMS/WhatsApp provider.
-export const DEMO_OTP = '246810'
-const otps: Record<string, { phone: string; expiresAt: number }> = {}
 
 function verificationOf(userId: string) {
   const v = personal(userId).identity.profile.verification
@@ -32,7 +28,7 @@ export function commitGuard(userId: string, valueIdr: number) {
 
 function kyc(userId: string) {
   const level = levelOf(userId)
-  return { level, ...KYC_LEVELS[level], verification: verificationOf(userId), otpPending: !!otps[userId] }
+  return { level, ...KYC_LEVELS[level], verification: verificationOf(userId) }
 }
 
 const session = () => {
@@ -100,31 +96,6 @@ export const kycHandlers = [
     await delay(150)
     const userId = session()
     return userId ? HttpResponse.json(kyc(userId)) : fail(401, 'unauthenticated', 'Belum login')
-  }),
-
-  http.post(api('/me/kyc/phone'), async ({ request }) => {
-    await delay(400)
-    const userId = session()
-    if (!userId) return fail(401, 'unauthenticated', 'Belum login')
-    const { phone } = (await request.json()) as { phone?: string }
-    const digits = (phone ?? '').replace(/\D/g, '')
-    if (!/^(62|0)8\d{7,11}$/.test(digits)) return fail(422, 'validation', 'Nomor HP tidak valid', { phone: 'Contoh: 0812xxxxxxxx' })
-    otps[userId] = { phone: digits, expiresAt: Date.now() + 5 * 60_000 }
-    return HttpResponse.json(kyc(userId))
-  }),
-
-  http.post(api('/me/kyc/phone/verify'), async ({ request }) => {
-    await delay(400)
-    const userId = session()
-    if (!userId) return fail(401, 'unauthenticated', 'Belum login')
-    const pending = otps[userId]
-    if (!pending || pending.expiresAt < Date.now()) return fail(409, 'otp_expired', 'Kode kedaluwarsa, kirim ulang')
-    const { code } = (await request.json()) as { code?: string }
-    if (code !== DEMO_OTP) return fail(422, 'validation', 'Kode salah', { code: 'Kode tidak cocok' })
-    delete otps[userId]
-    personal(userId).identity.profile.verification.phone = true
-    savePersonal()
-    return HttpResponse.json(kyc(userId))
   }),
 
   http.post(api('/me/kyc/identity'), async ({ request }) => {
