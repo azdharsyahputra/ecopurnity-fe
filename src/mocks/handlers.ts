@@ -6,6 +6,8 @@ import { legacyHandlers } from './legacy'
 import { applyOnboarding, personal } from './personal'
 import { personalHandlers } from './personalHandlers'
 import { mmHandlers } from './mmHandlers'
+import { adminHandlers } from './adminHandlers'
+import { profileHandlers } from './profileHandlers'
 
 const api = (path: string) => `/api/v1${path}`
 
@@ -250,6 +252,8 @@ export const handlers = [
   }),
 
   ...mmHandlers,
+  ...adminHandlers,
+  ...profileHandlers,
   ...personalHandlers,
   ...legacyHandlers,
 ]
