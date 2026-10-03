@@ -315,6 +315,20 @@ export interface Identity {
 
 export type DeliveryMode = 'pickup' | 'deliver' | 'both'
 
+/** A photo or document attached to a listing. */
+export interface ListingAttachment {
+  id: string
+  fileName: string
+  /** image/jpeg, image/png, image/webp or application/pdf (legacy rows may have another type). */
+  contentType: string
+  sizeBytes?: number
+  /** Presigned GET URL, valid for 1 hour. Absent for legacy name-only attachments (no stored file). */
+  url?: string
+}
+
+/** Exactly one of uploadId (add a file, purpose listing_attachment) or id (keep an existing attachment). */
+export type ListingAttachmentInput = { uploadId: string; id?: never } | { id: string; uploadId?: never }
+
 interface ListingBase {
   id: string
   code: string
@@ -324,8 +338,8 @@ interface ListingBase {
   location: string
   spec: string
   delivery: DeliveryMode
-  /** File names; real uploads arrive with the BE. */
-  attachments: string[]
+  /** Photos and documents in the owner's order. */
+  attachments: ListingAttachment[]
   marketId?: string
   createdAt: string
   updatedAt: string
@@ -356,11 +370,14 @@ export type PublicListing = Pick<Listing, 'id' | 'code' | 'kind' | 'item' | 'cat
   /** Per unit: the supplier's asking price, or the buyer's budget divided by quantity. */
   unitPriceIdr: number
   owner: { name: string; username?: string; userId?: string; verified: boolean }
+  /** The listing's photos and documents in the owner's order (the card shows the first image). */
+  attachments: ListingAttachment[]
 }
 
+/** `attachments` is the complete ordered set (at most 8); attachments not listed are removed. */
 export type ListingInput =
-  | Omit<SupplyListing, 'id' | 'code' | 'status' | 'createdAt' | 'updatedAt' | 'marketId'>
-  | Omit<DemandListing, 'id' | 'code' | 'status' | 'createdAt' | 'updatedAt' | 'marketId' | 'auctionId'>
+  | (Omit<SupplyListing, 'id' | 'code' | 'status' | 'createdAt' | 'updatedAt' | 'marketId' | 'attachments'> & { attachments: ListingAttachmentInput[] })
+  | (Omit<DemandListing, 'id' | 'code' | 'status' | 'createdAt' | 'updatedAt' | 'marketId' | 'auctionId' | 'attachments'> & { attachments: ListingAttachmentInput[] })
 
 export type ListingDetail = Listing & {
   history: { at: string; status: string; note: string }[]

@@ -24,8 +24,8 @@ function userListings(): PublicListing[] {
     return p.listings
       .map((s) => s.listing)
       .filter((l) => PUBLIC_STATUS.includes(l.status))
-      .map(({ id, code, kind, item, categoryId, quantity, location, spec, delivery, marketId, createdAt, ...rest }) => ({
-        id, code, kind, item, categoryId, quantity, location, spec, delivery, marketId, createdAt,
+      .map(({ id, code, kind, item, categoryId, quantity, location, spec, delivery, marketId, createdAt, attachments, ...rest }) => ({
+        id, code, kind, item, categoryId, quantity, location, spec, delivery, marketId, createdAt, attachments,
         unitPriceIdr: unitPrice({ kind, quantity, ...rest } as Listing), owner: { name: u.name, username: u.username, userId, verified },
       }))
   })
@@ -47,7 +47,7 @@ function marketListings(): PublicListing[] {
         id: `pl-${m.id}-${i}`, code: `${kind === 'supply' ? 'SUP' : 'DEM'}-${(h % 9000) + 1000}`, kind, item: m.name.replace(/\s+Q\d.*$/, ''),
         categoryId: m.categoryId, quantity: { value: qty, unit: m.priceRange.unit }, location: m.region, spec: 'Sesuai standar market',
         delivery: 'both', marketId: m.id, createdAt: new Date(Date.now() - (h % 20) * 864e5).toISOString(),
-        unitPriceIdr: Math.round((ref * (0.9 + (h % 20) / 100)) / 50) * 50, owner: { name: who.name, verified: who.status === 'active' },
+        unitPriceIdr: Math.round((ref * (0.9 + (h % 20) / 100)) / 50) * 50, owner: { name: who.name, verified: who.status === 'active' }, attachments: [],
       } satisfies PublicListing]
     })
   }))
