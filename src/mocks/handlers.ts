@@ -1,179 +1,294 @@
-import { http, HttpResponse, delay } from 'msw'
-import {
-  mockProfile,
-  mockOpportunities,
-  mockGraphData,
-  mockAuctions,
-  mockExecutionPlan,
-  mockTransactions,
-  mockReputation,
-  mockMySupply,
-  mockMyDemand,
-  mockCoalitions,
-  mockMarketIntelligence,
-  mockBusinessDashboard,
-  mockAdminDashboard,
-} from './mockData'
+import { delay, http, HttpResponse } from 'msw'
+import type { CategoryId, ExplorerRange, OnboardingInput, Page, SearchType } from '@/domain/types'
+import { db, saveUsers, toUser, type MockUser } from './db'
+import { aggregates, economy, explorerOverview, marketDetail, search, toAuction, toOpportunity } from './economy'
+import { admin, saveAdmin } from './admin'
+import { audit } from './audit'
+import { applyOnboarding } from './personal'
+import { personalHandlers } from './personalHandlers'
+import { rfqHandlers } from './rfq'
+import { settleHandlers } from './settle'
+import { kycHandlers } from './kyc'
+import { mmHandlers } from './mmHandlers'
+import { adminHandlers } from './adminHandlers'
+import { profileHandlers } from './profileHandlers'
+import { orgHandlers } from './orgHandlers'
+import { createMmApplication, roleHandlers } from './roles'
+
+const api = (path: string) => `/api/v1${path}`
+
+const fail = (status: number, code: string, message: string, fields?: Record<string, string>) =>
+  HttpResponse.json({ error: { code, message, fields } }, { status })
+
+const SUSPENDED = 'Akun ini disuspend oleh tim governance.'
+
+const noContent = () => new HttpResponse(null, { status: 204 })
+
+const sessionUser = () => db.users.find((u) => u.id === db.sessionUserId)
+
+const token = () => Math.random().toString(36).slice(2, 12)
+
+/** `?page=&pageSize=` over an already filtered list (PRD §13 list contract). */
+function paginate<T>(items: T[], url: URL): Page<T> {
+  const page = Math.max(1, Number(url.searchParams.get('page') ?? 1))
+  const pageSize = Math.min(50, Number(url.searchParams.get('pageSize') ?? 12))
+  return { data: items.slice((page - 1) * pageSize, page * pageSize), meta: { page, pageSize, total: items.length } }
+}
+
+function matches(url: URL, item: { categoryId: CategoryId; region: string; status: string }, text: string) {
+  const p = url.searchParams
+  const term = p.get('q')?.toLowerCase()
+  return (
+    (!p.get('category') || item.categoryId === p.get('category')) &&
+    (!p.get('region') || item.region === p.get('region')) &&
+    (!p.get('status') || p.get('status')!.split(',').includes(item.status)) &&
+    (!term || text.toLowerCase().includes(term))
+  )
+}
 
 export const handlers = [
+  // ── Auth (PRD §7) ──
+  http.get(api('/auth/me'), async () => {
+    await delay(150)
+    const user = sessionUser()
+    if (user && admin.users[user.id]?.status === 'suspended') return fail(403, 'account_suspended', SUSPENDED)
+    return user ? HttpResponse.json(toUser(user)) : fail(401, 'unauthenticated', 'Belum login')
+  }),
 
-  // Economic Identity
-  http.get('/api/v1/profile/me', async () => {
+  http.post(api('/auth/login'), async ({ request }) => {
+    await delay(400)
+    const { email, password } = (await request.json()) as { email: string; password: string }
+    const user = db.users.find((u) => u.email === email.trim().toLowerCase() && u.password === password)
+    // Same message for unknown email and wrong password.
+    if (!user) return fail(401, 'invalid_credentials', 'Email atau password salah')
+    if (admin.users[user.id]?.status === 'suspended') {
+      const ap = admin.appeals?.[user.id]
+      const note = ap?.status === 'pending' ? ' Bandingmu sedang ditinjau.' : ap?.status === 'denied' ? ` Banding ditolak: ${ap.decision?.note}` : ''
+      return fail(403, ap ? 'account_suspended_appealed' : 'account_suspended', `${SUSPENDED}${note}`)
+    }
+    db.setSession(user.id)
+    return HttpResponse.json(toUser(user))
+  }),
+
+  // Suspension appeal (PRD F6): suspended accounts can't sign in, so the appeal re-checks the credentials.
+  http.post(api('/auth/appeal'), async ({ request }) => {
+    await delay(400)
+    const { email = '', password, reason } = (await request.json()) as { email?: string; password?: string; reason?: string }
+    const user = db.users.find((u) => u.email === email.trim().toLowerCase() && u.password === password)
+    if (!user) return fail(401, 'invalid_credentials', 'Email atau password salah')
+    if (admin.users[user.id]?.status !== 'suspended') return fail(409, 'not_suspended', 'Akun ini tidak disuspend')
+    if (admin.appeals?.[user.id]) return fail(409, 'already_appealed', 'Banding sudah pernah diajukan')
+    if (!reason || reason.trim().length < 20) return fail(422, 'validation', 'Jelaskan bandingmu', { reason: 'Minimal 20 karakter' })
+    ;(admin.appeals ??= {})[user.id] = { reason: reason.trim(), at: new Date().toISOString(), status: 'pending' }
+    saveAdmin()
+    audit({ actor: user.name, action: 'Ajukan banding suspend', entity: { type: 'user', id: user.id, label: user.name }, reason: reason.trim() })
+    return HttpResponse.json({ ok: true })
+  }),
+
+  http.post(api('/auth/register'), async ({ request }) => {
+    await delay(500)
+    const { name, email, password } = (await request.json()) as { name: string; email: string; password: string }
+    const normalized = email.trim().toLowerCase()
+    if (db.users.some((u) => u.email === normalized))
+      return fail(409, 'email_taken', 'Email sudah terdaftar', { email: 'Email ini sudah punya akun. Masuk saja.' })
+    if (password.length < 8) return fail(422, 'validation', 'Password terlalu pendek', { password: 'Minimal 8 karakter' })
+    const user: MockUser = {
+      id: `usr-new-${token()}`, name: name.trim(), username: normalized.split('@')[0], email: normalized,
+      emailVerified: false, capabilities: [], orgs: [], onboarded: false, password,
+    }
+    db.users.push(user)
+    saveUsers()
+    db.verifyTokens.set(normalized, token())
+    db.setSession(user.id)
+    return HttpResponse.json(toUser(user), { status: 201 })
+  }),
+
+  // Mock OAuth: the "provider" always returns the same Google account.
+  http.post(api('/auth/google'), async () => {
+    await delay(600)
+    const email = 'tamu.google@gmail.com'
+    let user = db.users.find((u) => u.email === email)
+    if (!user) {
+      user = {
+        id: `usr-new-google`, name: 'Tamu Google', username: 'tamu', email, emailVerified: true,
+        capabilities: [], orgs: [], onboarded: false, password: token(),
+      }
+      db.users.push(user)
+      saveUsers()
+    }
+    db.setSession(user.id)
+    return HttpResponse.json(toUser(user))
+  }),
+
+  http.post(api('/auth/logout'), async () => {
+    db.setSession(null)
+    return noContent()
+  }),
+
+  http.post(api('/auth/verify-email'), async ({ request }) => {
+    await delay(400)
+    const { token: t } = (await request.json()) as { token: string }
+    const email = [...db.verifyTokens].find(([, v]) => v === t)?.[0]
+    const user = db.users.find((u) => u.email === email)
+    if (!user) return fail(400, 'invalid_token', 'Link verifikasi tidak valid atau sudah kedaluwarsa')
+    user.emailVerified = true
+    db.verifyTokens.delete(user.email)
+    saveUsers()
+    return HttpResponse.json(toUser(user))
+  }),
+
+  http.post(api('/auth/resend-verification'), async () => {
     await delay(300)
-    return HttpResponse.json(mockProfile)
+    const user = sessionUser()
+    if (!user) return fail(401, 'unauthenticated', 'Belum login')
+    db.verifyTokens.set(user.email, token())
+    return noContent()
   }),
 
-  // Opportunity Engine
-  http.get('/api/v1/opportunities', async () => {
+  // Always 204 so the response never reveals whether an email is registered.
+  http.post(api('/auth/forgot-password'), async ({ request }) => {
     await delay(400)
-    return HttpResponse.json(mockOpportunities)
+    const { email } = (await request.json()) as { email: string }
+    const normalized = email.trim().toLowerCase()
+    if (db.users.some((u) => u.email === normalized)) db.resetTokens.set(normalized, token())
+    return noContent()
   }),
 
-  http.get('/api/v1/opportunities/graph', async ({ request }) => {
+  http.post(api('/auth/reset-password'), async ({ request }) => {
     await delay(400)
+    const { token: t, password } = (await request.json()) as { token: string; password: string }
+    const email = [...db.resetTokens].find(([, v]) => v === t)?.[0]
+    const user = db.users.find((u) => u.email === email)
+    if (!user) return fail(400, 'invalid_token', 'Link reset tidak valid atau sudah kedaluwarsa')
+    if (password.length < 8) return fail(422, 'validation', 'Password terlalu pendek', { password: 'Minimal 8 karakter' })
+    user.password = password
+    db.resetTokens.delete(user.email)
+    saveUsers()
+    return noContent()
+  }),
+
+  /** Mock-only: lets the UI show the link a real BE would have emailed. */
+  http.get(api('/_mock/outbox'), ({ request }) => {
+    const email = new URL(request.url).searchParams.get('email')?.trim().toLowerCase() ?? sessionUser()?.email ?? ''
+    return HttpResponse.json({ verifyToken: db.verifyTokens.get(email) ?? null, resetToken: db.resetTokens.get(email) ?? null })
+  }),
+
+  http.patch(api('/me/onboarding'), async ({ request }) => {
+    await delay(500)
+    const user = sessionUser()
+    if (!user) return fail(401, 'unauthenticated', 'Belum login')
+    const input = (await request.json()) as OnboardingInput
+    user.location = input.location
+    user.onboarded = true
+    applyOnboarding(user.id, input)
+    if (input.organization) {
+      user.orgs.push({ orgId: `org-${token()}`, orgName: input.organization.name, role: 'owner', verified: false })
+    }
+    const mm = input.marketMakerApplication
+    if (mm?.organization.trim()) createMmApplication(user, { organization: mm.organization, categories: input.categories, experience: mm.reason, documents: '' })
+    saveUsers()
+    return HttpResponse.json(toUser(user))
+  }),
+
+  // ── Public economy ──
+  http.get(api('/public/stats'), async () => {
+    await delay(200)
+    return HttpResponse.json(db.stats)
+  }),
+
+  http.get(api('/public/activity'), async ({ request }) => {
+    await delay(250)
+    const limit = Number(new URL(request.url).searchParams.get('limit') ?? 20)
+    return HttpResponse.json(db.activity.slice(0, limit))
+  }),
+
+  http.get(api('/opportunities'), async ({ request }) => {
+    await delay(300)
     const url = new URL(request.url)
-    const oppId = url.searchParams.get('opp') ?? undefined
-    return HttpResponse.json(mockGraphData(oppId))
+    const list = economy.opportunities
+      .filter((o) => matches(url, o, `${o.title} ${o.code} ${o.description}`))
+      .sort((a, b) => b.potentialValueIdr - a.potentialValueIdr)
+      .map(toOpportunity)
+    return HttpResponse.json(paginate(list, url))
   }),
 
-  // Market & Auctions
-  http.get('/api/v1/auctions', async () => {
-    await delay(400)
-    return HttpResponse.json(mockAuctions)
-  }),
-
-  http.post('/api/v1/auctions/:id/join', async ({ request }) => {
-    await delay(500)
-    const body = (await request.json()) as { quantity: number }
-    return HttpResponse.json({
-      message: 'Successfully joined order pool',
-      addedQuantity: body.quantity,
-    })
-  }),
-
-  http.post('/api/v1/auctions/:id/bid', async ({ request }) => {
-    await delay(500)
-    const body = (await request.json()) as { price: number; capacity: number }
-    return HttpResponse.json({
-      message: 'Bid submitted successfully',
-      bid: body,
-    })
-  }),
-
-  // Smart Allocation
-  http.get('/api/v1/allocation/current', async () => {
-    await delay(350)
-    return HttpResponse.json(mockExecutionPlan)
-  }),
-
-  http.post('/api/v1/allocation/lock-escrow', async () => {
-    await delay(600)
-    return HttpResponse.json({
-      message: 'Escrow locked successfully and smart contract executed.',
-      status: 'ESCROW_LOCKED',
-    })
-  }),
-
-  // Transaction Layer
-  http.get('/api/v1/transactions', async () => {
-    await delay(400)
-    return HttpResponse.json(mockTransactions)
-  }),
-
-  http.get('/api/v1/transactions/:id', async ({ params }) => {
+  http.get(api('/opportunities/:id'), async ({ params }) => {
     await delay(300)
-    const tx = mockTransactions.find((t) => t.id === params.id)
-    if (!tx) return new HttpResponse(null, { status: 404 })
-    return HttpResponse.json(tx)
+    const o = economy.opportunities.find((x) => x.id === params.id)
+    if (!o) return fail(404, 'not_found', 'Opportunity tidak ditemukan')
+    // Visitors get initials only (PRD §6.3).
+    const masked = sessionUser()
+      ? o.participantsPreview
+      : o.participantsPreview.map((p) => ({ ...p, name: p.name.replace(/\B\w+/g, '•••') }))
+    return HttpResponse.json({ ...o, participantsPreview: masked })
   }),
 
-  http.post('/api/v1/transactions/:id/proof', async () => {
-    await delay(700)
-    return HttpResponse.json({
-      message: 'Proof of fulfillment submitted. Under review.',
-      status: 'PROOF_SUBMITTED',
-    })
-  }),
-
-  // Reputation Engine
-  http.get('/api/v1/reputation/me', async () => {
-    await delay(350)
-    return HttpResponse.json(mockReputation)
-  }),
-
-  // Supply & Demand Registry 
-  http.get('/api/v1/supply/me', async () => {
+  http.get(api('/markets'), async ({ request }) => {
     await delay(300)
-    return HttpResponse.json(mockMySupply)
+    const url = new URL(request.url)
+    const list = economy.markets
+      .filter((m) => matches(url, m, `${m.name} ${m.code} ${m.maker.name}`))
+      .sort((a, b) => b.volume30dIdr - a.volume30dIdr)
+      .map(({ description: _d, rules: _r, priceHistory: _p, activity: _a, auctions: _u, ...m }) => m)
+    return HttpResponse.json(paginate(list, url))
   }),
 
-  http.post('/api/v1/supply', async ({ request }) => {
-    await delay(600)
-    const body = await request.json()
-    return HttpResponse.json({ message: 'Supply registered successfully.', data: body }, { status: 201 })
-  }),
-
-  http.get('/api/v1/demand/me', async () => {
+  http.get(api('/markets/:id'), async ({ params }) => {
     await delay(300)
-    return HttpResponse.json(mockMyDemand)
+    const m = marketDetail(String(params.id))
+    return m ? HttpResponse.json(m) : fail(404, 'not_found', 'Market tidak ditemukan')
   }),
 
-  http.post('/api/v1/demand', async ({ request }) => {
-    await delay(600)
-    const body = await request.json()
-    return HttpResponse.json({ message: 'Demand registered successfully.', data: body }, { status: 201 })
-  }),
-
-  // Market Formation
-  http.post('/api/v1/markets', async ({ request }) => {
-    await delay(600)
-    const body = await request.json()
-    return HttpResponse.json({ message: 'Market formation request created.', data: body }, { status: 201 })
-  }),
-
-  // Market Maker Coalitions
-  http.get('/api/v1/coalitions', async () => {
-    await delay(400)
-    return HttpResponse.json(mockCoalitions)
-  }),
-
-  // Market Intelligence
-  http.get('/api/v1/market-intelligence', async () => {
-    await delay(350)
-    return HttpResponse.json(mockMarketIntelligence)
-  }),
-
-  // Business Dashboard
-  http.get('/api/v1/business/dashboard', async () => {
-    await delay(350)
-    return HttpResponse.json(mockBusinessDashboard)
-  }),
-
-  // Platform Admin Dashboard 
-  http.get('/api/v1/admin/dashboard', async () => {
+  http.get(api('/auctions'), async ({ request }) => {
     await delay(300)
-    return HttpResponse.json(mockAdminDashboard)
+    const url = new URL(request.url)
+    const order = { live: 0, extended: 0, qualification: 1, scheduled: 2 } as Record<string, number>
+    const list = economy.auctions
+      .filter((a) => matches(url, { ...a, region: url.searchParams.get('region') ?? '' }, `${a.title} ${a.code} ${a.marketName}`))
+      .sort((a, b) => (order[a.status] ?? 3) - (order[b.status] ?? 3) || a.endsAt.localeCompare(b.endsAt))
+      .map(toAuction)
+    return HttpResponse.json(paginate(list, url))
   }),
 
-  // Admin Dispute Actions
-  http.post('/api/v1/admin/disputes/:id/request-proof', async ({ params }) => {
-    await delay(600)
-    return HttpResponse.json({
-      success: true,
-      disputeId: params.id,
-      action: 'PROOF_REQUESTED',
-      message: 'Both parties have been notified to submit supporting documents within 48 hours.',
-    })
+  http.get(api('/auctions/:id'), async ({ params }) => {
+    await delay(250)
+    const a = economy.auctions.find((x) => x.id === params.id)
+    if (!a) return fail(404, 'not_found', 'Auction tidak ditemukan')
+    // Flag the viewer's own bids so the room can say "Kamu"; everyone else only sees the masked name.
+    const viewer = db.sessionUserId
+    return HttpResponse.json({ ...a, bids: a.bids.map((b) => (viewer && economy.bidOwners.get(b.id) === viewer ? { ...b, mine: true } : b)) })
   }),
 
-  http.post('/api/v1/admin/disputes/:id/mediate', async ({ params, request }) => {
-    await delay(800)
-    const body = await request.json()
-    return HttpResponse.json({
-      success: true,
-      disputeId: params.id,
-      action: 'MEDIATION_INITIATED',
-      ...(body as object),
-    })
+  http.get(api('/explorer/overview'), async ({ request }) => {
+    await delay(350)
+    const p = new URL(request.url).searchParams
+    return HttpResponse.json(explorerOverview((p.get('range') ?? '30d') as ExplorerRange, (p.get('category') || undefined) as CategoryId))
   }),
+
+  http.get(api('/explorer/:side'), async ({ params, request }) => {
+    await delay(300)
+    const side = params.side
+    if (side !== 'demand' && side !== 'supply') return fail(404, 'not_found', 'Tidak ditemukan')
+    const category = (new URL(request.url).searchParams.get('category') || undefined) as CategoryId
+    return HttpResponse.json(aggregates(side, category))
+  }),
+
+  http.get(api('/search'), async ({ request }) => {
+    await delay(200)
+    const p = new URL(request.url).searchParams
+    const type = p.get('type') as SearchType | null
+    const limit = Number(p.get('limit') ?? 50)
+    const hits = search(p.get('q') ?? '').filter((h) => !type || h.type === type)
+    return HttpResponse.json(hits.slice(0, limit))
+  }),
+
+  ...mmHandlers,
+  ...adminHandlers,
+  ...profileHandlers,
+  ...orgHandlers,
+  ...roleHandlers,
+  ...rfqHandlers,
+  ...settleHandlers,
+  ...kycHandlers,
+  ...personalHandlers,
 ]
