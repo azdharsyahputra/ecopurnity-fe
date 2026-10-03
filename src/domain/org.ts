@@ -1,7 +1,7 @@
 import type { AllocationLine, AuctionType, BidVisibility, CategoryId, Offer, OrgRole, Quantity, AuditEntry, TransactionDetail } from './types'
 import type { AuctionStatus, Tone } from './status'
 import { suggestAllocation } from './auction'
-import { ACTION_LABEL, type TransactionAction } from './transaction'
+import { TRADE_ACTION_LABEL, type TradeAction } from './trade'
 
 // Business / organization workspace (PRD §9): contract types plus the branching rules shared by
 // the UI (what to show/enable) and the mock API (what to accept). BE should enforce the same tables.
@@ -45,30 +45,31 @@ export function can(perms: Permissions | undefined, role: string, module: Module
 export const deniedReason = (roleLabel: string, module: Module, action: Action) =>
   `Peran ${roleLabel} tidak punya izin ${ACTIONS[action].toLowerCase()} ${MODULES[module]}`
 
-/** Who may take each step of an org transaction (PRD §9.8): money moves by Finance, goods by Operations. */
-export const TX_ACTION_ROLES: Partial<Record<TransactionAction, OrgRole[]>> = {
-  pay: ['owner', 'finance'],
+/** Who may take each step of an org trade (PRD §9.8, F6): money moves by Finance, goods by Operations, commitments by Procurement/Sales. */
+export const TX_ACTION_ROLES: Record<TradeAction, OrgRole[]> = {
+  accept_agreement: ['owner', 'procurement', 'sales'],
   issue_invoice: ['owner', 'finance', 'sales'],
+  pay: ['owner', 'finance'],
   ship: ['owner', 'operations'],
   upload_proof: ['owner', 'operations'],
   confirm_receipt: ['owner', 'procurement', 'operations'],
   cancel: ['owner', 'procurement'],
   dispute: ['owner', 'procurement'],
+  add_evidence: ['owner', 'procurement', 'operations'],
+  review: ['owner', 'procurement'],
 }
 
-const txRoles = (action: TransactionAction) => TX_ACTION_ROLES[action] ?? ['owner'] // unlisted (new) actions: owner only until mapped
-
 /** Built-in roles follow TX_ACTION_ROLES; custom roles fall back to their `transactions.manage` permission. */
-export function canTransact(perms: Permissions | undefined, role: string, action: TransactionAction): boolean {
-  if (Object.hasOwn(ROLE_LABEL, role)) return txRoles(action).includes(role as OrgRole)
+export function canTransact(perms: Permissions | undefined, role: string, action: TradeAction): boolean {
+  if (Object.hasOwn(ROLE_LABEL, role)) return TX_ACTION_ROLES[action].includes(role as OrgRole)
   return can(perms, role, 'transactions', 'manage')
 }
 
 /** Reason for a disabled transaction step, or undefined when the role may take it. */
-export function txDeniedReason(perms: Permissions | undefined, role: string, roleLabel: string, action: TransactionAction) {
+export function txDeniedReason(perms: Permissions | undefined, role: string, roleLabel: string, action: TradeAction) {
   if (canTransact(perms, role, action)) return undefined
   if (!Object.hasOwn(ROLE_LABEL, role)) return deniedReason(roleLabel, 'transactions', 'manage')
-  return `${ACTION_LABEL[action]} hanya untuk ${txRoles(action).map((r) => ROLE_LABEL[r]).join(', ')}; peranmu ${roleLabel}`
+  return `${TRADE_ACTION_LABEL[action]} hanya untuk ${TX_ACTION_ROLES[action].map((r) => ROLE_LABEL[r]).join(', ')}; peranmu ${roleLabel}`
 }
 
 // ── Approval rules ───────────────────────────────────────────────
@@ -384,7 +385,7 @@ export function scaleDiscount(totalQty: number, refQty: number) {
 
 export const projectedUnitPrice = (baseIdr: number, totalQty: number, refQty: number) => Math.round(baseIdr * (1 - scaleDiscount(totalQty, refQty)))
 
-export type PoolStatus = 'open' | 'market_requested' | 'market_live'
+export type PoolStatus = 'open' | 'market_requested' | 'market_live' | 'settled'
 
 export interface PoolMember {
   /** Shown only when `optIn`; otherwise masked as "Bisnis lain". */
@@ -410,6 +411,21 @@ export interface CollectivePool {
   status: PoolStatus
   members: PoolMember[]
   marketRequestedAt?: string
+  /** Set once a market maker forms the market and opens its round (PRD F6). */
+  marketId?: string
+  auctionId?: string
+  /** The round's live state, for display. */
+  round?: { status: AuctionStatus; endsAt: string }
+  settlement?: PoolSettlement
+}
+
+/** Round result split pro-rata over the pool; each business member's line links its own sub-PO. */
+export interface PoolSettlement {
+  at: string
+  by: string
+  winner: string
+  priceIdr: number
+  lines: (PoolMember & { share: number; amountIdr: number; transactionId?: string })[]
 }
 
 export function poolTotals(pool: Pick<CollectivePool, 'members' | 'baseUnitPriceIdr' | 'refQty' | 'thresholdQty'>) {

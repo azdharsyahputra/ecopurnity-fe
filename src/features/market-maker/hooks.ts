@@ -8,6 +8,7 @@ import type {
 } from '@/domain/mm'
 import type { MarketRules } from '@/domain/marketRules'
 import type { Settlement } from '@/domain/settlement'
+import type { CollectivePool } from '@/domain/org'
 
 // Market Maker workspace data (PRD §10). Keys start with 'mm'; mutations also refresh the public
 // economy lists because markets, rounds and opportunity statuses are shared with them.
@@ -25,6 +26,12 @@ function useMmMutation<V, R = unknown>(fn: (v: V) => Promise<R>) {
 export const useMmOverview = () => useQuery({ queryKey: ['mm', 'overview'], queryFn: () => api<MmOverview>('/mm/overview'), refetchInterval: 15_000 })
 
 export const usePipeline = () => useQuery({ queryKey: ['mm', 'pipeline'], queryFn: () => api<PipelineCard[]>('/mm/opportunities') })
+
+/** Collective pools asking for a market, plus the ones this maker already formed (PRD F6). */
+export const usePoolRequests = () => useQuery({ queryKey: ['mm', 'pools'], queryFn: () => api<CollectivePool[]>('/mm/pools'), refetchInterval: 10_000 })
+
+export const useFormPoolMarket = () =>
+  useMmMutation((v: { id: string; durationMinutes: number }) => api<{ marketId: string; auctionId: string }>(`/mm/pools/${v.id}/market`, json('POST', { durationMinutes: v.durationMinutes })))
 
 export const useMoveOpportunity = () =>
   useMmMutation((v: { id: string; stage: PipelineStage; reason?: string }) => api(`/mm/opportunities/${v.id}/stage`, json('POST', { stage: v.stage, reason: v.reason })))

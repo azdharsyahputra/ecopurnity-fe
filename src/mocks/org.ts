@@ -2,7 +2,7 @@ import type { AuctionDetail, AuditEntry, CategoryId, PublicBid, TransactionDetai
 import type { TransactionStatus } from '@/domain/status'
 import {
   DEFAULT_PERMISSIONS, DEFAULT_WEIGHTS, ROLE_LABEL, auctionValue, awardRuleInfo, higherWins, requiredApprovers, type ApprovalRule, type CollectivePool, type InventoryData,
-  type OrgAuction, type OrgLot, type OrgMember, type OrgSettings, type PoolMember, type ProcurementRequest, type Supplier,
+  type OrgAuction, type OrgLot, type OrgMember, type OrgSettings, type PoolMember, type PoolSettlement, type ProcurementRequest, type Supplier,
   type SupplierRelation,
 } from '@/domain/org'
 import { AUCTION_TYPES } from '@/domain/catalog'
@@ -10,6 +10,7 @@ import { formatIdr } from '@/domain/format'
 import { audit } from './audit'
 import { db } from './db'
 import { economy } from './economy'
+import { ensureF6 } from './trade'
 
 // Business workspace mock data (PRD §9). One persisted blob per org plus the shared collective pools.
 // ponytail: whole-store JSON in localStorage, rewritten on every mutation; fine for two demo orgs.
@@ -49,7 +50,12 @@ export interface OrgData {
 }
 
 type StoredPoolMember = PoolMember & { orgId?: string }
-export type StoredPool = Omit<CollectivePool, 'members'> & { members: StoredPoolMember[] }
+export type StoredPool = Omit<CollectivePool, 'members' | 'round' | 'settlement'> & {
+  members: StoredPoolMember[]
+  /** Market maker who formed the pool's market. */
+  makerUserId?: string
+  settlement?: Omit<PoolSettlement, 'lines'> & { lines: (PoolSettlement['lines'][number] & { orgId?: string })[] }
+}
 
 interface Store {
   v: 2
@@ -143,20 +149,22 @@ export function makeTx(
   const reached = TIMELINE.indexOf(status)
   const at = (i: number) => ago(Math.max(0, created - i * (created / 6)))
   const code = id.slice(-4).toUpperCase()
-  return {
+  // Records are F6 trades from the start (terms, agreement, invoice, staged shipments); old stored ones are normalised on read.
+  return ensureF6({
     id, code: `TRX-${code}`, title: t.title, role: t.role, counterparty: t.counterparty, status, quantity: t.quantity,
     unitPriceIdr: t.unitPriceIdr, totalIdr: t.unitPriceIdr * t.quantity.value, supplierId: t.supplierId, auctionId: t.auctionId,
     createdAt: ago(created), updatedAt: ago(Math.max(1, created / 3)), dueAt: ahead(10 * DAY),
     timeline: TIMELINE.map((s, i) => ({ status: s, at: i <= reached ? at(i) : undefined })),
     documents: [
       { id: `${id}-po`, kind: 'order', name: `${t.poNumber ?? `PO-${code}`}.pdf`, at: ago(created) },
-      { id: `${id}-ag`, kind: 'agreement', name: 'Perjanjian-pengadaan.pdf', at: ago(created) },
+      ...(reached >= 1 ? [{ id: `${id}-ag`, kind: 'agreement' as const, name: 'Perjanjian-pengadaan.pdf', at: ago(created) }] : []),
       ...(reached >= 1 ? [{ id: `${id}-in`, kind: 'invoice' as const, name: `INV-${code}.pdf`, at: at(1) }] : []),
       ...(reached >= 4 ? [{ id: `${id}-pr`, kind: 'proof' as const, name: 'surat-jalan.jpg', at: at(4) }] : []),
     ],
     payment: { status: reached >= 5 ? 'released' : reached >= 2 ? 'escrow' : 'unpaid', paidAt: reached >= 2 ? at(2) : undefined },
     delivery: { address: t.address, eta: reached >= 3 && reached < 5 ? ahead(2 * DAY) : undefined, proof: reached >= 4 ? 'surat-jalan.jpg' : undefined },
-  }
+    terms: 'escrow', makerFeeRate: 0,
+  })
 }
 
 const q = (value: number, unit: string) => ({ value, unit })
@@ -549,6 +557,9 @@ export const pools = () => store.pools
 
 /** Every stored org as [orgId, data], e.g. to find invitations addressed to an email. */
 export const allOrgs = () => Object.entries(store.orgs)
+
+/** Platform accounts that belong to an org, e.g. to notify its team. */
+export const orgUserIds = (orgId: string) => db.users.filter((u) => u.orgs.some((m) => m.orgId === orgId)).map((u) => u.id)
 
 /** Writes the shared audit log (PRD §12.6) and keeps a copy for the org's activity feed. */
 export function orgAudit(o: OrgData, entry: Omit<AuditEntry, 'id' | 'at'>) {
