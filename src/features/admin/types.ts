@@ -43,11 +43,13 @@ export type UserAction = 'verify' | 'suspend' | 'restrict' | 'restore'
 
 // ── Business verification ──
 
-export type DocKind = 'nib' | 'npwp' | 'akta'
+export type DocKind = 'nib' | 'npwp' | 'akta' | 'ktp' | 'selfie'
 export type VerificationStatus = 'pending' | 'approved' | 'rejected' | 'reupload'
 
 export interface VerificationRequest {
   id: string
+  /** Business documents (default) or a person's KTP + selfie (PRD F6). */
+  kind?: 'business' | 'personal'
   business: string
   owner: string
   submittedAt: string

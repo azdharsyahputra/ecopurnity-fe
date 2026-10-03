@@ -4,11 +4,12 @@ import { BadgeCheck, Boxes, CircleDashed, Clock, IdCard, Package, Plus, Trash2, 
 import type { CapacityKind, CategoryId, Identity } from '@/domain/types'
 import type { Tone } from '@/domain/status'
 import { CATEGORIES, REGIONS } from '@/domain/catalog'
-import { formatPercent } from '@/domain/format'
+import { formatIdr, formatPercent } from '@/domain/format'
 import { fieldError } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { toast } from '@/stores/toast'
-import { useIdentity, useSaveIdentity } from './hooks'
+import { useIdentity, useKyc, useKycAction, useSaveIdentity } from './hooks'
+import { KYC_LEVELS, type KycLevel } from '@/domain/kyc'
 import { PageHeader } from '@/components/PageHeader'
 import { AsyncView } from '@/components/States'
 import { IconChip } from '@/components/IconChip'
@@ -17,6 +18,7 @@ import { Field, FormError, TextareaField } from '@/components/form'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
 const KINDS: [CapacityKind, LucideIcon, Tone, string, string, string][] = [
   ['skill', Wrench, 'purple', 'Skills', 'mis. Backend Go', 'Level, mis. Mahir'],
@@ -38,6 +40,114 @@ function CategorySelect({ label, value, onChange, className }: { label: string; 
       <option value="">Kategori…</option>
       {(Object.keys(CATEGORIES) as CategoryId[]).map((c) => <option key={c} value={c}>{CATEGORIES[c].label}</option>)}
     </select>
+  )
+}
+
+function PhoneDialog({ otpPending, onClose }: { otpPending: boolean; onClose: () => void }) {
+  const act = useKycAction()
+  const [phone, setPhone] = useState('')
+  const [code, setCode] = useState('')
+  const [sent, setSent] = useState(otpPending)
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Verifikasi nomor HP</DialogTitle>
+          <DialogDescription>Kode OTP 6 digit dikirim lewat WhatsApp atau SMS, berlaku 5 menit.</DialogDescription>
+        </DialogHeader>
+        <form
+          className="grid gap-3"
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (!sent) act.mutate({ type: 'phone', phone }, { onSuccess: () => setSent(true) })
+            else act.mutate({ type: 'otp', code }, { onSuccess: () => { toast({ title: 'Nomor HP terverifikasi', tone: 'green' }); onClose() } })
+          }}
+        >
+          {!sent ? (
+            <Field label="Nomor HP" inputMode="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} error={fieldError(act.error, 'phone')} hint="Contoh: 0812xxxxxxxx" />
+          ) : (
+            <Field label="Kode OTP" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} error={fieldError(act.error, 'code')} hint="Mode demo: kodenya 246810" />
+          )}
+          <FormError error={act.error} />
+          <DialogFooter>
+            {sent && <Button type="button" variant="ghost" onClick={() => setSent(false)}>Ganti nomor</Button>}
+            <Button type="submit" disabled={act.isPending}>{sent ? 'Verifikasi' : 'Kirim kode'}</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function IdentityDialog({ onClose }: { onClose: () => void }) {
+  const act = useKycAction()
+  const [f, setF] = useState({ nik: '', fullName: '', ktpFile: '', selfieFile: '' })
+  const file = (k: 'ktpFile' | 'selfieFile') => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.files?.[0]?.name ?? '' })
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Verifikasi KTP</DialogTitle>
+          <DialogDescription>Ditinjau tim governance, biasanya kurang dari 1 hari kerja. Dokumen hanya dipakai untuk verifikasi.</DialogDescription>
+        </DialogHeader>
+        <form className="grid gap-3" onSubmit={(e) => { e.preventDefault(); act.mutate({ type: 'identity', ...f }, { onSuccess: () => { toast({ title: 'KTP diajukan', body: 'Kami kabari lewat notifikasi setelah ditinjau.', tone: 'green' }); onClose() } }) }}>
+          <Field label="NIK" inputMode="numeric" maxLength={16} value={f.nik} onChange={(e) => setF({ ...f, nik: e.target.value.replace(/\D/g, '') })} error={fieldError(act.error, 'nik')} />
+          <Field label="Nama lengkap sesuai KTP" value={f.fullName} onChange={(e) => setF({ ...f, fullName: e.target.value })} error={fieldError(act.error, 'fullName')} />
+          <Field label="Foto KTP" type="file" accept="image/*,.pdf" onChange={file('ktpFile')} error={fieldError(act.error, 'ktpFile')} />
+          <Field label="Selfie memegang KTP" type="file" accept="image/*" capture="user" onChange={file('selfieFile')} error={fieldError(act.error, 'selfieFile')} />
+          <FormError error={act.error} />
+          <DialogFooter><Button type="submit" disabled={act.isPending}>Ajukan verifikasi</Button></DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function Verification() {
+  const query = useKyc()
+  const [params, setParams] = useSearchParams()
+  const open = params.get('verify')
+  const setOpen = (v: string) => setParams((p) => (v ? p.set('verify', v) : p.delete('verify'), p), { replace: true })
+  return (
+    <AsyncView query={query} skeleton={<Skeleton className="h-60 max-w-2xl rounded-xl" />}>
+      {(k) => {
+        const v = k.verification
+        const steps = [
+          ['email', 'Email', v.email, 'Diverifikasi lewat link email'],
+          ['phone', 'Nomor HP', v.phone, 'Kode OTP ke WhatsApp/SMS'],
+          ['identity', 'Identitas (KTP)', v.identity === 'verified', v.identity === 'pending' ? 'Sedang ditinjau tim governance' : 'Foto KTP + selfie'],
+        ] as const
+        return (
+          <div className="grid max-w-2xl gap-4">
+            <section className="rounded-xl border bg-card p-4">
+              <p className="text-sm text-muted-foreground">Batas per transaksi saat ini</p>
+              <p className="num mt-1 text-2xl font-semibold">{formatIdr(k.limitIdr)}</p>
+              <p className="mt-1 text-sm">Level <b>{k.label}</b>{k.next && <span className="text-muted-foreground"> · {k.next}</span>}</p>
+              <ol className="mt-3 grid grid-cols-3 gap-1.5" aria-label="Level verifikasi">
+                {([0, 1, 2] as KycLevel[]).map((l) => (
+                  <li key={l} className={cn('rounded-md border px-2 py-1.5 text-xs', l <= k.level ? 'border-primary bg-primary/10 text-foreground' : 'text-muted-foreground')}>
+                    <span className="block font-medium">{KYC_LEVELS[l].label}</span>
+                    <span className="num">s.d. {formatIdr(KYC_LEVELS[l].limitIdr, { compact: true })}</span>
+                  </li>
+                ))}
+              </ol>
+            </section>
+            <ul className="grid gap-3">
+              {steps.map(([id, label, ok, detail]) => (
+                <li key={id} className="flex items-center gap-3 rounded-xl border bg-card p-4">
+                  <IconChip icon={ok ? BadgeCheck : id === 'identity' && v.identity === 'pending' ? Clock : CircleDashed} tone={ok ? 'green' : 'gray'} />
+                  <div className="min-w-0 flex-1"><p className="font-medium">{label}</p><p className="text-sm text-muted-foreground">{detail}</p></div>
+                  {ok ? <span className="text-sm font-medium" style={{ color: 'var(--tag-green-fg)' }}>Terverifikasi</span>
+                    : id !== 'email' && !(id === 'identity' && v.identity === 'pending') && <Button variant="outline" className="h-8" onClick={() => setOpen(id)}>Verifikasi</Button>}
+                </li>
+              ))}
+            </ul>
+            {open === 'phone' && !v.phone && <PhoneDialog otpPending={k.otpPending} onClose={() => setOpen('')} />}
+            {open === 'identity' && v.identity === 'none' && <IdentityDialog onClose={() => setOpen('')} />}
+          </div>
+        )
+      }}
+    </AsyncView>
   )
 }
 
@@ -173,23 +283,7 @@ function Editor({ initial }: { initial: Identity }) {
           </div>
         )}
 
-        {tab === 'verification' && (
-          <ul className="grid max-w-2xl gap-3">
-            {([
-              ['Email', d.profile.verification.email, 'Diverifikasi lewat link email'],
-              ['Nomor HP', d.profile.verification.phone, 'Kode OTP ke WhatsApp/SMS'],
-              ['Identitas (KTP)', d.profile.verification.identity === 'verified', d.profile.verification.identity === 'pending' ? 'Sedang ditinjau' : 'Foto KTP + selfie; wajib untuk transaksi besar'],
-            ] as const).map(([label, ok, detail]) => (
-              <li key={label} className="flex items-center gap-3 rounded-xl border bg-card p-4">
-                <IconChip icon={ok ? BadgeCheck : CircleDashed} tone={ok ? 'green' : 'gray'} />
-                <div className="min-w-0 flex-1"><p className="font-medium">{label}</p><p className="text-sm text-muted-foreground">{detail}</p></div>
-                {ok ? <span className="text-sm font-medium" style={{ color: 'var(--tag-green-fg)' }}>Terverifikasi</span> : (
-                  <Button variant="outline" className="h-8" onClick={() => toast({ title: `Verifikasi ${label.toLowerCase()} dibuka`, body: 'Alur verifikasi nyata menyambung ke provider KYC/OTP saat backend siap.' })}>Verifikasi</Button>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
+        {tab === 'verification' && <Verification />}
       </div>
 
       <div className={cn('sticky bottom-0 z-10 -mx-4 mt-8 flex items-center gap-3 border-t bg-background/95 px-4 py-3 backdrop-blur md:-mx-10 md:px-10', !dirty && 'hidden')}>
