@@ -1,11 +1,10 @@
 import { delay, http, HttpResponse } from 'msw'
 import type { AllocationLine, AuctionDetail, AuditEntry, CategoryId } from '@/domain/types'
 import { allowedActions, transition, type TransactionAction } from '@/domain/transaction'
-import { lowerWins } from '@/domain/auction'
 import { CATEGORIES } from '@/domain/catalog'
 import {
-  approvalState, auctionValue, can, canApprove, deniedReason, inventoryFromCsv, orgAuctionStatus, pipelineCounts, procurementActions,
-  requiredApprovers, scoreOf, statusAfterApproval, type Action, type Approval, type ApprovalRule, type InventoryItem, type LotOffer, type Module,
+  approvalState, approverUserIds, auctionValue, can, canApprove, deniedReason, higherWins, inventoryFromCsv, orgAuctionStatus, pipelineCounts, procurementActions,
+  requiredApprovers, scoreOf, statusAfterApproval, txDeniedReason, type Action, type Approval, type ApprovalRule, type InventoryItem, type LotOffer, type Module,
   type OrgAnalytics, type OrgAuction, type OrgAuctionEvaluation, type OrgAuctionInput, type OrgAuctionView, type OrgOverview, type OrgProfile,
   type OrgSettings, type OrgSupplier, type ProcurementAction, type ProcurementInput, type ProcurementRequest, type SupplierAction,
   type SupplierDetail, type WaitingItem,
@@ -13,6 +12,7 @@ import {
 import { formatIdr } from '@/domain/format'
 import { db } from './db'
 import { economy } from './economy'
+import { notify } from './personal'
 import { SUPPLIERS, lotAuction, makeTx, newId, org, orgAudit, pools, saveOrg, supplierById, type OrgData, type StoredPool } from './org'
 
 const api = (path: string) => `/api/v1/orgs/:orgId${path}`
@@ -85,20 +85,21 @@ setInterval(() => {
   for (const a of economy.auctions) if (a.status === 'scheduled' && a.id.startsWith('oau-') && new Date(a.startsAt).getTime() <= Date.now()) a.status = 'live'
 }, 5_000)
 
-/** One offer per bidder (their best price), mapped onto the supplier directory for scoring. */
-function lotOffers(a: AuctionDetail, categoryId: CategoryId): LotOffer[] {
+/** One offer per bidder (their best price for the org: lowest when buying, highest when selling), mapped onto the supplier directory for scoring. */
+function lotOffers(a: AuctionDetail, categoryId: CategoryId, higher: boolean): LotOffer[] {
+  const better = (x: number, y: number) => (higher ? x > y : x < y)
   const list = SUPPLIERS.filter((s) => s.categories.includes(categoryId))
   const dir = SUPPLIERS.length && list.length >= 3 ? list : SUPPLIERS
   const best = new Map<string, { priceIdr: number; at: string }>()
   if (a.bids.length) {
     for (const b of a.bids) {
       const prev = best.get(b.bidder)
-      if (!prev || (lowerWins(a.type) ? b.priceIdr < prev.priceIdr : b.priceIdr > prev.priceIdr)) best.set(b.bidder, { priceIdr: b.priceIdr, at: b.at })
+      if (!prev || better(b.priceIdr, prev.priceIdr)) best.set(b.bidder, { priceIdr: b.priceIdr, at: b.at })
     }
   } else {
     // Hidden bids (sealed / rank only) aren't kept by the mock; the owner sees a plausible ladder behind the best price.
     const top = economy.bestPrice.get(a.id) ?? a.openingPriceIdr
-    for (let k = 0; k < Math.min(a.bidCount, 6); k++) best.set(`Supplier ${k + 1}`, { priceIdr: Math.round(top * (1 + (lowerWins(a.type) ? 1 : -1) * k * 0.012)), at: a.endsAt })
+    for (let k = 0; k < Math.min(a.bidCount, 6); k++) best.set(`Supplier ${k + 1}`, { priceIdr: Math.round(top * (1 + (higher ? -1 : 1) * k * 0.012)), at: a.endsAt })
   }
   const bySupplier = new Map<string, LotOffer>()
   for (const [bidder, b] of best) {
@@ -112,9 +113,9 @@ function lotOffers(a: AuctionDetail, categoryId: CategoryId): LotOffer[] {
       quality: card.quality, delivery: card.delivery, reliability: card.reliability,
     }
     const prev = bySupplier.get(s.id)
-    if (!prev || (lowerWins(a.type) ? offer.priceIdr < prev.priceIdr : offer.priceIdr > prev.priceIdr)) bySupplier.set(s.id, offer)
+    if (!prev || better(offer.priceIdr, prev.priceIdr)) bySupplier.set(s.id, offer)
   }
-  return [...bySupplier.values()].sort((x, y) => (lowerWins(a.type) ? x.priceIdr - y.priceIdr : y.priceIdr - x.priceIdr))
+  return [...bySupplier.values()].sort((x, y) => (higher ? y.priceIdr - x.priceIdr : x.priceIdr - y.priceIdr))
 }
 
 // ── Approvals ────────────────────────────────────────────────────
@@ -135,26 +136,16 @@ function settle(o: OrgData, kind: 'procurement' | 'auction', target: Approvable 
   if (p) Object.assign(p, { status: 'approved', auctionId: undefined, updatedAt: now() })
 }
 
-/**
- * Stand-in for teammates: a few seconds after a submit, members holding the other required roles approve.
- * The signed-in user's own role is left for them ("Menunggu approval saya").
- */
-function simulateTeam(orgId: string, kind: 'procurement' | 'auction', id: string, userId: string) {
-  setTimeout(() => {
-    const o = org(orgId)
-    const target: (Approvable & { id: string; code: string }) | undefined = kind === 'procurement' ? o.procurements.find((r) => r.id === id) : o.auctions.find((a) => a.id === id)
-    if (!target || target.status !== 'pending_approval') return
-    const myRole = db.users.find((u) => u.id === userId)?.orgs.find((m) => m.orgId === orgId)?.role
-    for (const role of approvalState(target.requiredApprovers, target.approvals).pending) {
-      const mate = o.members.find((m) => m.role === role && m.status === 'active' && m.userId !== userId)
-      if (role === myRole || !mate) continue
-      const by = `${mate.name} (${roleLabelOf(o, role)})`
-      target.approvals.push({ role, by, at: now(), decision: 'approved', note: 'Sesuai budget dan kebutuhan.' })
-      orgAudit(o, { actor: by, action: `Approve ${kind} (${roleLabelOf(o, role)})`, entity: { type: kind, id, label: target.code } })
-    }
-    settle(o, kind, target)
-    saveOrg()
-  }, 6_000)
+/** In-app notification for every teammate whose sign-off is still needed (PRD §9.2). */
+function askApprovers(c: Ctx, kind: 'procurement' | 'auction', target: Approvable & { id: string; code: string }, title: string, valueIdr: number) {
+  const members = db.users.flatMap((u) => u.orgs.filter((m) => m.orgId === c.orgId).map((m) => ({ userId: u.id, role: m.role })))
+  const href = kind === 'procurement' ? `/org/${c.orgId}/procurement/${target.id}` : `/org/${c.orgId}/auctions?review=${target.id}`
+  for (const userId of approverUserIds(target.requiredApprovers, target.approvals, members, c.userId)) {
+    notify(userId, {
+      type: 'transaction_update', title: `Perlu approval kamu: ${target.code}`,
+      body: `${c.actor} mengajukan ${kind === 'procurement' ? 'procurement' : 'auction'} "${title}" senilai ${formatIdr(valueIdr)}.`, href,
+    })
+  }
 }
 
 function decide(c: Ctx, kind: 'procurement' | 'auction', target: Approvable & { id: string; code: string }, decision: 'approved' | 'rejected', note?: string) {
@@ -163,7 +154,6 @@ function decide(c: Ctx, kind: 'procurement' | 'auction', target: Approvable & { 
   target.approvals.push({ role: c.role, by: c.actor, at: now(), decision, note: note?.trim() || undefined })
   settle(c.o, kind, target)
   orgAudit(c.o, { actor: c.actor, action: `${decision === 'approved' ? 'Approve' : 'Tolak'} ${kind}`, entity: { type: kind, id: target.id, label: target.code }, reason: decision === 'rejected' ? note : undefined })
-  if (target.status === 'pending_approval') simulateTeam(c.orgId, kind, target.id, c.userId)
   return null
 }
 
@@ -443,7 +433,7 @@ export const orgHandlers = [
     if (submit) r.status = statusAfterApproval(required, [])
     c.o.procurements.unshift(r)
     orgAudit(c.o, { actor: c.actor, action: submit ? 'Ajukan procurement' : 'Simpan draft procurement', entity: { type: 'procurement', id, label: `${r.code} ${r.need}` } })
-    if (r.status === 'pending_approval') simulateTeam(c.orgId, 'procurement', id, c.userId)
+    if (r.status === 'pending_approval') askApprovers(c, 'procurement', r, r.need, r.budgetIdr)
     return HttpResponse.json(r, { status: 201 })
   })),
   http.post(api('/procurement/:id/actions'), orgAuthed(async (c) => {
@@ -459,7 +449,7 @@ export const orgHandlers = [
       if (action === 'submit') {
         r.requiredApprovers = requiredApprovers(r.budgetIdr, 'procurement', c.o.settings.approvalRules)
         r.status = statusAfterApproval(r.requiredApprovers, [])
-        if (r.status === 'pending_approval') simulateTeam(c.orgId, 'procurement', r.id, c.userId)
+        if (r.status === 'pending_approval') askApprovers(c, 'procurement', r, r.need, r.budgetIdr)
       }
       if (action === 'publish') r.status = 'published'
       if (action === 'cancel') r.status = 'cancelled'
@@ -564,7 +554,7 @@ export const orgHandlers = [
     const p = c.o.procurements.find((r) => r.id === input.procurementId && (r.status === 'approved' || r.status === 'published'))
     if (p) Object.assign(p, { status: 'in_auction', auctionId: id, updatedAt: now() })
     if (!required.length) goLive(c.o, oa)
-    else simulateTeam(c.orgId, 'auction', id, c.userId)
+    else askApprovers(c, 'auction', oa, oa.title, value)
     orgAudit(c.o, { actor: c.actor, action: required.length ? 'Ajukan auction untuk approval' : 'Buka auction', entity: { type: 'auction', id, label: `${oa.code} ${oa.title}` } })
     return HttpResponse.json(toView(oa), { status: 201 })
   })),
@@ -587,7 +577,7 @@ export const orgHandlers = [
       auction: toView(oa),
       lots: oa.lots.map((lot) => {
         const a = economy.auctions.find((x) => x.id === lot.auctionId)
-        return { lot, status: a?.status ?? 'scheduled', offers: a ? lotOffers(a, oa.categoryId) : [] }
+        return { lot, status: a?.status ?? 'scheduled', offers: a ? lotOffers(a, oa.categoryId, higherWins(oa.type)) : [] }
       }),
       org: { name: p.name, location: p.location, npwp: p.legal.npwp },
     }
@@ -681,8 +671,9 @@ export const orgHandlers = [
   http.post(api('/transactions/:tid/actions'), orgAuthed(async (c) => {
     const t = c.o.transactions.find((x) => x.id === c.params.tid)
     if (!t) return fail(404, 'not_found', 'Transaksi tidak ditemukan')
-    if (!c.allowed('transactions', 'manage')) return deny(c, 'transactions', 'manage')
     const { action, note, file } = await body<{ action: TransactionAction; note?: string; file?: string }>(c.request)
+    const denied = txDeniedReason(c.o.settings.permissions, c.role, c.roleLabel, action)
+    if (denied) return fail(403, 'forbidden', denied)
     const next = transition(t.status, t.role, action)
     if (!next || !allowedActions(t.status, t.role).includes(action)) return fail(409, 'invalid_transition', 'Aksi ini tidak tersedia untuk status sekarang')
     if (action === 'upload_proof' && !file) return fail(422, 'validation', 'Pilih file bukti', { file: 'Pilih file bukti pengiriman' })
