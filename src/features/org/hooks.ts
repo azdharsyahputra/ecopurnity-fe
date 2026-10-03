@@ -166,6 +166,8 @@ export function useOrgTradeScope(): TradeScope {
   const orgId = useOrgId()
   return {
     actionUrl: (id) => `${base(orgId)}/transactions/${id}/actions`,
+    paymentsUrl: (id) => `${base(orgId)}/transactions/${id}/payments`,
+    tradeKey: (id) => ['org', orgId, 'transactions', id],
     onSuccess: (qc, t) => {
       qc.setQueryData(['org', orgId, 'transactions', t.id], t)
       return qc.invalidateQueries({ queryKey: ['org', orgId] })

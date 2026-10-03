@@ -137,6 +137,7 @@ export function applyAction(t: TransactionDetail, actorName: string, input: Acti
   if (!tradeActions(s, role).includes(input.action)) return err(409, 'invalid_transition', 'Aksi ini tidak tersedia untuk status sekarang')
   const at = now()
   let note = TRADE_ACTION_LABEL[input.action]
+  let stepNote: string | undefined // timeline note when it differs from note (pay: the payment reference)
 
   switch (input.action) {
     case 'accept_agreement':
@@ -154,6 +155,7 @@ export function applyAction(t: TransactionDetail, actorName: string, input: Acti
     case 'pay':
       t.payment = { status: t.terms === 'escrow' ? 'escrow' : 'released', paidAt: at }
       note = t.terms === 'escrow' ? 'Dana masuk escrow' : 'Pembayaran diterima supplier'
+      if (input.note) stepNote = `${note} · ${input.note}`
       break
     case 'ship': {
       const sh = input.shipment
@@ -223,7 +225,7 @@ export function applyAction(t: TransactionDetail, actorName: string, input: Acti
   t.updatedAt = at
   if (t.status !== before) {
     const step = t.timeline.find((x) => x.status === t.status)
-    if (step) Object.assign(step, { at, note })
+    if (step) Object.assign(step, { at, note: stepNote ?? note })
   }
   mirror(t)
   sink.save()

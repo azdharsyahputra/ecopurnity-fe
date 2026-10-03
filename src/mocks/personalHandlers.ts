@@ -10,6 +10,8 @@ import { publish } from '@/lib/realtime'
 import { db } from './db'
 import { bidderLabel, economy, toAuction, toOpportunity } from './economy'
 import { applyAction, createTrade, ensureF6, financeOf, setBank, tradeState, withdraw, type ActionInput } from './trade'
+import { cancelPayment, createPayment, currentPayment, PAY_VIA_GATEWAY } from './payments'
+import type { PaymentInput } from '@/domain/payment'
 import { allPersonal, completeness, newId, notify, personal, savePersonal, type PersonalData } from './personal'
 import { audit } from './audit'
 import { isMaker, operatedIds, ops, saveMm } from './mm'
@@ -575,8 +577,28 @@ export const personalHandlers = [
   http.post(api('/me/transactions/:id/actions'), authed(async ({ p, params, userId, request }) => {
     const t = p.transactions.find((x) => x.id === params.id)
     if (!t) return fail(404, 'not_found', 'Transaksi tidak ditemukan')
-    const res = applyAction(t, actorName(userId), (await request.json()) as ActionInput)
+    const input = (await request.json()) as ActionInput
+    if (input.action === 'pay') return fail(409, 'payment_required', PAY_VIA_GATEWAY)
+    const res = applyAction(t, actorName(userId), input)
     return res.ok ? HttpResponse.json(res.tx) : fail(res.status, res.code, res.message, res.fields)
+  })),
+
+  // Payments through the gateway (Midtrans Core API in the API; src/mocks/payments.ts here)
+  http.post(api('/me/transactions/:id/payments'), authed(async ({ p, params, userId, request }) => {
+    const t = p.transactions.find((x) => x.id === params.id)
+    if (!t) return fail(404, 'not_found', 'Transaksi tidak ditemukan')
+    const res = createPayment(ensureF6(t), (await request.json()) as PaymentInput, actorName(userId))
+    return res.ok ? HttpResponse.json(res.payment, { status: 201 }) : fail(res.status, res.code, res.message, res.fields)
+  })),
+  http.get(api('/me/transactions/:id/payments/current'), authed(({ p, params }) => {
+    const t = p.transactions.find((x) => x.id === params.id)
+    return t ? HttpResponse.json(currentPayment(t)) : fail(404, 'not_found', 'Transaksi tidak ditemukan')
+  })),
+  http.post(api('/me/transactions/:id/payments/current/cancel'), authed(({ p, params }) => {
+    const t = p.transactions.find((x) => x.id === params.id)
+    if (!t) return fail(404, 'not_found', 'Transaksi tidak ditemukan')
+    const res = cancelPayment(t)
+    return res.ok ? HttpResponse.json(res.payment) : fail(res.status, res.code, res.message, res.fields)
   })),
 
   // Finance: escrow, payouts, withdrawals (PRD F6)
