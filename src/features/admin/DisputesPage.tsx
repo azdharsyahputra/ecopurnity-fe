@@ -17,6 +17,7 @@ import { EntityAvatar } from '@/components/EntityAvatar'
 import { DataTable } from '@/components/DataTable'
 import { Field, Segmented, SelectField } from '@/components/form'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Attachment } from '@/features/trade/components'
 
 const PAYMENT_LABEL = { unpaid: 'Belum dibayar', escrow: 'Di escrow', released: 'Dilepas ke supplier', refunded: 'Dikembalikan ke pembeli' }
 const SIDE_LABEL: Record<Evidence['side'], string> = { buyer: 'Pembeli', supplier: 'Supplier', admin: 'Admin' }
@@ -93,7 +94,7 @@ function EvidenceColumn({ title, items }: { title: string; items: Evidence[] }) 
           {items.map((e) => (
             <li key={e.id} className="rounded-lg border p-3 text-sm">
               <p>{e.text}</p>
-              {e.file && <p className="mt-1.5 flex items-center gap-1.5 text-xs text-primary"><FileText className="size-3.5" /> {e.file}</p>}
+              {e.file && <Attachment name={e.file} url={e.url} preview className="mt-1.5 text-xs" />}
               <p className="mt-1 text-xs text-muted-foreground">{e.by} · {formatRelative(e.at)}</p>
             </li>
           ))}
@@ -233,7 +234,7 @@ export function DisputeCasePage() {
                       ].map(([k, v]) => <div key={k} className="flex justify-between gap-3"><dt className="text-muted-foreground">{k}</dt><dd className="num text-right font-medium">{v}</dd></div>)}
                     </dl>
                     <ul className="mt-3 flex flex-col gap-1 border-t pt-3 text-xs text-muted-foreground">
-                      {t.documents.map((d) => <li key={d.id} className="flex items-center gap-1.5 truncate"><FileText className="size-3.5 shrink-0" /> {d.name}</li>)}
+                      {t.documents.map((d) => <li key={d.id} className="flex min-w-0 items-center gap-1.5 truncate">{d.url ? <Attachment name={d.name} url={d.url} /> : <><FileText className="size-3.5 shrink-0" /> {d.name}</>}</li>)}
                     </ul>
                   </Panel>
                 </div>
