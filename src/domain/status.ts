@@ -61,6 +61,7 @@ export const STATUS = {
     paid: ['Paid', 'teal'],
     fulfilling: ['Fulfilling', 'purple'],
     delivered: ['Delivered', 'teal'],
+    accepted: ['Accepted', 'teal'],
     completed: ['Completed', 'green'],
     cancelled: ['Cancelled', 'gray'],
     disputed: ['Disputed', 'red'],

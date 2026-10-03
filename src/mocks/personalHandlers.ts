@@ -3,13 +3,13 @@ import type {
   AllocationLine, AuctionDetail, AuctionEvaluation, CreateAuctionInput, DashboardSummary, DemandListing, Identity, ListingDetail,
   ListingInput, MyBid, MyMarket, NotificationPrefs, Offer, PersonalOpportunity, Qualification, TransactionDetail,
 } from '@/domain/types'
-import type { TransactionStatus } from '@/domain/status'
-import { allowedActions, transition, type TransactionAction } from '@/domain/transaction'
+import { tradeActions } from '@/domain/trade'
 import { lowerWins, rankOf, suggestAllocation, validateBid } from '@/domain/auction'
 import { formatIdr } from '@/domain/format'
 import { publish } from '@/lib/realtime'
 import { db } from './db'
-import { economy, toAuction, toOpportunity } from './economy'
+import { bidderLabel, economy, toAuction, toOpportunity } from './economy'
+import { applyAction, createTrade, ensureF6, financeOf, setBank, tradeState, withdraw, type ActionInput } from './trade'
 import { allPersonal, completeness, newId, notify, personal, savePersonal, type PersonalData } from './personal'
 import { audit } from './audit'
 import { ops, saveMm } from './mm'
@@ -40,7 +40,9 @@ for (const [userId, p] of allPersonal()) {
       economy.bestPrice.set(a.id, b.priceIdr)
       if (a.visibility === 'full') {
         a.currentPriceIdr = b.priceIdr
-        a.bids = [{ id: `${a.id}-me-restored`, bidder: 'Kamu', priceIdr: b.priceIdr, at: b.updatedAt, mine: true }, ...a.bids]
+        const id = `${a.id}-${userId}-restored`
+        economy.bidOwners.set(id, userId)
+        a.bids = [{ id, bidder: bidderLabel(a, userId), priceIdr: b.priceIdr, at: b.updatedAt }, ...a.bids]
       }
     }
   }
@@ -122,23 +124,24 @@ function qualification(p: PersonalData, auctionId: string, userId: string): Qual
 
 // ── Transactions ─────────────────────────────────────────────────
 
-export function createTransaction(userId: string, t: Omit<TransactionDetail, 'id' | 'code' | 'timeline' | 'documents' | 'payment' | 'delivery' | 'createdAt' | 'updatedAt' | 'status'>) {
-  const id = newId('trx')
-  const tx: TransactionDetail = {
-    ...t, id, code: `TRX-${id.slice(-4).toUpperCase()}`, status: 'agreement', createdAt: now(), updatedAt: now(),
-    timeline: (['agreement', 'invoiced', 'paid', 'fulfilling', 'delivered', 'completed'] as TransactionStatus[]).map((s, i) => ({ status: s, at: i === 0 ? now() : undefined })),
-    documents: [{ id: `${id}-o`, kind: 'order', name: `PO-${id.slice(-4).toUpperCase()}.pdf`, at: now() }],
-    payment: { status: 'unpaid' }, delivery: { address: 'Alamat pengiriman dari profil' },
-  }
-  personal(userId).transactions.unshift(tx)
-  savePersonal()
-  return tx
+/**
+ * Creates a trade through the settlement engine. With `peerUserId` the other side is a platform account
+ * and gets its own linked record; otherwise the counterparty is fictional and played by the bot.
+ */
+export function createTransaction(
+  userId: string,
+  t: Pick<TransactionDetail, 'title' | 'role' | 'counterparty' | 'quantity' | 'unitPriceIdr' | 'auctionId'> & Partial<TransactionDetail>,
+  peerUserId?: string,
+) {
+  const me = { userId }
+  const other = peerUserId ? { userId: peerUserId } : { party: t.counterparty }
+  const res = createTrade({
+    title: t.title, buyer: t.role === 'buyer' ? me : other, supplier: t.role === 'supplier' ? me : other,
+    quantity: t.quantity, unitPriceIdr: t.unitPriceIdr, auctionId: t.auctionId, makerFeeRate: t.auctionId ? 0.005 : 0,
+  })
+  return (t.role === 'buyer' ? res.buyer : res.supplier)!
 }
 
-const ACTION_NOTE: Record<TransactionAction, string> = {
-  issue_invoice: 'Invoice diterbitkan', pay: 'Dana masuk escrow', ship: 'Barang dikirim', upload_proof: 'Bukti pengiriman diunggah',
-  confirm_receipt: 'Diterima pembeli, dana dilepas', cancel: 'Dibatalkan', dispute: 'Dispute diajukan',
-}
 
 /** Restricted or suspended accounts can browse but not trade (PRD §11 user governance). */
 const restricted = (userId: string) => ['restricted', 'suspended'].includes(admin.users[userId]?.status ?? 'active')
@@ -167,8 +170,8 @@ export const personalHandlers = [
       ...live.filter((b) => new Date(b.auction.endsAt).getTime() - Date.now() < 3_600_000).map((b) => ({
         id: `end-${b.auction.id}`, tone: 'orange' as const, title: `${b.auction.title} berakhir < 1 jam`, detail: 'Pastikan bid terakhirmu sudah masuk', href: `/auctions/${b.auction.id}`,
       })),
-      ...tx.filter((t) => allowedActions(t.status, t.role).some((a) => a !== 'cancel' && a !== 'dispute')).map((t) => ({
-        id: `tx-${t.id}`, tone: 'blue' as const, title: t.title, detail: `Menunggu kamu: ${allowedActions(t.status, t.role).filter((a) => a !== 'cancel' && a !== 'dispute').length} aksi`, href: `/app/transactions/${t.id}`,
+      ...tx.map((t) => ({ t, todo: tradeActions(tradeState(t), t.role).filter((a) => !['cancel', 'dispute', 'review'].includes(a)) })).filter((x) => x.todo.length).map(({ t, todo }) => ({
+        id: `tx-${t.id}`, tone: 'blue' as const, title: t.title, detail: `Menunggu kamu: ${todo.length} aksi`, href: `/app/transactions/${t.id}`,
       })),
       ...opps.filter((o) => o.relation === 'none' && o.status === 'detected' && o.reasons.length >= 2).slice(0, 1).map((o) => ({
         id: `opp-${o.id}`, tone: 'lime' as const, title: `Match baru: ${o.title}`, detail: o.reasons.map((r) => r.label).join(' · '), href: `/opportunities/${o.id}`,
@@ -397,7 +400,8 @@ export const personalHandlers = [
     }
     if (!prev) a.participants++
     a.bidCount++
-    const bid = { id: `${a.id}-me-${a.bidCount}`, bidder: 'Kamu', priceIdr, at: now(), mine: true }
+    const bid = { id: `${a.id}-${userId}-${a.bidCount}`, bidder: bidderLabel(a, userId), priceIdr, at: now() }
+    economy.bidOwners.set(bid.id, userId)
     if (a.visibility === 'full') a.bids = [bid, ...a.bids].slice(0, 30)
     savePersonal()
     publish({
@@ -513,14 +517,31 @@ export const personalHandlers = [
       actor: actorName(userId), action: 'Tetapkan pemenang', entity: { type: 'auction', id: a.id, label: a.title },
       changes: lines.map((l) => ({ field: l.supplier, after: `${l.quantity.toLocaleString('id-ID')} × ${formatIdr(l.priceIdr)}` })),
     })
-    const ids = lines.map((l) =>
-      createTransaction(userId, {
+    // A line whose offer came from a platform account becomes a linked two-sided trade (PRD F6).
+    const ownerOf = (offerId: string) => {
+      const bidder = offerId.slice(a.id.length + 1)
+      const bid = a.bids.find((b) => b.bidder === bidder && economy.bidOwners.has(b.id))
+      return bid ? economy.bidOwners.get(bid.id) : undefined
+    }
+    const winners = new Set<string>()
+    const ids = lines.map((l) => {
+      const supplierUser = ownerOf(l.offerId)
+      if (supplierUser) winners.add(supplierUser)
+      return createTransaction(userId, {
         title: `${a.lot.item} ${l.quantity.toLocaleString('id-ID')} ${a.lot.quantity.unit}`, role: 'buyer',
         counterparty: { name: l.supplier, kind: 'business', verified: true },
-        quantity: { value: l.quantity, unit: a.lot.quantity.unit }, unitPriceIdr: l.priceIdr, totalIdr: l.priceIdr * l.quantity,
-        dueAt: new Date(Date.now() + 14 * 864e5).toISOString(), auctionId: a.id,
-      }).id,
-    )
+        quantity: { value: l.quantity, unit: a.lot.quantity.unit }, unitPriceIdr: l.priceIdr, auctionId: a.id,
+      }, supplierUser).id
+    })
+    for (const [uid, up] of allPersonal()) {
+      const b = up.bids[a.id]
+      if (!b || uid === userId) continue
+      b.status = winners.has(uid) ? 'won' : 'lost'
+      b.updatedAt = now()
+      notify(uid, winners.has(uid)
+        ? { type: 'winning_bid', title: `Kamu memenangkan ${a.title}`, body: 'Pembeli menetapkanmu sebagai pemenang. Setujui agreement-nya.', href: '/app/transactions' }
+        : { type: 'auction_ending', title: `${a.title} sudah diputuskan`, body: 'Bid kamu tidak dipilih kali ini.', href: `/auctions/${a.id}` })
+    }
     const demand = p.listings.find((l) => l.listing.kind === 'demand' && (l.listing as DemandListing).auctionId === a.id)
     if (demand) {
       demand.listing.status = 'matched'
@@ -535,40 +556,41 @@ export const personalHandlers = [
     const q = new URL(request.url).searchParams
     return HttpResponse.json(
       p.transactions
+        .map(ensureF6)
         .filter((t) => (!q.get('role') || t.role === q.get('role')) && (!q.get('status') || q.get('status')!.split(',').includes(t.status)))
-        .map(({ timeline: _t, documents: _d, payment: _p, delivery: _v, dispute: _x, ...t }) => t),
+        .map(({ timeline: _t, documents: _d, payment: _p, delivery: _v, dispute: _x, shipments: _s, reviews: _r, ...t }) => t),
     )
   })),
   http.get(api('/me/transactions/:id'), authed(({ p, params }) => {
     const t = p.transactions.find((x) => x.id === params.id)
-    return t ? HttpResponse.json(t) : fail(404, 'not_found', 'Transaksi tidak ditemukan')
+    return t ? HttpResponse.json(ensureF6(t)) : fail(404, 'not_found', 'Transaksi tidak ditemukan')
   })),
-  http.post(api('/me/transactions/:id/actions'), authed(async ({ p, params, request }) => {
+  http.post(api('/me/transactions/:id/actions'), authed(async ({ p, params, userId, request }) => {
     const t = p.transactions.find((x) => x.id === params.id)
     if (!t) return fail(404, 'not_found', 'Transaksi tidak ditemukan')
-    const { action, note, file } = (await request.json()) as { action: TransactionAction; note?: string; file?: string }
-    const next = transition(t.status, t.role, action)
-    if (!next) return fail(409, 'invalid_transition', 'Aksi ini tidak tersedia untuk status sekarang')
-    if (action === 'upload_proof' && !file) return fail(422, 'validation', 'Pilih file bukti', { file: 'Pilih file bukti pengiriman' })
-    if (action === 'dispute' && !note?.trim()) return fail(422, 'validation', 'Jelaskan alasannya', { note: 'Jelaskan alasan dispute' })
-    audit({ actor: actorName(db.sessionUserId!), action: ACTION_NOTE[action], entity: { type: 'transaction', id: t.id, label: `${t.code} · ${t.title}` }, reason: note, changes: [{ field: 'Status', before: t.status, after: next }] })
-    t.status = next
-    t.updatedAt = now()
-    const step = t.timeline.find((s) => s.status === next)
-    if (step) Object.assign(step, { at: now(), note: ACTION_NOTE[action] })
-    if (action === 'issue_invoice') t.documents.push({ id: newId('doc'), kind: 'invoice', name: `INV-${t.code.slice(4)}.pdf`, at: now() })
-    if (action === 'pay') t.payment = { status: 'escrow', paidAt: now() }
-    if (action === 'ship') t.delivery.eta = new Date(Date.now() + 2 * 864e5).toISOString()
-    if (action === 'upload_proof') {
-      t.delivery.proof = file
-      t.documents.push({ id: newId('doc'), kind: 'proof', name: file!, at: now() })
-    }
-    if (action === 'confirm_receipt') t.payment.status = 'released'
-    if (action === 'cancel' && t.payment.status === 'escrow') t.payment.status = 'refunded'
-    if (action === 'dispute') t.dispute = { status: 'open', reason: note!, openedAt: now() }
-    savePersonal()
-    // The counterparty gets notified, not the actor; mock counterparties aren't real accounts.
-    return HttpResponse.json(t)
+    const res = applyAction(t, actorName(userId), (await request.json()) as ActionInput)
+    return res.ok ? HttpResponse.json(res.tx) : fail(res.status, res.code, res.message, res.fields)
+  })),
+
+  // Finance: escrow, payouts, withdrawals (PRD F6)
+  http.get(api('/me/finance'), authed(({ userId }) => HttpResponse.json(financeOf(userId)))),
+  http.put(api('/me/finance/bank'), authed(async ({ userId, request }) => {
+    const bank = (await request.json()) as { bank: string; accountNo: string; holder: string }
+    const fields: Record<string, string> = {}
+    if (!bank.bank?.trim()) fields.bank = 'Pilih bank'
+    if (!/^\d{8,16}$/.test(bank.accountNo ?? '')) fields.accountNo = '8–16 digit angka'
+    if (!bank.holder?.trim()) fields.holder = 'Isi nama pemilik rekening'
+    if (Object.keys(fields).length) return fail(422, 'validation', 'Data rekening belum lengkap', fields)
+    setBank(userId, bank)
+    audit({ actor: actorName(userId), action: 'Ubah rekening pencairan', entity: { type: 'user', id: userId, label: actorName(userId) }, changes: [{ field: 'Rekening', after: `${bank.bank} ••${bank.accountNo.slice(-4)}` }] })
+    return HttpResponse.json(financeOf(userId))
+  })),
+  http.post(api('/me/finance/withdrawals'), authed(async ({ userId, request }) => {
+    const { amountIdr } = (await request.json()) as { amountIdr: number }
+    const error = withdraw(userId, Number(amountIdr))
+    if (error) return fail(422, 'validation', error, { amountIdr: error })
+    audit({ actor: actorName(userId), action: `Tarik dana ${formatIdr(Number(amountIdr))}`, entity: { type: 'user', id: userId, label: actorName(userId) } })
+    return HttpResponse.json(financeOf(userId), { status: 201 })
   })),
 
   // Notifications (PRD §8.11)
@@ -611,6 +633,7 @@ export function onAuctionClosed(auctionId: string) {
   if (ownerId) {
     notify(ownerId, { type: 'auction_ending', title: `${a.title} sudah ditutup`, body: `${a.bidCount} bid masuk. Bandingkan penawaran dan tetapkan pemenang.`, href: orgEvaluateHref(a.id) ?? `/app/auctions/${a.id}/evaluate` })
   }
+  if (ownerId) return // participants' bids on a buyer's auction are settled when the buyer awards
   for (const [userId, p] of allPersonal()) {
     const b = p.bids[auctionId]
     if (!b || b.status === 'withdrawn') continue

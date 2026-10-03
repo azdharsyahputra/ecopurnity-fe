@@ -39,7 +39,7 @@ const P = {
   evaluate: named(me, 'EvaluatePage'), transactions: named(me, 'TransactionsPage'), transaction: named(me, 'TransactionDetailPage'),
   notifications: named(me, 'NotificationsPage'), settings: named(me, 'SettingsPage'), supply: named(me, 'SupplyPage'),
   demand: named(me, 'DemandPage'), supplyForm: named(me, 'SupplyFormPage'), demandForm: named(me, 'DemandFormPage'),
-  supplyDetail: named(me, 'SupplyDetailPage'), demandDetail: named(me, 'DemandDetailPage'),
+  supplyDetail: named(me, 'SupplyDetailPage'), demandDetail: named(me, 'DemandDetailPage'), finance: named(me, 'FinancePage'),
 }
 const mm = () => import('@/features/market-maker/pages')
 const M = {
@@ -135,7 +135,7 @@ export default function App() {
                   <Route path="app">
                     {workspaceRoutes(personal, {
                       '': P.dashboard, identity: P.identity, supply: P.supply, demand: P.demand, opportunities: P.opportunities,
-                      markets: P.markets, auctions: P.auctions, transactions: P.transactions, notifications: P.notifications, settings: P.settings,
+                      markets: P.markets, auctions: P.auctions, transactions: P.transactions, notifications: P.notifications, settings: P.settings, finance: P.finance,
                       matches: R.matches, reputation: R.reputation,
                     })}
                     <Route path="supply/new" element={<P.supplyForm />} />

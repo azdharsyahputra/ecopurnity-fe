@@ -13,6 +13,7 @@ import { audit, auditLog } from './audit'
 import { db } from './db'
 import { economy, toAuction } from './economy'
 import { allPersonal, newId, notify, personal, savePersonal } from './personal'
+import { mirror } from './trade'
 import { admin, saveAdmin, type DisputeOverlay } from './admin'
 import { reputationTxs } from './profileHandlers'
 
@@ -184,7 +185,8 @@ function caseRefs(): CaseRef[] {
     }
   })
   const real = allPersonal().flatMap(([userId, p]) =>
-    p.transactions.filter((t) => t.dispute).map((t): CaseRef => {
+    // A linked trade has two records; the buyer's copy carries the case.
+    p.transactions.filter((t) => t.dispute && !(t.peer && t.role === 'supplier')).map((t): CaseRef => {
       const id = `dsp-${t.id}`
       const user = db.users.find((u) => u.id === userId)
       const name = user?.name ?? userId
@@ -192,14 +194,15 @@ function caseRefs(): CaseRef[] {
       const overlay = overlayFor(id)
       const parties: DisputeParty[] = [
         { role: t.role, name, kind: 'person', verified: !!user?.emailVerified, userId },
-        { role: other, ...t.counterparty, userId: dbUserId(t.counterparty.name) },
+        { role: other, ...t.counterparty, userId: t.peer?.userId ?? dbUserId(t.counterparty.name) },
       ]
+      const partyEvidence = (t.dispute!.evidence ?? []).map((e) => ({ id: e.id, side: e.by, by: e.name, text: e.file ? `${e.text} (lampiran: ${e.file})` : e.text, at: e.at }))
       return {
-        tx: t, overlay, save: () => { savePersonal(); saveAdmin() },
+        tx: t, overlay, save: () => { mirror(t); savePersonal(); saveAdmin() },
         case: {
           id, code: `DSP-${t.code.slice(4)}`, status: t.dispute!.status, reason: t.dispute!.reason, openedAt: t.dispute!.openedAt, openedBy: name,
           parties: t.role === 'buyer' ? parties : parties.reverse(), transaction: t, marketId: economy.auctions.find((a) => a.id === t.auctionId)?.marketId,
-          evidence: [{ id: `${id}-open`, side: t.role, by: name, text: t.dispute!.reason, at: t.dispute!.openedAt }, ...overlay.evidence],
+          evidence: [...(partyEvidence.length ? partyEvidence : [{ id: `${id}-open`, side: t.role, by: name, text: t.dispute!.reason, at: t.dispute!.openedAt }]), ...overlay.evidence],
           timeline: [{ at: t.dispute!.openedAt, by: name, label: 'Dispute dibuka' }, ...overlay.timeline],
           resolution: overlay.resolution,
         },

@@ -3,7 +3,7 @@ import type { CategoryId, ExplorerRange, OnboardingInput, Page, SearchType } fro
 import { db, saveUsers, toUser, type MockUser } from './db'
 import { aggregates, economy, explorerOverview, marketDetail, search, toAuction, toOpportunity } from './economy'
 import { admin } from './admin'
-import { applyOnboarding, personal } from './personal'
+import { applyOnboarding } from './personal'
 import { personalHandlers } from './personalHandlers'
 import { mmHandlers } from './mmHandlers'
 import { adminHandlers } from './adminHandlers'
@@ -228,9 +228,9 @@ export const handlers = [
     await delay(250)
     const a = economy.auctions.find((x) => x.id === params.id)
     if (!a) return fail(404, 'not_found', 'Auction tidak ditemukan')
-    // Flag the viewer's own bids so the room can say "Kamu".
-    const me = db.sessionUserId && db.users.some((u) => u.id === db.sessionUserId) ? personal(db.sessionUserId).bids[a.id] : undefined
-    return HttpResponse.json(me ? { ...a, bids: a.bids.map((b) => (b.mine || (b.priceIdr === me.priceIdr && b.bidder === 'Kamu') ? { ...b, mine: true } : b)) } : a)
+    // Flag the viewer's own bids so the room can say "Kamu"; everyone else only sees the masked name.
+    const viewer = db.sessionUserId
+    return HttpResponse.json({ ...a, bids: a.bids.map((b) => (viewer && economy.bidOwners.get(b.id) === viewer ? { ...b, mine: true } : b)) })
   }),
 
   http.get(api('/explorer/overview'), async ({ request }) => {

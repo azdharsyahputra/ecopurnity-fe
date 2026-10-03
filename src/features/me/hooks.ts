@@ -5,7 +5,7 @@ import type {
   ListingDetail, ListingInput, MyBid, MyMarket, NotificationPrefs, PersonalOpportunity, Qualification, Transaction, TransactionDetail,
 } from '@/domain/types'
 import type { QualificationStatus } from '@/domain/status'
-import type { TransactionAction } from '@/domain/transaction'
+import type { TradeActionInput } from '@/domain/trade'
 
 // Personal workspace data (PRD §8). Every key starts with 'me' so a sign-out or a live event can
 // invalidate the whole workspace at once.
@@ -160,7 +160,7 @@ export const useTransaction = (id: string) =>
 export function useTransactionAction(id: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (body: { action: TransactionAction; note?: string; file?: string }) => api<TransactionDetail>(`/me/transactions/${id}/actions`, json('POST', body)),
+    mutationFn: (body: TradeActionInput) => api<TransactionDetail>(`/me/transactions/${id}/actions`, json('POST', body)),
     onSuccess: (t) => {
       qc.setQueryData(['me', 'transactions', 'detail', id], t)
       qc.invalidateQueries({ queryKey: ['me', 'transactions'] })
@@ -189,5 +189,27 @@ export function useSaveNotificationPrefs() {
   return useMutation({
     mutationFn: (p: NotificationPrefs) => api<NotificationPrefs>('/me/notification-prefs', json('PUT', p)),
     onSuccess: (p) => qc.setQueryData(['me', 'notification-prefs'], p),
+  })
+}
+
+// ── Finance (PRD F6) ──
+export interface Finance {
+  escrowHeldIdr: number
+  receivableIdr: number
+  availableIdr: number
+  withdrawnIdr: number
+  bank?: { bank: string; accountNo: string; holder: string }
+  withdrawals: { id: string; amountIdr: number; at: string; status: 'processing' | 'paid' }[]
+  entries: { id: string; at: string; label: string; amountIdr: number; kind: 'escrow' | 'payout' | 'refund' | 'payment' | 'withdrawal' | 'fee' }[]
+}
+
+export const useFinance = () => useQuery({ queryKey: ['me', 'finance'], queryFn: () => api<Finance>('/me/finance') })
+
+export function useFinanceAction() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (a: { type: 'bank'; bank: Finance['bank'] } | { type: 'withdraw'; amountIdr: number }) =>
+      a.type === 'bank' ? api<Finance>('/me/finance/bank', json('PUT', a.bank)) : api<Finance>('/me/finance/withdrawals', json('POST', { amountIdr: a.amountIdr })),
+    onSuccess: (f) => qc.setQueryData(['me', 'finance'], f),
   })
 }
