@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { activeVersion, addVersion, diffRules, pendingVersion, rulesToLabeled, validateRules, type MarketRules } from './marketRules'
+import { activeVersion, addVersion, defaultRules, diffRules, pendingVersion, rulesToLabeled, validateRules, type MarketRules } from './marketRules'
 import { canMove, simulateMarket } from './mm'
 
 const n = (s: string) => s.replace(/\u00a0|\u202f/g, ' ')
@@ -71,5 +71,17 @@ describe('market formation', () => {
     expect(open.buyers + open.suppliers).toBe(open.participants)
     expect(open.priceHighIdr).toBeLessThan(10_000 * 1.01)
     expect(simulateMarket({ ...input, mechanism: 'forward_auction' }).priceLowIdr).toBeGreaterThan(10_000 * 0.99)
+  })
+})
+
+describe('defaultRules window', () => {
+  const m = { demand: { value: 600, unit: 'kg' }, supply: { value: 800, unit: 'kg' }, region: 'Jawa Barat', mechanism: 'reverse_auction' as const }
+  it('runs from today to Friday on a weekday', () => {
+    const r = defaultRules(m, new Date(2026, 9, 1)) // Thursday
+    expect([r.windowStart, r.windowEnd]).toEqual(['2026-10-01', '2026-10-02'])
+  })
+  it('moves to next week on a weekend', () => {
+    const r = defaultRules(m, new Date(2026, 9, 3)) // Saturday
+    expect([r.windowStart, r.windowEnd]).toEqual(['2026-10-05', '2026-10-09'])
   })
 })
