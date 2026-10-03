@@ -16,7 +16,7 @@ export default defineConfig({
   server: {
     port: Number(process.env.PORT) || 5173,
     watch: { ignored: ['**/.claude/**'] },
-    proxy: { '/api': process.env.API_URL ?? 'http://localhost:8080' },
+    proxy: { '/api': { target: process.env.API_URL ?? 'http://localhost:8080', ws: true } },
   },
   test: {
     include: ['src/**/*.test.ts'],

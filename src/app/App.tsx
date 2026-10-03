@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, type ReactNode } from 'react'
 import { BrowserRouter, Outlet, Route, Routes, StaticRouter } from 'react-router-dom'
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query'
 import { queryClient } from '@/lib/api'
@@ -6,7 +6,8 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { CommandPalette } from '@/components/CommandPalette'
 import { Toaster } from '@/components/Toaster'
 import { useMe } from '@/features/auth/hooks'
-import { useLiveNotifications } from '@/features/notifications/live'
+import { resyncQueries, useLiveNotifications } from '@/features/notifications/live'
+import { resetRealtime } from '@/lib/realtime'
 import { FullPageLoader } from '@/components/States'
 import { AuthGateDialog } from '@/features/auth/AuthGate'
 import { LoginPage } from '@/features/auth/LoginPage'
@@ -88,6 +89,12 @@ function workspaceRoutes(ws: Workspace, pages: Record<string, React.ComponentTyp
 function Shell() {
   const { data: me } = useMe()
   useLiveNotifications(me?.id)
+  // One socket per tab, reopened when the identity changes (undefined = still loading).
+  const identity = me === undefined ? undefined : (me?.id ?? 'anonymous')
+  useEffect(() => {
+    if (identity === undefined || import.meta.env.VITE_USE_MOCKS !== 'false') return
+    return resetRealtime((channel) => resyncQueries(queryClient, channel))
+  }, [identity])
   return (
     <>
       <Suspense fallback={<FullPageLoader />}>

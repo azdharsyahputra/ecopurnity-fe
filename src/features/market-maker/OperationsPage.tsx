@@ -23,7 +23,7 @@ function EventFeed({ initial, liveAuctions }: { initial: ActivityEvent[]; liveAu
   const { data: me } = useMe()
   const [live, setLive] = useState<ActivityEvent[]>([])
   const push = (e: ActivityEvent) => setLive((l) => [e, ...l].slice(0, 20))
-  useChannel<ActivityEvent>(`mm:${me?.id ?? 'none'}:events`, ({ payload }) => push(payload))
+  useChannel<ActivityEvent>(me ? `user:${me.id}` : undefined, ({ type, payload }) => type === 'mm.activity' && push(payload))
   // Resubscribe only when the set of live rounds changes, not on every refetch.
   const key = JSON.stringify(liveAuctions)
   useEffect(() => {
