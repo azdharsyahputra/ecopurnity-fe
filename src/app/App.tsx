@@ -63,6 +63,7 @@ const A = {
   markets: named(adm, 'AdminMarketsPage'), market: named(adm, 'AdminMarketDetailPage'), auctions: named(adm, 'AdminAuctionsPage'),
   auction: named(adm, 'AdminAuctionDetailPage'), disputes: named(adm, 'DisputesPage'), dispute: named(adm, 'DisputeCasePage'),
   fraud: named(adm, 'FraudPage'), alert: named(adm, 'FraudAlertPage'), audit: named(adm, 'AuditTrailPage'), mmApplications: named(adm, 'MmApplicationsPage'),
+  withdrawals: named(adm, 'WithdrawalsPage'), withdrawal: named(adm, 'WithdrawalDetailPage'),
 }
 const orgPages = () => import('@/features/org/pages')
 const O = {
@@ -188,7 +189,7 @@ export default function App({ location, client = queryClient }: { location?: str
                   <Route path="admin" element={<RequireCapability cap="admin" />}>
                     {workspaceRoutes(governance, {
                       '': A.overview, users: A.users, verification: A.verification, markets: A.markets, auctions: A.auctions,
-                      disputes: A.disputes, fraud: A.fraud, audit: A.audit, 'mm-applications': A.mmApplications,
+                      disputes: A.disputes, fraud: A.fraud, audit: A.audit, 'mm-applications': A.mmApplications, withdrawals: A.withdrawals,
                     })}
                     <Route path="users/:id" element={<A.user />} />
                     <Route path="verification/:id" element={<A.verificationDetail />} />
@@ -196,6 +197,7 @@ export default function App({ location, client = queryClient }: { location?: str
                     <Route path="auctions/:id" element={<A.auction />} />
                     <Route path="disputes/:id" element={<A.dispute />} />
                     <Route path="fraud/:id" element={<A.alert />} />
+                    <Route path="withdrawals/:id" element={<A.withdrawal />} />
                   </Route>
                 </Route>
               </Route>

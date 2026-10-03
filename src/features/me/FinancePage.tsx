@@ -17,6 +17,9 @@ import { Skeleton } from '@/components/ui/skeleton'
 const KIND: Record<Finance['entries'][number]['kind'], [string, 'blue' | 'green' | 'red' | 'orange' | 'gray' | 'purple']> = {
   escrow: ['Escrow', 'blue'], payment: ['Pembayaran', 'gray'], payout: ['Pencairan', 'green'], refund: ['Refund', 'purple'], fee: ['Fee', 'orange'], withdrawal: ['Tarik dana', 'gray'],
 }
+const WITHDRAWAL: Record<Finance['withdrawals'][number]['status'], [string, 'yellow' | 'green' | 'red']> = {
+  processing: ['Diproses admin', 'yellow'], paid: ['Sudah ditransfer', 'green'], rejected: ['Ditolak', 'red'],
+}
 const BANKS = ['BCA', 'BRI', 'Mandiri', 'BNI', 'BSI', 'CIMB Niaga']
 
 function BankForm({ f }: { f: Finance }) {
@@ -51,13 +54,36 @@ function Withdraw({ f }: { f: Finance }) {
       <ConfirmDialog
         trigger={<Button className="h-9" disabled={!f.bank || !(value > 0)}><ArrowDownToLine /> Tarik dana</Button>}
         title={`Tarik ${formatIdr(value)}?`}
-        impact={f.bank ? `Dikirim ke ${f.bank.bank} ••${f.bank.accountNo.slice(-4)} a.n. ${f.bank.holder}, biasanya tiba dalam 1 hari kerja.` : undefined}
+        impact={f.bank ? `Admin mentransfer ke ${f.bank.bank} ••${f.bank.accountNo.slice(-4)} a.n. ${f.bank.holder}. Diproses admin, biasanya 1 hari kerja.` : undefined}
         confirmLabel="Tarik dana"
-        onConfirm={() => act.mutateAsync({ type: 'withdraw', amountIdr: value }).then(() => toast({ title: 'Penarikan diproses', tone: 'green' }))}
+        onConfirm={() => act.mutateAsync({ type: 'withdraw', amountIdr: value }).then(() => toast({ title: 'Penarikan diproses', body: 'Diproses admin, biasanya 1 hari kerja.', tone: 'green' }))}
       />
       {!f.bank && <p className="text-xs text-muted-foreground">Tambahkan rekening pencairan dulu.</p>}
       <FormError error={act.error} />
     </div>
+  )
+}
+
+function Withdrawals({ f }: { f: Finance }) {
+  if (!f.withdrawals.length) return null
+  return (
+    <section className="min-w-0">
+      <h2 className="mb-1 font-medium">Penarikan</h2>
+      <p className="mb-3 text-sm text-muted-foreground">Diproses admin, biasanya 1 hari kerja. Penarikan yang ditolak kembali ke saldo.</p>
+      <ul className="divide-y rounded-xl border bg-card">
+        {f.withdrawals.map((w) => (
+          <li key={w.id} className="flex flex-wrap items-start justify-between gap-2 p-3 text-sm">
+            <div className="min-w-0">
+              <p className="num font-medium">{formatIdr(w.amountIdr)}</p>
+              <p className="text-xs text-muted-foreground">Diajukan {formatDateTime(w.at)}</p>
+              {w.status === 'paid' && <p className="mt-1 text-xs">Ditransfer{w.paidAt && ` ${formatDateTime(w.paidAt)}`}{w.transferRef && <> · ref <span className="font-mono">{w.transferRef}</span></>}</p>}
+              {w.status === 'rejected' && w.reason && <p className="mt-1 text-xs break-words">Alasan: {w.reason}</p>}
+            </div>
+            <Tag tone={WITHDRAWAL[w.status][1]}>{WITHDRAWAL[w.status][0]}</Tag>
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }
 
@@ -76,6 +102,8 @@ export function FinancePage() {
               <StatTile label="Sudah ditarik" icon={Landmark} tone="gray" value={formatIdr(f.withdrawnIdr, { compact: true })} />
             </div>
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+              <div className="flex min-w-0 flex-col gap-6">
+              <Withdrawals f={f} />
               <section className="min-w-0">
                 <h2 className="mb-3 font-medium">Riwayat</h2>
                 {f.entries.length ? (
@@ -95,6 +123,7 @@ export function FinancePage() {
                   <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">Belum ada pergerakan dana.</p>
                 )}
               </section>
+              </div>
               <aside className="flex flex-col gap-4">
                 <section className="rounded-xl border bg-card p-4">
                   <h2 className="mb-3 font-medium">Tarik dana</h2>
