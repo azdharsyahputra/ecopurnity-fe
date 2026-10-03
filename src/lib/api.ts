@@ -49,3 +49,11 @@ export const queryClient = new QueryClient({
     },
   },
 })
+
+/** Query string from params, leaving out empty values ("all" filters): `?a=1&b=2` or "". */
+export const qs = (params: object) => {
+  const s = new URLSearchParams(
+    Object.entries(params).filter(([, v]) => v !== undefined && v !== '' && v !== null).map(([k, v]) => [k, String(v)]),
+  ).toString()
+  return s ? `?${s}` : ''
+}
