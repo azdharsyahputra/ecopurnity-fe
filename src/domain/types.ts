@@ -471,7 +471,8 @@ export interface Transaction {
 
 export interface TransactionDetail extends Transaction {
   timeline: { status: TransactionStatus; at?: string; note?: string }[]
-  documents: { id: string; kind: 'order' | 'agreement' | 'invoice' | 'proof'; name: string; at: string }[]
+  /** `url`: short-lived presigned link of an uploaded file (delivery proofs); absent for generated documents. */
+  documents: { id: string; kind: 'order' | 'agreement' | 'invoice' | 'proof'; name: string; url?: string; at: string }[]
   payment: { status: 'unpaid' | 'escrow' | 'released' | 'refunded'; paidAt?: string }
   delivery: { address: string; eta?: string; proof?: string }
   dispute?: {
@@ -479,7 +480,7 @@ export interface TransactionDetail extends Transaction {
     reason: string
     openedAt: string
     /** Evidence from either party (F6); the opening reason is the first entry. */
-    evidence?: { id: string; by: 'buyer' | 'supplier'; name: string; text: string; file?: string; at: string }[]
+    evidence?: { id: string; by: 'buyer' | 'supplier'; name: string; text: string; file?: string; url?: string; at: string }[]
   }
   // ── F6 settlement fields; optional so records from before F6 still read ──
   agreement?: { buyerAcceptedAt?: string; supplierAcceptedAt?: string }
@@ -504,6 +505,8 @@ export interface Shipment {
   status: 'scheduled' | 'in_transit' | 'delivered'
   deliveredAt?: string
   proof?: string
+  /** Short-lived presigned link of the proof file (absent for name-only demo proofs). */
+  proofUrl?: string
 }
 
 export interface Review {
