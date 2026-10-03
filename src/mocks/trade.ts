@@ -8,6 +8,7 @@ import { formatIdr } from '@/domain/format'
 import { audit } from './audit'
 import { db } from './db'
 import { newId, notify, personal, savePersonal } from './personal'
+import { claim, consumeUpload, uploadFileInfo } from './kyc'
 
 // Settlement engine for the mock (PRD F6). One trade, two records when both sides are platform accounts:
 // every action is applied to the actor's record and mirrored to the peer's. Fictional counterparties are
@@ -117,7 +118,8 @@ export function mirror(t: TransactionDetail) {
   for (const k of SHARED) (other as unknown as Record<string, unknown>)[k] = structuredClone(t[k])
 }
 
-export type ActionInput = TradeActionInput
+/** `fileUrl`: the stored file's link (mock storage) once a user's upload was claimed. */
+export type ActionInput = TradeActionInput & { fileUrl?: string }
 
 export type ActionResult = { ok: true; tx: TransactionDetail } | { ok: false; status: number; code: string; message: string; fields?: Record<string, string> }
 
@@ -171,10 +173,10 @@ export function applyAction(t: TransactionDetail, actorName: string, input: Acti
     case 'upload_proof': {
       const sh = t.shipments!.find((x) => x.id === input.shipmentId && x.status !== 'delivered') ?? t.shipments!.find((x) => x.status !== 'delivered')
       if (!sh) return err(409, 'invalid_transition', 'Tidak ada pengiriman yang sedang berjalan')
-      if (!input.file) return err(422, 'validation', 'Pilih file bukti', { file: 'Pilih file bukti pengiriman' })
-      Object.assign(sh, { status: 'delivered', deliveredAt: at, proof: input.file })
+      if (!input.file) return err(422, 'validation', 'Pilih file bukti pengiriman', { uploadId: 'Pilih file bukti pengiriman' })
+      Object.assign(sh, { status: 'delivered', deliveredAt: at, proof: input.file, proofUrl: input.fileUrl })
       t.delivery.proof = input.file
-      t.documents.push({ id: newId('doc'), kind: 'proof', name: input.file, at })
+      t.documents.push({ id: newId('doc'), kind: 'proof', name: input.file, url: input.fileUrl, at })
       note = `Terkirim ${sh.quantity.toLocaleString('id-ID')} ${t.quantity.unit} ke ${sh.dropPoint}`
       break
     }
@@ -202,11 +204,11 @@ export function applyAction(t: TransactionDetail, actorName: string, input: Acti
       break
     case 'dispute':
       if (!input.note?.trim()) return err(422, 'validation', 'Jelaskan alasannya', { note: 'Jelaskan alasan dispute' })
-      t.dispute = { status: 'open', reason: input.note.trim(), openedAt: at, evidence: [{ id: newId('evd'), by: role, name: actorName, text: input.note.trim(), file: input.file, at }] }
+      t.dispute = { status: 'open', reason: input.note.trim(), openedAt: at, evidence: [{ id: newId('evd'), by: role, name: actorName, text: input.note.trim(), file: input.file, url: input.fileUrl, at }] }
       break
     case 'add_evidence':
       if (!input.note?.trim()) return err(422, 'validation', 'Tulis keterangan bukti', { note: 'Tulis keterangan bukti' })
-      t.dispute!.evidence = [...(t.dispute!.evidence ?? []), { id: newId('evd'), by: role, name: actorName, text: input.note.trim(), file: input.file, at }]
+      t.dispute!.evidence = [...(t.dispute!.evidence ?? []), { id: newId('evd'), by: role, name: actorName, text: input.note.trim(), file: input.file, url: input.fileUrl, at }]
       if (t.dispute!.status === 'open') t.dispute!.status = 'evidence'
       note = 'Bukti dispute ditambahkan'
       break
@@ -236,6 +238,25 @@ export function applyAction(t: TransactionDetail, actorName: string, input: Acti
   })
   if (t.peer) notify(t.peer.userId, { type: input.action === 'pay' ? 'payment' : ['ship', 'upload_proof'].includes(input.action) ? 'delivery' : 'transaction_update', title: `${t.code}: ${note}`, body: `${actorName} · ${t.title}`, href: `/app/transactions/${t.peer.txId}` })
   return { ok: true, tx: t }
+}
+
+const FILE_PURPOSE: Partial<Record<TradeAction, string>> = { upload_proof: 'trade_proof', dispute: 'dispute_evidence', add_evidence: 'dispute_evidence' }
+
+/**
+ * A user's action (personal, or an org member for the org): files are the user's verified uploads (`uploadId`, used up
+ * only when the step succeeds, like the API's transaction); a bare `file` name is the bot's only and is ignored here.
+ */
+export function applyUserAction(t: TransactionDetail, userId: string, actorName: string, input: TradeActionInput, sink?: TradeSink): ActionResult {
+  const purpose = FILE_PURPOSE[input.action]
+  let file: string | undefined
+  if (purpose && input.uploadId) {
+    const r = claim(userId, input.uploadId, purpose, 'uploadId')
+    if (typeof r !== 'string') return err(422, 'validation', 'Periksa kembali file yang diunggah', r)
+    file = r
+  }
+  const res = applyAction(t, actorName, { ...input, file, fileUrl: file && uploadFileInfo(input.uploadId!).url }, sink)
+  if (res.ok && file) consumeUpload(userId, input.uploadId, purpose!, 'uploadId')
+  return res
 }
 
 // ── Fictional counterparties ─────────────────────────────────────

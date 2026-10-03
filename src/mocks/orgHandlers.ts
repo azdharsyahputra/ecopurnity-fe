@@ -17,7 +17,7 @@ import { allPersonal, notify, personal } from './personal'
 import {
   SUPPLIERS, activeRoles, allOrgs, lotAuction, makeTx, newId, org, orgAudit, orgUserIds, pools, saveOrg, settingsView, supplierById, type HistoryRow, type OrgData, type StoredPool,
 } from './org'
-import { applyAction, botNotice, botStep, ensureF6, type TradeSink } from './trade'
+import { applyUserAction, botNotice, botStep, ensureF6, type TradeSink } from './trade'
 import { cancelPayment, createPayment, currentPayment, PAY_VIA_GATEWAY } from './payments'
 import type { PaymentInput } from '@/domain/payment'
 
@@ -767,7 +767,7 @@ export const orgHandlers = [
     const denied = txDeniedReason(c.o.settings.permissions, c.role, c.roleLabel, input.action)
     if (denied) return fail(403, 'forbidden', denied)
     if (input.action === 'pay') return fail(409, 'payment_required', PAY_VIA_GATEWAY)
-    const res = applyAction(ensureF6(t), c.actor, input, orgSink(c.o))
+    const res = applyUserAction(ensureF6(t), c.userId, c.actor, input, orgSink(c.o))
     return res.ok ? HttpResponse.json(txPage(c.o, c.orgId, t)) : fail(res.status, res.code, res.message, res.fields)
   })),
   // Payments through the gateway, gated like the `pay` step
