@@ -13,7 +13,7 @@ import { formatIdr } from '@/domain/format'
 import { db } from './db'
 import { economy } from './economy'
 import { notify } from './personal'
-import { SUPPLIERS, lotAuction, makeTx, newId, org, orgAudit, pools, saveOrg, supplierById, type OrgData, type StoredPool } from './org'
+import { SUPPLIERS, lotAuction, makeTx, newId, org, orgAudit, pools, saveOrg, supplierById, type HistoryRow, type OrgData, type StoredPool } from './org'
 
 const api = (path: string) => `/api/v1/orgs/:orgId${path}`
 const fail = (status: number, code: string, message: string, fields?: Record<string, string>) => HttpResponse.json({ error: { code, message, fields } }, { status })
@@ -186,9 +186,31 @@ function joinPool(o: OrgData, orgId: string, p: StoredPool, quantity: number, op
 
 // ── Analytics ────────────────────────────────────────────────────
 
+/** Seeded purchase history plus every procurement auction awarded since, oldest month first (PRD §9.9). */
+function purchases(o: OrgData): HistoryRow[] {
+  const awarded = o.auctions.flatMap((a) => {
+    if (!a.award || a.objective === 'selling') return []
+    const { award } = a
+    return award.lines.flatMap((lot, i) => lot.flatMap((l, k): HistoryRow[] => {
+      const s = SUPPLIERS.find((x) => x.name === l.supplier)
+      const def = a.lots[i]
+      if (!s || !def) return []
+      return [{
+        code: `${award.poNumber ?? a.code}-${i + 1}${lot.length > 1 ? String.fromCharCode(97 + k) : ''}`, month: award.at.slice(0, 7), item: def.item,
+        categoryId: a.categoryId, supplierId: s.id, quantity: { value: l.quantity, unit: def.quantity.unit }, unitPriceIdr: l.priceIdr,
+        // ponytail: the lot's target price stands in for budget and market until awards carry a market reference.
+        budgetUnitIdr: def.reservePriceIdr, marketUnitIdr: def.reservePriceIdr, via: 'auction',
+        bidders: economy.auctions.find((x) => x.id === def.auctionId)?.participants, openingIdr: def.reservePriceIdr,
+      }]
+    }))
+  })
+  return [...o.history, ...awarded].sort((a, b) => a.month.localeCompare(b.month))
+}
+
 function analytics(o: OrgData, months: number, category?: string): OrgAnalytics {
-  const keys = [...new Set(o.history.map((h) => h.month))].sort().slice(-months)
-  const rows = o.history.filter((h) => keys.includes(h.month) && (!category || h.categoryId === category))
+  const all = purchases(o)
+  const keys = [...new Set(all.map((h) => h.month))].sort().slice(-months)
+  const rows = all.filter((h) => keys.includes(h.month) && (!category || h.categoryId === category))
   const sum = <T>(xs: T[], f: (x: T) => number) => xs.reduce((s, x) => s + f(x), 0)
   const total = (h: (typeof rows)[number]) => h.unitPriceIdr * h.quantity.value
   const cats = [...new Set(rows.map((h) => h.categoryId))].sort((a, b) => o.settings.profile.categories.indexOf(a) - o.settings.profile.categories.indexOf(b))
@@ -245,7 +267,7 @@ export const orgHandlers = [
   // Overview (PRD §9.1)
   http.get(api('/overview'), orgAuthed(({ o, role }) => {
     const month = new Date().toISOString().slice(0, 7)
-    const thisMonth = o.history.filter((h) => h.month === month)
+    const thisMonth = purchases(o).filter((h) => h.month === month)
     const views = o.auctions.map(toView)
     const waiting: WaitingItem[] = [
       ...o.procurements.filter((r) => r.status === 'pending_approval' && canApprove(role, r.requiredApprovers, r.approvals))
