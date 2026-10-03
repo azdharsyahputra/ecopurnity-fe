@@ -59,6 +59,27 @@ export function saveUsers() {
   }
 }
 
+// Roles granted in-app (market maker approval, joined or created orgs) survive reloads, seeded accounts included.
+const ROLES_KEY = 'ecp-mock-user-roles'
+const roles: Record<string, Pick<User, 'capabilities' | 'orgs'>> = (() => {
+  try {
+    return JSON.parse(localStorage.getItem(ROLES_KEY) ?? '{}')
+  } catch {
+    return {}
+  }
+})()
+for (const u of users) Object.assign(u, roles[u.id])
+
+export function saveRoles(user: MockUser) {
+  roles[user.id] = { capabilities: user.capabilities, orgs: user.orgs }
+  try {
+    localStorage.setItem(ROLES_KEY, JSON.stringify(roles))
+  } catch {
+    // per-tab only
+  }
+  saveUsers()
+}
+
 function readSession() {
   try {
     return localStorage.getItem(SESSION_KEY)

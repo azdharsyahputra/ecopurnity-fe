@@ -59,7 +59,7 @@ const A = {
   verification: named(adm, 'VerificationQueuePage'), verificationDetail: named(adm, 'VerificationDetailPage'),
   markets: named(adm, 'AdminMarketsPage'), market: named(adm, 'AdminMarketDetailPage'), auctions: named(adm, 'AdminAuctionsPage'),
   auction: named(adm, 'AdminAuctionDetailPage'), disputes: named(adm, 'DisputesPage'), dispute: named(adm, 'DisputeCasePage'),
-  fraud: named(adm, 'FraudPage'), alert: named(adm, 'FraudAlertPage'), audit: named(adm, 'AuditTrailPage'),
+  fraud: named(adm, 'FraudPage'), alert: named(adm, 'FraudAlertPage'), audit: named(adm, 'AuditTrailPage'), mmApplications: named(adm, 'MmApplicationsPage'),
 }
 const orgPages = () => import('@/features/org/pages')
 const O = {
@@ -177,7 +177,7 @@ export default function App({ location, client = queryClient }: { location?: str
                   <Route path="admin" element={<RequireCapability cap="admin" />}>
                     {workspaceRoutes(governance, {
                       '': A.overview, users: A.users, verification: A.verification, markets: A.markets, auctions: A.auctions,
-                      disputes: A.disputes, fraud: A.fraud, audit: A.audit,
+                      disputes: A.disputes, fraud: A.fraud, audit: A.audit, 'mm-applications': A.mmApplications,
                     })}
                     <Route path="users/:id" element={<A.user />} />
                     <Route path="verification/:id" element={<A.verificationDetail />} />

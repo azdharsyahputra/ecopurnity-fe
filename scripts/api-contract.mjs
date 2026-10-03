@@ -9,6 +9,7 @@ const AREAS = {
   'mmHandlers.ts': 'Market maker',
   'adminHandlers.ts': 'Admin governance',
   'profileHandlers.ts': 'Matching, reputation & public profiles',
+  'roles.ts': 'Role activation (market maker applications, org invitations, create organisation)',
 }
 
 const rows = []

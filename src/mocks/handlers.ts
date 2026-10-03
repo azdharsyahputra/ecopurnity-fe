@@ -11,6 +11,7 @@ import { mmHandlers } from './mmHandlers'
 import { adminHandlers } from './adminHandlers'
 import { profileHandlers } from './profileHandlers'
 import { orgHandlers } from './orgHandlers'
+import { createMmApplication, roleHandlers } from './roles'
 
 const api = (path: string) => `/api/v1${path}`
 
@@ -162,6 +163,8 @@ export const handlers = [
     if (input.organization) {
       user.orgs.push({ orgId: `org-${token()}`, orgName: input.organization.name, role: 'owner', verified: false })
     }
+    const mm = input.marketMakerApplication
+    if (mm?.organization.trim()) createMmApplication(user, { organization: mm.organization, categories: input.categories, experience: mm.reason, documents: '' })
     saveUsers()
     return HttpResponse.json(toUser(user))
   }),
@@ -262,6 +265,7 @@ export const handlers = [
   ...adminHandlers,
   ...profileHandlers,
   ...orgHandlers,
+  ...roleHandlers,
   ...rfqHandlers,
   ...settleHandlers,
   ...personalHandlers,
