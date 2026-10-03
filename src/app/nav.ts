@@ -1,5 +1,5 @@
 import {
-  BadgeCheck, Bell, Building2, ChartColumn, ClipboardList, Compass, FileCheck2, Gavel, Handshake, History, House,
+  BadgeCheck, Banknote, Bell, Building2, ChartColumn, ClipboardList, Compass, FileCheck2, Gavel, Handshake, History, House,
   IdCard, Kanban, LayoutDashboard, PackageOpen, ReceiptText, Scale, Settings, ShieldAlert, ShieldCheck, ShoppingCart,
   FileQuestion, MessagesSquare, Repeat, Sparkles, Store, SquarePlus, Truck, UserRound, Users, UsersRound, Wallet, Warehouse, type LucideIcon,
 } from 'lucide-react'
@@ -94,6 +94,7 @@ const governance: Workspace = {
     { label: 'Markets', path: 'markets', icon: Store },
     { label: 'Auctions', path: 'auctions', icon: Gavel },
     { label: 'Disputes', path: 'disputes', icon: Scale },
+    { label: 'Pencairan', path: 'withdrawals', icon: Banknote },
     { label: 'Fraud', path: 'fraud', icon: ShieldAlert },
     { label: 'Audit', path: 'audit', icon: History },
   ],
