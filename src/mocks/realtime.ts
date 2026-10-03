@@ -37,6 +37,8 @@ function bidTick() {
   const base = economy.bestPrice.get(a.id) ?? a.currentPriceIdr ?? a.openingPriceIdr
   // Sealed bids aren't bound by the step; they just land somewhere sensible.
   const price = a.type === 'sealed' ? Math.round(a.openingPriceIdr * (0.85 + Math.random() * 0.12)) : base + dir * steps * Math.max(a.minStepIdr, 1)
+  // Bots have a walk-away price: 25% below opening in procurement, 25% above in selling.
+  if (a.type !== 'sealed' && (dir < 0 ? price < a.openingPriceIdr * 0.75 : price > a.openingPriceIdr * 1.25)) return
   if (a.type !== 'sealed' || price < base) economy.bestPrice.set(a.id, a.type === 'sealed' ? Math.min(base, price) : price)
   if (economy.owners.has(a.id)) savePersonal()
   a.bidCount++
