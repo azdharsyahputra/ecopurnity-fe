@@ -5,6 +5,7 @@ import { aggregates, economy, explorerOverview, marketDetail, search, toAuction,
 import { legacyHandlers } from './legacy'
 import { applyOnboarding, personal } from './personal'
 import { personalHandlers } from './personalHandlers'
+import { orgHandlers } from './orgHandlers'
 
 const api = (path: string) => `/api/v1${path}`
 
@@ -248,6 +249,7 @@ export const handlers = [
     return HttpResponse.json(hits.slice(0, limit))
   }),
 
+  ...orgHandlers,
   ...personalHandlers,
   ...legacyHandlers,
 ]
