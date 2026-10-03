@@ -5,6 +5,7 @@ import { aggregates, economy, explorerOverview, marketDetail, search, toAuction,
 import { admin } from './admin'
 import { applyOnboarding } from './personal'
 import { personalHandlers } from './personalHandlers'
+import { rfqHandlers } from './rfq'
 import { mmHandlers } from './mmHandlers'
 import { adminHandlers } from './adminHandlers'
 import { profileHandlers } from './profileHandlers'
@@ -260,5 +261,6 @@ export const handlers = [
   ...adminHandlers,
   ...profileHandlers,
   ...orgHandlers,
+  ...rfqHandlers,
   ...personalHandlers,
 ]
