@@ -354,8 +354,12 @@ export const orgHandlers = [
     if (!EMAIL.test(e)) return fail(422, 'validation', 'Email tidak valid', { email: 'Masukkan email yang valid' })
     if (c.o.members.some((m) => m.email === e)) return fail(409, 'exists', 'Sudah anggota', { email: 'Email ini sudah ada di tim' })
     if (!c.o.settings.roles.some((r) => r.id === role)) return fail(422, 'validation', 'Pilih peran', { role: 'Pilih peran' })
-    c.o.members.push({ id: newId('mem'), name: e, email: e, role, department, status: 'invited', joinedAt: now() })
+    const id = newId('mem')
+    c.o.members.push({ id, name: e, email: e, role, department, status: 'invited', joinedAt: now() })
     orgAudit(c.o, { actor: c.actor, action: 'Undang anggota', entity: { type: 'user', id: e, label: e }, changes: [{ field: 'Peran', after: roleLabelOf(c.o, role) }] })
+    // Existing accounts get it in-app; new ones see it after registering with this email (GET /me/invitations).
+    const invitee = db.users.find((u) => u.email === e)
+    if (invitee) notify(invitee.id, { type: 'transaction_update', title: `Undangan bergabung ke ${c.o.settings.profile.name}`, body: `${c.actor} mengundangmu sebagai ${roleLabelOf(c.o, role)}.`, href: `/app?invitation=${id}` })
     return new HttpResponse(null, { status: 204 })
   })),
   http.patch(api('/team/members/:memberId'), orgAuthed(async (c) => {
