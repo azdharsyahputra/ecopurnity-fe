@@ -65,7 +65,10 @@ export interface VerificationRequest {
   /** What the applicant typed into the form. */
   form: LabeledValue[]
   /** What the uploaded documents say (OCR in the real BE). Labels that also appear in `form` are compared. */
-  documents: { kind: DocKind; fileName: string; fields: LabeledValue[] }[]
+  /** `url`: short-lived download link, detail only. */
+  documents: { kind: DocKind; fileName: string; fields: LabeledValue[]; url?: string }[]
+  /** Decrypted NIK of a personal request, detail only (every view is audited). */
+  nik?: string
   decision?: { at: string; by: string; note: string }
 }
 
@@ -209,10 +212,51 @@ export type AlertActionInput =
 
 // ── Overview ──
 
+// ── Manual payouts ──
+
+export type WithdrawalStatus = 'processing' | 'paid' | 'rejected'
+
+/** A withdrawal in the payout queue; the admin transfers it by hand and records it. Account number masked. */
+export interface AdminWithdrawal {
+  id: string
+  /** "WDR-…", for the transfer description. */
+  code: string
+  status: WithdrawalStatus
+  amountIdr: number
+  requestedAt: string
+  /** SLA hint: one working day after the request. */
+  dueAt: string
+  requester: { id: string; name: string; email: string }
+  party: { id: string; name: string }
+  bank: string
+  holder: string
+  accountLast4: string
+  transferRef?: string
+  paidAt?: string
+  note?: string
+  reason?: string
+  decidedAt?: string
+  decidedBy?: string
+}
+
+export interface AdminWithdrawalDetail extends AdminWithdrawal {
+  /** Full account number, only while processing; every view is audited. */
+  accountNo?: string
+  /** Name on the requester's approved KTP. */
+  identityName?: string
+  nameMismatch: boolean
+  /** Other withdrawals of the same party, newest first. */
+  recent: AdminWithdrawal[]
+}
+
+export type WithdrawalActionInput =
+  | { action: 'mark_paid'; transferRef: string; paidAt?: string; note?: string }
+  | { action: 'reject'; reason: string }
+
 export interface AdminOverview {
-  queues: { users: number; verification: number; markets: number; auctions: number; disputes: number; fraud: number }
+  queues: { users: number; verification: number; markets: number; auctions: number; disputes: number; fraud: number; withdrawals: number }
   newAlerts: FraudAlert[]
   openDisputes: DisputeSummary[]
   /** Items waiting longer than their review SLA. */
-  sla: { module: 'verification' | 'disputes'; label: string; slaHours: number; total: number; breached: number; oldestAt?: string }[]
+  sla: { module: 'verification' | 'disputes' | 'withdrawals'; label: string; slaHours: number; total: number; breached: number; oldestAt?: string }[]
 }

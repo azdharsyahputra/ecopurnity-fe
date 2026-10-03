@@ -1,5 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { api } from '@/lib/api'
+import { api, qs } from '@/lib/api'
 import { useChannel } from '@/lib/realtime'
 import type {
   AggregateRow, Auction, AuctionDetail, AuctionEvent, ExplorerOverview, ExplorerRange, Market, MarketDetail, Opportunity,
@@ -17,13 +17,6 @@ export interface ListFilters {
   market?: string
   page?: number
   pageSize?: number
-}
-
-const qs = (params: object) => {
-  const s = new URLSearchParams(
-    Object.entries(params).filter(([, v]) => v !== undefined && v !== '' && v !== null).map(([k, v]) => [k, String(v)]),
-  ).toString()
-  return s ? `?${s}` : ''
 }
 
 export function useOpportunities(f: ListFilters = {}) {

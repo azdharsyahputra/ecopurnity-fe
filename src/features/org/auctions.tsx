@@ -203,7 +203,8 @@ function AuctionWizard({ source }: { source?: ProcurementRequest }) {
                 </div>
               </div>
               <div role="radiogroup" aria-label="Tipe auction" className="grid gap-2 sm:grid-cols-2">
-                {(Object.keys(AUCTION_TYPES) as AuctionType[]).map((t) => (
+                {/* Dutch needs a market (accepting creates the trade with the maker); org lots have none. */}
+                {(Object.keys(AUCTION_TYPES) as AuctionType[]).filter((t) => t !== 'dutch').map((t) => (
                   <button key={t} type="button" role="radio" aria-checked={d.type === t} onClick={() => set('type', t)} className={cn('rounded-lg border p-3 text-left text-sm', d.type === t ? 'border-primary ring-3 ring-primary/20' : 'hover:bg-hover')}>
                     <span className="font-medium">{AUCTION_TYPES[t].label}</span>
                     <span className="mt-0.5 block text-xs text-muted-foreground">{{ reverse: 'Supplier menurunkan harga; cocok untuk procurement.', forward: 'Pembeli menaikkan harga; cocok untuk menjual stok.', sealed: 'Penawaran tertutup sampai penutupan.', dutch: 'Harga turun bertahap; yang pertama menerima menang.' }[t]}</span>

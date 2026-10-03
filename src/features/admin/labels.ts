@@ -1,5 +1,5 @@
 import type { Tone } from '@/domain/status'
-import type { AccountStatus, AlertStatus, AlertType, DocKind, Finding, VerificationStatus } from './types'
+import type { AccountStatus, AlertStatus, AlertType, DocKind, Finding, VerificationStatus, WithdrawalStatus } from './types'
 
 export const ACCOUNT_STATUS: Record<AccountStatus, [string, Tone]> = {
   active: ['Aktif', 'green'],
@@ -42,4 +42,10 @@ export const riskTone = (score: number): Tone => (score >= 80 ? 'red' : score >=
 /** RFC 4180-ish CSV: quote every cell, double inner quotes. */
 export function toCsv(rows: (string | number | undefined)[][]) {
   return rows.map((r) => r.map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n')
+}
+
+export const WITHDRAWAL_STATUS: Record<WithdrawalStatus, [string, Tone]> = {
+  processing: ['Diproses', 'yellow'],
+  paid: ['Dibayar', 'green'],
+  rejected: ['Ditolak', 'red'],
 }

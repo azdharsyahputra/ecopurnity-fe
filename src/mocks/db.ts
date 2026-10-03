@@ -118,7 +118,8 @@ export const db = {
   activity: Array.from({ length: 12 }, (_, i) => makeActivity(new Date(Date.now() - i * 7 * 60_000))),
 
   /** One-time tokens a real BE would email: email → token. */
-  verifyTokens: new Map<string, string>(),
+  /** email → live verification code (6 digits), with wrong attempts and when it was sent / expires. */
+  verifyCodes: new Map<string, { code: string; attempts: number; sentAt: number; expiresAt: number }>(),
   resetTokens: new Map<string, string>(),
 
   sessionUserId: readSession(),

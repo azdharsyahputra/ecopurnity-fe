@@ -146,13 +146,13 @@ export function notifyMarket(marketId: string, n: Omit<AppNotification, 'id' | '
   for (const id of ids) if (db.users.some((u) => u.id === id)) notify(id, n)
 }
 
-/** Operations feed item for this maker (`mm:{userId}:events`), optionally mirrored to the public activity feed. */
+/** Operations feed item for this maker (`mm.activity` on `user:{userId}`), optionally mirrored to the public activity feed. */
 export function emitEvent(userId: string, e: Omit<ActivityEvent, 'id' | 'at'>, isPublic = false) {
   const full: ActivityEvent = { ...e, id: mmId('mme'), at: now() }
   const list = (mm.events[userId] ??= [])
   list.unshift(full)
   list.length = Math.min(list.length, 30)
-  publish({ channel: `mm:${userId}:events`, type: 'activity.created', payload: full, ts: full.at })
+  publish({ channel: `user:${userId}`, type: 'mm.activity', payload: full, ts: full.at })
   if (isPublic) {
     db.activity.unshift({ ...full, id: mmId('act') })
     db.activity.length = Math.min(db.activity.length, 50)

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ArrowRight, Clock, FileCheck2, Gavel, LayoutDashboard, Scale, ShieldAlert, Store, Users } from 'lucide-react'
+import { ArrowRight, Banknote, Clock, FileCheck2, Gavel, LayoutDashboard, Scale, ShieldAlert, Store, Users } from 'lucide-react'
 import { formatIdr, formatNumber, formatRelative } from '@/domain/format'
 import { cn } from '@/lib/utils'
 import { useAdminOverview } from './hooks'
@@ -24,7 +24,7 @@ export function AdminOverviewPage() {
       <AsyncView query={query} skeleton={<Skeleton className="h-96 rounded-xl" />}>
         {(d) => (
           <div className="flex flex-col gap-6">
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               {([
                 ['Users dilaporkan', d.queues.users, Users, 'blue', 'users'],
                 ['Verifikasi bisnis', d.queues.verification, FileCheck2, 'teal', 'verification'],
@@ -32,6 +32,7 @@ export function AdminOverviewPage() {
                 ['Auction dengan temuan', d.queues.auctions, Gavel, 'yellow', 'auctions'],
                 ['Dispute terbuka', d.queues.disputes, Scale, 'orange', 'disputes'],
                 ['Fraud alert aktif', d.queues.fraud, ShieldAlert, 'red', 'fraud'],
+                ['Pencairan menunggu', d.queues.withdrawals, Banknote, 'green', 'withdrawals'],
               ] as const).map(([label, n, icon, tone, path]) => (
                 <Link key={path} to={`/admin/${path}`} className="rounded-xl focus-visible:outline-2 focus-visible:outline-ring">
                   <StatTile label={label} value={formatNumber(n)} icon={icon} tone={tone} className="h-full hover:bg-hover" />
@@ -83,7 +84,7 @@ export function AdminOverviewPage() {
             </div>
 
             <Panel title="SLA review">
-              <ul className="grid gap-3 sm:grid-cols-2">
+              <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {d.sla.map((s) => (
                   <li key={s.module} className="rounded-lg border p-3">
                     <div className="flex items-center justify-between gap-2">

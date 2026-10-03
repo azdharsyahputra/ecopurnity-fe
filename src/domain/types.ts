@@ -295,7 +295,7 @@ export interface Identity {
     username: string
     location: string
     bio: string
-    verification: { email: boolean; phone: boolean; identity: 'none' | 'pending' | 'verified' }
+    verification: { email: boolean; identity: 'none' | 'pending' | 'verified' }
   }
   items: CapacityItem[]
   /** Days 0 = Senin … 6 = Minggu; hours as HH:mm. */

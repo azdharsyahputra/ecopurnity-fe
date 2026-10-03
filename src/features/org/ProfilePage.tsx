@@ -6,6 +6,7 @@ import type { Tone } from '@/domain/status'
 import { CATEGORIES } from '@/domain/catalog'
 import { formatDate } from '@/domain/format'
 import { fieldError } from '@/lib/api'
+import { uploadErrorMessage } from '@/lib/upload'
 import { toast } from '@/stores/toast'
 import { useOrgAccess, useOrgSettings, useRequestVerification, useSaveProfile, useUploadDocument } from './hooks'
 import { CheckChips, GuardedButton, Section } from './ui'
@@ -111,19 +112,19 @@ function Verification({ profile, readOnly }: { profile: OrgProfile; readOnly?: s
               accept=".pdf,image/*"
               className="sr-only"
               onChange={(e) => {
-                const name = e.target.files?.[0]?.name
-                if (name) upload.mutate({ name, kind }, { onSuccess: () => toast({ title: 'Dokumen diunggah', body: name, tone: 'green' }) })
+                const file = e.target.files?.[0]
+                if (file) upload.mutate({ file, kind }, { onSuccess: () => toast({ title: 'Dokumen diunggah', body: file.name, tone: 'green' }) })
                 e.target.value = ''
               }}
             />
           </label>
-          {fieldError(upload.error, 'file') && <p className="text-xs text-destructive">{fieldError(upload.error, 'file')}</p>}
+          {upload.error && <p className="text-xs text-destructive">{uploadErrorMessage(upload.error)}</p>}
           {(profile.verification === 'unverified' || profile.verification === 'rejected') && (
             <GuardedButton className="h-9" disabled={request.isPending} onClick={() => request.mutate(undefined, { onSuccess: () => toast({ title: 'Verifikasi diajukan', tone: 'green' }) })}>
               <ShieldCheck /> Ajukan verifikasi
             </GuardedButton>
           )}
-          <FormError error={request.error ?? upload.error} />
+          <FormError error={request.error} />
         </div>
       )}
     </Section>

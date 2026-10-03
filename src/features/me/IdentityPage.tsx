@@ -9,6 +9,7 @@ import { fieldError } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { toast } from '@/stores/toast'
 import { useIdentity, useKyc, useKycAction, useSaveIdentity } from './hooks'
+import { uploadFile, uploadErrorMessage } from '@/lib/upload'
 import { KYC_LEVELS, type KycLevel } from '@/domain/kyc'
 import { PageHeader } from '@/components/PageHeader'
 import { AsyncView } from '@/components/States'
@@ -43,60 +44,58 @@ function CategorySelect({ label, value, onChange, className }: { label: string; 
   )
 }
 
-function PhoneDialog({ otpPending, onClose }: { otpPending: boolean; onClose: () => void }) {
-  const act = useKycAction()
-  const [phone, setPhone] = useState('')
-  const [code, setCode] = useState('')
-  const [sent, setSent] = useState(otpPending)
-  return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Verifikasi nomor HP</DialogTitle>
-          <DialogDescription>Kode OTP 6 digit dikirim lewat WhatsApp atau SMS, berlaku 5 menit.</DialogDescription>
-        </DialogHeader>
-        <form
-          className="grid gap-3"
-          onSubmit={(e) => {
-            e.preventDefault()
-            if (!sent) act.mutate({ type: 'phone', phone }, { onSuccess: () => setSent(true) })
-            else act.mutate({ type: 'otp', code }, { onSuccess: () => { toast({ title: 'Nomor HP terverifikasi', tone: 'green' }); onClose() } })
-          }}
-        >
-          {!sent ? (
-            <Field label="Nomor HP" inputMode="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} error={fieldError(act.error, 'phone')} hint="Contoh: 0812xxxxxxxx" />
-          ) : (
-            <Field label="Kode OTP" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} error={fieldError(act.error, 'code')} hint="Mode demo: kodenya 246810" />
-          )}
-          <FormError error={act.error} />
-          <DialogFooter>
-            {sent && <Button type="button" variant="ghost" onClick={() => setSent(false)}>Ganti nomor</Button>}
-            <Button type="submit" disabled={act.isPending}>{sent ? 'Verifikasi' : 'Kirim kode'}</Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
 function IdentityDialog({ onClose }: { onClose: () => void }) {
   const act = useKycAction()
-  const [f, setF] = useState({ nik: '', fullName: '', ktpFile: '', selfieFile: '' })
-  const file = (k: 'ktpFile' | 'selfieFile') => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.files?.[0]?.name ?? '' })
+  const [f, setF] = useState({ nik: '', fullName: '' })
+  const [files, setFiles] = useState<{ ktp?: File; selfie?: File }>({})
+  const [uploading, setUploading] = useState(false)
+  const [uploadErr, setUploadErr] = useState<{ ktp?: string; selfie?: string }>({})
+  const pick = (k: 'ktp' | 'selfie') => (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFiles({ ...files, [k]: e.target.files?.[0] })
+    setUploadErr({ ...uploadErr, [k]: undefined })
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!files.ktp || !files.selfie) {
+      setUploadErr({ ktp: files.ktp ? undefined : 'Unggah foto KTP', selfie: files.selfie ? undefined : 'Unggah selfie dengan KTP' })
+      return
+    }
+    setUploading(true)
+    const [ktp, selfie] = await Promise.allSettled([uploadFile(files.ktp, 'kyc_ktp'), uploadFile(files.selfie, 'kyc_selfie')])
+    setUploading(false)
+    if (ktp.status === 'rejected' || selfie.status === 'rejected') {
+      setUploadErr({
+        ktp: ktp.status === 'rejected' ? uploadErrorMessage(ktp.reason) : undefined,
+        selfie: selfie.status === 'rejected' ? uploadErrorMessage(selfie.reason) : undefined,
+      })
+      return
+    }
+    act.mutate(
+      { type: 'identity', ...f, ktpUploadId: ktp.value, selfieUploadId: selfie.value },
+      { onSuccess: () => { toast({ title: 'KTP diajukan', body: 'Kami kabari lewat notifikasi setelah ditinjau.', tone: 'green' }); onClose() } },
+    )
+  }
+
+  const busy = uploading || act.isPending
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Verifikasi KTP</DialogTitle>
-          <DialogDescription>Ditinjau tim governance, biasanya kurang dari 1 hari kerja. Dokumen hanya dipakai untuk verifikasi.</DialogDescription>
+          <DialogDescription>Ditinjau tim governance, biasanya kurang dari 1 hari kerja. Dokumen disimpan terenkripsi dan hanya dipakai untuk verifikasi.</DialogDescription>
         </DialogHeader>
-        <form className="grid gap-3" onSubmit={(e) => { e.preventDefault(); act.mutate({ type: 'identity', ...f }, { onSuccess: () => { toast({ title: 'KTP diajukan', body: 'Kami kabari lewat notifikasi setelah ditinjau.', tone: 'green' }); onClose() } }) }}>
+        <form className="grid gap-3" onSubmit={submit}>
           <Field label="NIK" inputMode="numeric" maxLength={16} value={f.nik} onChange={(e) => setF({ ...f, nik: e.target.value.replace(/\D/g, '') })} error={fieldError(act.error, 'nik')} />
           <Field label="Nama lengkap sesuai KTP" value={f.fullName} onChange={(e) => setF({ ...f, fullName: e.target.value })} error={fieldError(act.error, 'fullName')} />
-          <Field label="Foto KTP" type="file" accept="image/*,.pdf" onChange={file('ktpFile')} error={fieldError(act.error, 'ktpFile')} />
-          <Field label="Selfie memegang KTP" type="file" accept="image/*" capture="user" onChange={file('selfieFile')} error={fieldError(act.error, 'selfieFile')} />
+          <Field label="Foto KTP" type="file" accept="image/jpeg,image/png,image/webp" onChange={pick('ktp')}
+            error={uploadErr.ktp ?? fieldError(act.error, 'ktpUploadId')} hint="JPG, PNG, atau WebP, maks. 8 MB" />
+          <Field label="Selfie memegang KTP" type="file" accept="image/jpeg,image/png,image/webp" capture="user" onChange={pick('selfie')}
+            error={uploadErr.selfie ?? fieldError(act.error, 'selfieUploadId')} />
           <FormError error={act.error} />
-          <DialogFooter><Button type="submit" disabled={act.isPending}>Ajukan verifikasi</Button></DialogFooter>
+          <DialogFooter>
+            <Button type="submit" disabled={busy}>{uploading ? 'Mengunggah foto…' : act.isPending ? 'Mengirim…' : 'Ajukan verifikasi'}</Button>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
@@ -113,8 +112,7 @@ function Verification() {
       {(k) => {
         const v = k.verification
         const steps = [
-          ['email', 'Email', v.email, 'Diverifikasi lewat link email'],
-          ['phone', 'Nomor HP', v.phone, 'Kode OTP ke WhatsApp/SMS'],
+          ['email', 'Email', v.email, 'Kode 6 digit dikirim ke email'],
           ['identity', 'Identitas (KTP)', v.identity === 'verified', v.identity === 'pending' ? 'Sedang ditinjau tim governance' : 'Foto KTP + selfie'],
         ] as const
         return (
@@ -123,8 +121,8 @@ function Verification() {
               <p className="text-sm text-muted-foreground">Batas per transaksi saat ini</p>
               <p className="num mt-1 text-2xl font-semibold">{formatIdr(k.limitIdr)}</p>
               <p className="mt-1 text-sm">Level <b>{k.label}</b>{k.next && <span className="text-muted-foreground"> · {k.next}</span>}</p>
-              <ol className="mt-3 grid grid-cols-3 gap-1.5" aria-label="Level verifikasi">
-                {([0, 1, 2] as KycLevel[]).map((l) => (
+              <ol className="mt-3 grid grid-cols-2 gap-1.5" aria-label="Level verifikasi">
+                {([0, 1] as KycLevel[]).map((l) => (
                   <li key={l} className={cn('rounded-md border px-2 py-1.5 text-xs', l <= k.level ? 'border-primary bg-primary/10 text-foreground' : 'text-muted-foreground')}>
                     <span className="block font-medium">{KYC_LEVELS[l].label}</span>
                     <span className="num">s.d. {formatIdr(KYC_LEVELS[l].limitIdr, { compact: true })}</span>
@@ -138,11 +136,11 @@ function Verification() {
                   <IconChip icon={ok ? BadgeCheck : id === 'identity' && v.identity === 'pending' ? Clock : CircleDashed} tone={ok ? 'green' : 'gray'} />
                   <div className="min-w-0 flex-1"><p className="font-medium">{label}</p><p className="text-sm text-muted-foreground">{detail}</p></div>
                   {ok ? <span className="text-sm font-medium" style={{ color: 'var(--tag-green-fg)' }}>Terverifikasi</span>
-                    : id !== 'email' && !(id === 'identity' && v.identity === 'pending') && <Button variant="outline" className="h-8" onClick={() => setOpen(id)}>Verifikasi</Button>}
+                    : id === 'email' ? <Button variant="outline" className="h-8" render={<Link to="/verify-email" />}>Verifikasi</Button>
+                    : !(id === 'identity' && v.identity === 'pending') && <Button variant="outline" className="h-8" onClick={() => setOpen(id)}>Verifikasi</Button>}
                 </li>
               ))}
             </ul>
-            {open === 'phone' && !v.phone && <PhoneDialog otpPending={k.otpPending} onClose={() => setOpen('')} />}
             {open === 'identity' && v.identity === 'none' && <IdentityDialog onClose={() => setOpen('')} />}
           </div>
         )

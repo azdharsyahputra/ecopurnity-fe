@@ -137,6 +137,7 @@ export function applyAction(t: TransactionDetail, actorName: string, input: Acti
   if (!tradeActions(s, role).includes(input.action)) return err(409, 'invalid_transition', 'Aksi ini tidak tersedia untuk status sekarang')
   const at = now()
   let note = TRADE_ACTION_LABEL[input.action]
+  let stepNote: string | undefined // timeline note when it differs from note (pay: the payment reference)
 
   switch (input.action) {
     case 'accept_agreement':
@@ -154,6 +155,7 @@ export function applyAction(t: TransactionDetail, actorName: string, input: Acti
     case 'pay':
       t.payment = { status: t.terms === 'escrow' ? 'escrow' : 'released', paidAt: at }
       note = t.terms === 'escrow' ? 'Dana masuk escrow' : 'Pembayaran diterima supplier'
+      if (input.note) stepNote = `${note} · ${input.note}`
       break
     case 'ship': {
       const sh = input.shipment
@@ -223,7 +225,7 @@ export function applyAction(t: TransactionDetail, actorName: string, input: Acti
   t.updatedAt = at
   if (t.status !== before) {
     const step = t.timeline.find((x) => x.status === t.status)
-    if (step) Object.assign(step, { at, note })
+    if (step) Object.assign(step, { at, note: stepNote ?? note })
   }
   mirror(t)
   sink.save()
@@ -283,9 +285,24 @@ export function counterpartyTick() {
 // ── Finance (escrow, payouts, refunds) ───────────────────────────
 
 const FIN_KEY = 'ecp-mock-finance'
+/** A withdrawal with the account it was requested to (admin payouts read it; the user sees the Finance shape). */
+export interface StoredWithdrawal {
+  id: string
+  code: string
+  amountIdr: number
+  at: string
+  status: 'processing' | 'paid' | 'rejected'
+  bank: { bank: string; accountNo: string; holder: string }
+  transferRef?: string
+  paidAt?: string
+  note?: string
+  reason?: string
+  decidedAt?: string
+  decidedBy?: string
+}
 interface FinanceStore {
   bank?: { bank: string; accountNo: string; holder: string }
-  withdrawals: { id: string; amountIdr: number; at: string; status: 'processing' | 'paid' }[]
+  withdrawals: StoredWithdrawal[]
 }
 const finance: Record<string, FinanceStore> = (() => {
   try {
@@ -326,11 +343,15 @@ export function financeOf(userId: string) {
     }
   }
   const f = fin(userId)
-  const withdrawnIdr = f.withdrawals.reduce((s, w) => s + w.amountIdr, 0)
-  for (const w of f.withdrawals) entries.push({ id: w.id, at: w.at, label: `Tarik dana ke ${f.bank?.bank ?? 'rekening'}`, amountIdr: -w.amountIdr, kind: 'withdrawal' })
+  const withdrawnIdr = f.withdrawals.filter((w) => w.status !== 'rejected').reduce((s, w) => s + w.amountIdr, 0)
+  for (const w of f.withdrawals) {
+    entries.push({ id: w.id, at: w.at, label: `Tarik dana ke ${w.bank?.bank ?? 'rekening'}`, amountIdr: -w.amountIdr, kind: 'withdrawal' })
+    if (w.status === 'rejected') entries.push({ id: `${w.id}-rej`, at: w.decidedAt ?? w.at, label: `Pencairan ${w.code} ditolak · dana kembali ke saldo`, amountIdr: w.amountIdr, kind: 'withdrawal' })
+  }
   return {
     escrowHeldIdr, receivableIdr, availableIdr: Math.max(0, earnedIdr - withdrawnIdr), withdrawnIdr, bank: f.bank,
-    withdrawals: f.withdrawals, entries: entries.sort((a, b) => b.at.localeCompare(a.at)),
+    withdrawals: f.withdrawals.map(({ id, amountIdr, at, status, transferRef, paidAt, reason }) => ({ id, amountIdr, at, status, transferRef, paidAt, reason })),
+    entries: entries.sort((a, b) => b.at.localeCompare(a.at)),
   }
 }
 
@@ -343,9 +364,25 @@ export function withdraw(userId: string, amountIdr: number) {
   const f = financeOf(userId)
   if (!fin(userId).bank) return 'Tambahkan rekening pencairan dulu'
   if (!(amountIdr > 0) || amountIdr > f.availableIdr) return `Maksimal ${formatIdr(f.availableIdr)}`
-  fin(userId).withdrawals.unshift({ id: newId('wd'), amountIdr, at: now(), status: 'processing' })
+  fin(userId).withdrawals.unshift({ id: newId('wd'), code: `WDR-${Date.now().toString(36).slice(-4).toUpperCase()}`, amountIdr, at: now(), status: 'processing', bank: { ...fin(userId).bank! } })
   saveFinance()
   return null
+}
+
+/** Every user's withdrawals (admin payout queue). */
+export const allWithdrawals = () =>
+  Object.entries(finance).flatMap(([userId, f]) =>
+    f.withdrawals.map((w) => {
+      // Stored before payouts existed: no code / bank snapshot.
+      w.code ??= `WDR-${w.id.slice(-4).toUpperCase()}`
+      w.bank ??= f.bank ?? { bank: '—', accountNo: '0000', holder: '—' }
+      return { userId, w }
+    }),
+  )
+
+export function decideWithdrawal(w: StoredWithdrawal, patch: Partial<StoredWithdrawal>) {
+  Object.assign(w, patch)
+  saveFinance()
 }
 
 // ── Demo pairs between real accounts ─────────────────────────────

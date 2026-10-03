@@ -79,74 +79,85 @@ export function RegisterPage() {
 
 function ResendButton() {
   const resend = useResendVerification()
-  const [cooldown, setCooldown] = useState(0)
+  const [cooldown, setCooldown] = useState(60) // a code was just sent with the registration
   useEffect(() => {
     if (cooldown <= 0) return
     const t = setTimeout(() => setCooldown((c) => c - 1), 1000)
     return () => clearTimeout(t)
   }, [cooldown])
   return (
-    <Button variant="outline" className="h-10" disabled={cooldown > 0 || resend.isPending} onClick={() => resend.mutate(undefined, { onSuccess: () => setCooldown(60) })}>
-      {cooldown > 0 ? `Kirim ulang dalam ${cooldown} dtk` : 'Kirim ulang email'}
-    </Button>
+    <div className="flex flex-col gap-1">
+      <Button
+        type="button"
+        variant="outline"
+        className="h-10"
+        disabled={cooldown > 0 || resend.isPending}
+        onClick={() =>
+          resend.mutate(undefined, {
+            onSuccess: () => setCooldown(60),
+            onError: (e) => e instanceof ApiError && e.code === 'resend_cooldown' && setCooldown(Number(/\d+/.exec(e.message)?.[0] ?? 60)),
+          })
+        }
+      >
+        {cooldown > 0 ? `Kirim ulang kode dalam ${cooldown} dtk` : 'Kirim ulang kode'}
+      </Button>
+      {resend.isSuccess && cooldown > 50 && <p className="text-xs text-muted-foreground" role="status">Kode baru sudah dikirim.</p>}
+    </div>
   )
 }
 
 export function VerifyEmailPage() {
-  const [params] = useSearchParams()
-  const token = params.get('token')
   const { data: me } = useMe()
   const verify = useVerifyEmail()
-  const fired = useRef(false)
-
-  useEffect(() => {
-    if (token && !fired.current) {
-      fired.current = true // StrictMode runs effects twice; the token is single-use.
-      verify.mutate(token)
-    }
-  }, [token, verify])
-
-  if (token) {
-    if (verify.isError)
-      return (
-        <div className="flex flex-col gap-4">
-          <IconChip icon={XCircle} tone="red" size="lg" />
-          <AuthHeading title="Link tidak valid">{verify.error.message}. Minta link baru dari halaman verifikasi.</AuthHeading>
-          {me && <ResendButton />}
-          {!me && <Button render={<Link to="/login" />} className="h-10">Masuk</Button>}
-        </div>
-      )
-    if (verify.isSuccess)
-      return (
-        <div className="flex flex-col gap-4">
-          <IconChip icon={CheckCircle2} tone="green" size="lg" />
-          <AuthHeading title="Email terverifikasi">Akunmu sudah aktif sepenuhnya.</AuthHeading>
-          <Button className="h-10" render={<Link to={me?.onboarded ? '/app' : '/onboarding'} />}>Lanjut</Button>
-        </div>
-      )
-    return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
-        <Loader2 className="size-4 animate-spin" /> Memverifikasi…
-      </div>
-    )
-  }
+  const [code, setCode] = useState('')
 
   if (!me) return <Navigate to="/login" replace />
+  if (verify.isSuccess)
+    return (
+      <div className="flex flex-col gap-4">
+        <IconChip icon={CheckCircle2} tone="green" size="lg" />
+        <AuthHeading title="Email terverifikasi">Akunmu sudah aktif sepenuhnya.</AuthHeading>
+        <Button className="h-10" render={<Link to={me.onboarded ? '/app' : '/onboarding'} />}>Lanjut</Button>
+      </div>
+    )
   if (me.emailVerified) return <Navigate to={me.onboarded ? '/app' : '/onboarding'} replace />
 
+  const submit = (value: string) => {
+    if (/^\d{6}$/.test(value) && !verify.isPending) verify.mutate(value)
+  }
   return (
-    <div className="flex flex-col gap-5">
+    <form className="flex flex-col gap-5" onSubmit={(e) => (e.preventDefault(), submit(code))}>
       <IconChip icon={MailCheck} tone="teal" size="lg" />
-      <AuthHeading title="Cek email kamu">
-        Kami mengirim link verifikasi ke <b className="text-foreground">{me.email}</b>. Klik link itu untuk mengaktifkan akun.
+      <AuthHeading title="Masukkan kode verifikasi">
+        Kami mengirim 6 digit kode ke <b className="text-foreground">{me.email}</b>. Kode berlaku 10 menit.
       </AuthHeading>
+      <Field
+        label="Kode verifikasi"
+        inputMode="numeric"
+        autoComplete="one-time-code"
+        pattern="[0-9]{6}"
+        maxLength={6}
+        autoFocus
+        value={code}
+        onChange={(e) => {
+          const v = e.target.value.replace(/\D/g, '').slice(0, 6)
+          setCode(v)
+          if (v.length === 6) submit(v) // paste or the last digit submits right away
+        }}
+        error={fieldError(verify.error, 'code')}
+        className="h-12 text-center font-mono text-2xl tracking-[0.5em]"
+      />
+      {verify.error && !fieldError(verify.error, 'code') && <FormError error={verify.error} />}
+      <Button type="submit" className="h-10" disabled={code.length !== 6 || verify.isPending}>
+        {verify.isPending ? <><Loader2 className="animate-spin" /> Memverifikasi…</> : 'Verifikasi'}
+      </Button>
       <ResendButton />
       <MockOutbox kind="verify" />
       <p className="text-sm text-muted-foreground">
         Bisa diverifikasi nanti.{' '}
         <Link to="/onboarding" className="font-medium text-primary hover:underline">Lanjut atur profil</Link>
       </p>
-    </div>
+    </form>
   )
 }
 

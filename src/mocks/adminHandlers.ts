@@ -4,7 +4,8 @@ import { disputeTransition, resolveOutcome, validateResolution } from '@/domain/
 import { reputationScore } from '@/domain/reputation'
 import { formatIdr } from '@/domain/format'
 import type {
-  AccountStatus, AdminAuction, AdminAuctionDetail, AdminBid, AdminMarket, AdminOverview, AdminUser, AdminUserDetail, AlertActionInput,
+  AccountStatus, AdminAuction, AdminAuctionDetail, AdminBid, AdminMarket, AdminOverview, AdminUser, AdminUserDetail, AdminWithdrawal,
+  AdminWithdrawalDetail, AlertActionInput, WithdrawalActionInput,
   AlertType, AuctionAction, DisputeActionInput, DisputeCase, DisputeParty, DisputeSummary, EscalationAction, Finding, FraudAlert, MarketAction,
   UserAction, VerificationAction,
 } from '@/features/admin/types'
@@ -13,7 +14,8 @@ import { audit, auditLog } from './audit'
 import { db } from './db'
 import { economy, toAuction } from './economy'
 import { allPersonal, newId, notify, personal, savePersonal } from './personal'
-import { mirror } from './trade'
+import { allWithdrawals, decideWithdrawal, mirror, type StoredWithdrawal } from './trade'
+import { normName, payoutDueAt } from '@/domain/payout'
 import { admin, saveAdmin, type DisputeOverlay } from './admin'
 import { reputationTxs } from './profileHandlers'
 
@@ -235,6 +237,18 @@ const ALERT_LABEL: Record<AlertType, string> = {
 
 const alertEntity = (al: FraudAlert): AuditEntry['entity'] => ({ type: 'alert', id: al.id, label: `${al.code} · ${al.title}` })
 
+// ── Payouts ──────────────────────────────────────────────────────
+
+function adminWithdrawal(userId: string, w: StoredWithdrawal): AdminWithdrawal {
+  const u = db.users.find((x) => x.id === userId)
+  return {
+    id: w.id, code: w.code, status: w.status, amountIdr: w.amountIdr, requestedAt: w.at, dueAt: payoutDueAt(w.at),
+    requester: { id: userId, name: u?.name ?? userId, email: u?.email ?? '' }, party: { id: `pty-${userId}`, name: u?.name ?? userId },
+    bank: w.bank.bank, holder: w.bank.holder, accountLast4: w.bank.accountNo.slice(-4),
+    transferRef: w.transferRef, paidAt: w.paidAt, note: w.note, reason: w.reason, decidedAt: w.decidedAt, decidedBy: w.decidedBy,
+  }
+}
+
 // ── Handlers ─────────────────────────────────────────────────────
 
 export const adminHandlers = [
@@ -244,6 +258,7 @@ export const adminHandlers = [
     const pending = admin.verifications.filter((v) => v.status === 'pending')
     const age = (iso: string) => Date.now() - new Date(iso).getTime()
     const oldest = (isos: string[]) => isos.sort()[0]
+    const payouts = allWithdrawals().filter(({ w }) => w.status === 'processing').map(({ w }) => w)
     const overview: AdminOverview = {
       queues: {
         users: users().filter((u) => (u.reportCount > 0 && u.status === 'active') || admin.appeals?.[u.id]?.status === 'pending').length,
@@ -252,12 +267,14 @@ export const adminHandlers = [
         auctions: economy.auctions.filter((a) => ACTIVE_AUCTION.includes(a.status) && adminAuction(a).findings.length > 0).length,
         disputes: open.length,
         fraud: admin.alerts.filter((a) => a.status === 'new' || a.status === 'investigating').length,
+        withdrawals: payouts.length,
       },
       newAlerts: admin.alerts.filter((a) => a.status === 'new').sort((a, b) => b.score - a.score).slice(0, 4),
       openDisputes: open.map(summary).slice(0, 5),
       sla: [
         { module: 'verification', label: 'Verifikasi bisnis', slaHours: 48, total: pending.length, breached: pending.filter((v) => age(v.submittedAt) > 48 * H).length, oldestAt: oldest(pending.map((v) => v.submittedAt)) },
         { module: 'disputes', label: 'Dispute', slaHours: 72, total: open.length, breached: open.filter((c) => age(c.openedAt) > 72 * H).length, oldestAt: oldest(open.map((c) => c.openedAt)) },
+        { module: 'withdrawals', label: 'Pencairan dana', slaHours: 24, total: payouts.length, breached: payouts.filter((w) => payoutDueAt(w.at) < now()).length, oldestAt: oldest(payouts.map((w) => w.at)) },
       ],
     }
     return HttpResponse.json(overview)
@@ -528,5 +545,62 @@ export const adminHandlers = [
   })),
 
   // Audit trail
+  // Manual payouts: the admin transfers by hand, then records it here.
+  http.get(api('/admin/withdrawals'), asAdmin(({ request }) => {
+    const status = new URL(request.url).searchParams.get('status')
+    const rows = allWithdrawals().filter(({ w }) => !status || w.status === status).map(({ userId, w }) => adminWithdrawal(userId, w))
+    rows.sort((a, b) => (status === 'processing' ? 1 : -1) * a.requestedAt.localeCompare(b.requestedAt))
+    return HttpResponse.json(rows.slice(0, 500))
+  })),
+  http.get(api('/admin/withdrawals/:id'), asAdmin(({ params, actor }) => {
+    const found = allWithdrawals().find(({ w }) => w.id === params.id)
+    if (!found) return fail(404, 'not_found', 'Pencairan tidak ditemukan')
+    const { userId, w } = found
+    const base = adminWithdrawal(userId, w)
+    const u = db.users.find((x) => x.id === userId)
+    const ktp = admin.verifications.find((v) => v.kind === 'personal' && v.status === 'approved' && v.owner === u?.name)?.business
+    const detail: AdminWithdrawalDetail = {
+      ...base, identityName: ktp, nameMismatch: !!ktp && normName(ktp) !== normName(w.bank.holder),
+      recent: allWithdrawals().filter((x) => x.userId === userId && x.w.id !== w.id).map((x) => adminWithdrawal(userId, x.w))
+        .sort((a, b) => b.requestedAt.localeCompare(a.requestedAt)).slice(0, 10),
+    }
+    if (w.status === 'processing') {
+      detail.accountNo = w.bank.accountNo
+      audit({ actor, action: `Melihat nomor rekening ${w.code}`, entity: { type: 'user', id: userId, label: base.requester.name } })
+    }
+    return HttpResponse.json(detail)
+  })),
+  http.post(api('/admin/withdrawals/:id/actions'), asAdmin(async ({ params, request, actor }) => {
+    const found = allWithdrawals().find(({ w }) => w.id === params.id)
+    if (!found) return fail(404, 'not_found', 'Pencairan tidak ditemukan')
+    const { userId, w } = found
+    if (w.status !== 'processing') return fail(409, 'decided', 'Pencairan ini sudah diproses')
+    const body = (await request.json()) as WithdrawalActionInput
+    const dest = `${w.bank.bank} ••${w.bank.accountNo.slice(-4)}`
+    const entity = { type: 'user' as const, id: userId, label: db.users.find((x) => x.id === userId)?.name ?? userId }
+    if (body.action === 'mark_paid') {
+      const ref = body.transferRef?.trim() ?? ''
+      const fields: Record<string, string> = {}
+      if (!ref) fields.transferRef = 'Isi nomor referensi transfer'
+      else if (ref.length > 100) fields.transferRef = 'Maksimal 100 karakter'
+      if (body.paidAt && body.paidAt > new Date(Date.now() + 5 * 60_000).toISOString()) fields.paidAt = 'Waktu transfer tidak boleh di masa depan'
+      else if (body.paidAt && body.paidAt < w.at) fields.paidAt = 'Waktu transfer sebelum pengajuan'
+      if (Object.keys(fields).length) return fail(422, 'validation', 'Data transfer belum lengkap', fields)
+      decideWithdrawal(w, { status: 'paid', transferRef: ref, paidAt: body.paidAt ?? now(), note: body.note?.trim() || undefined, decidedAt: now(), decidedBy: actor })
+      audit({ actor, action: `Tandai pencairan ${w.code} dibayar`, entity, changes: [{ field: 'status', before: 'processing', after: 'paid' }, { field: 'Ref transfer', after: ref }] })
+      notify(userId, { type: 'payment', title: `Dana ${formatIdr(w.amountIdr)} sudah ditransfer ke ${dest}`, body: `Ref transfer ${ref}`, href: '/app/finance' })
+    } else if (body.action === 'reject') {
+      const err = reasonError(body.reason)
+      if (err) return err
+      const reason = body.reason.trim()
+      decideWithdrawal(w, { status: 'rejected', reason, decidedAt: now(), decidedBy: actor })
+      audit({ actor, action: `Tolak pencairan ${w.code}`, entity, reason, changes: [{ field: 'status', before: 'processing', after: 'rejected' }] })
+      notify(userId, { type: 'payment', title: `Pencairan ${formatIdr(w.amountIdr)} ditolak`, body: `${reason} Dana sudah kembali ke saldo yang bisa ditarik.`, href: '/app/finance' })
+    } else {
+      return fail(422, 'validation', 'Aksi tidak dikenal', { action: 'Pilih mark_paid atau reject' })
+    }
+    return HttpResponse.json(adminWithdrawal(userId, w))
+  })),
+
   http.get(api('/admin/audit'), asAdmin(() => HttpResponse.json(auditLog()))),
 ]
