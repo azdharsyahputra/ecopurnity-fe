@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { useChannel } from '@/lib/realtime'
 import type {
@@ -14,6 +14,7 @@ export interface ListFilters {
   category?: string
   region?: string
   status?: string
+  market?: string
   page?: number
   pageSize?: number
 }
@@ -127,5 +128,13 @@ export function usePriceSuggestion(category: string, unit: string, item: string,
     queryFn: () => api<(PriceSuggestion & { unit: string; markets: { id: string; name: string }[] }) | null>(`/listings/price-suggestion${qs({ category, unit, item, exclude })}`),
     enabled: !!category && !!unit.trim(),
     staleTime: 60_000,
+  })
+}
+
+export function useDirectOrder(marketId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (b: { listingId: string; quantity: number }) => api<{ transactionId: string }>(`/markets/${marketId}/orders`, { method: 'POST', json: b }),
+    onSuccess: () => Promise.all([qc.invalidateQueries({ queryKey: ['listings'] }), qc.invalidateQueries({ queryKey: ['me'] })]),
   })
 }
