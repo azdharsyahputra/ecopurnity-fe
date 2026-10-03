@@ -16,6 +16,8 @@ import { economy } from './economy'
 import { allPersonal, notify } from './personal'
 import { SUPPLIERS, allOrgs, lotAuction, makeTx, newId, org, orgAudit, orgUserIds, pools, saveOrg, supplierById, type HistoryRow, type OrgData, type StoredPool } from './org'
 import { applyAction, botNotice, botStep, ensureF6, type TradeSink } from './trade'
+import { cancelPayment, createPayment, currentPayment, PAY_VIA_GATEWAY } from './payments'
+import type { PaymentInput } from '@/domain/payment'
 
 const api = (path: string) => `/api/v1/orgs/:orgId${path}`
 const fail = (status: number, code: string, message: string, fields?: Record<string, string>) => HttpResponse.json({ error: { code, message, fields } }, { status })
@@ -744,8 +746,30 @@ export const orgHandlers = [
     const input = await body<TradeActionInput>(c.request)
     const denied = txDeniedReason(c.o.settings.permissions, c.role, c.roleLabel, input.action)
     if (denied) return fail(403, 'forbidden', denied)
+    if (input.action === 'pay') return fail(409, 'payment_required', PAY_VIA_GATEWAY)
     const res = applyAction(ensureF6(t), c.actor, input, orgSink(c.o))
     return res.ok ? HttpResponse.json(txPage(c.o, c.orgId, t)) : fail(res.status, res.code, res.message, res.fields)
+  })),
+  // Payments through the gateway, gated like the `pay` step
+  http.post(api('/transactions/:tid/payments'), orgAuthed(async (c) => {
+    const t = c.o.transactions.find((x) => x.id === c.params.tid)
+    if (!t) return fail(404, 'not_found', 'Transaksi tidak ditemukan')
+    const denied = txDeniedReason(c.o.settings.permissions, c.role, c.roleLabel, 'pay')
+    if (denied) return fail(403, 'forbidden', denied)
+    const res = createPayment(ensureF6(t), await body<PaymentInput>(c.request), c.actor, orgSink(c.o))
+    return res.ok ? HttpResponse.json(res.payment, { status: 201 }) : fail(res.status, res.code, res.message, res.fields)
+  })),
+  http.get(api('/transactions/:tid/payments/current'), orgAuthed(({ o, params }) => {
+    const t = o.transactions.find((x) => x.id === params.tid)
+    return t ? HttpResponse.json(currentPayment(ensureF6(t), orgSink(o))) : fail(404, 'not_found', 'Transaksi tidak ditemukan')
+  })),
+  http.post(api('/transactions/:tid/payments/current/cancel'), orgAuthed((c) => {
+    const t = c.o.transactions.find((x) => x.id === c.params.tid)
+    if (!t) return fail(404, 'not_found', 'Transaksi tidak ditemukan')
+    const denied = txDeniedReason(c.o.settings.permissions, c.role, c.roleLabel, 'pay')
+    if (denied) return fail(403, 'forbidden', denied)
+    const res = cancelPayment(t, orgSink(c.o))
+    return res.ok ? HttpResponse.json(res.payment) : fail(res.status, res.code, res.message, res.fields)
   })),
 
   // Analytics (PRD §9.9)

@@ -162,6 +162,8 @@ export const useTransaction = (id: string) =>
 /** Where personal trade actions go (shared trade UI, F6). */
 export const personalTradeScope: TradeScope = {
   actionUrl: (id) => `/me/transactions/${id}/actions`,
+  paymentsUrl: (id) => `/me/transactions/${id}/payments`,
+  tradeKey: (id) => ['me', 'transactions', 'detail', id],
   onSuccess: (qc, t) => {
     qc.setQueryData(['me', 'transactions', 'detail', t.id], t)
     qc.invalidateQueries({ queryKey: ['me', 'transactions'] })

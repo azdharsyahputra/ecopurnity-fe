@@ -9,6 +9,7 @@ import { fieldError } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { toast } from '@/stores/toast'
 import { useTradeAction, type TradeScope } from './hooks'
+import { PayPanel } from './payment'
 import { GuardedButton } from '@/features/org/ui'
 import { StatusBadge, Tag } from '@/components/Tag'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
@@ -22,7 +23,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 const IMPACT: Partial<Record<TradeAction, (t: TransactionDetail) => string>> = {
   accept_agreement: (t) => `Kamu menyetujui ${formatQty(t.quantity)} × ${formatIdr(t.unitPriceIdr)} dengan termin ${TERMS[t.terms ?? 'escrow'].label}. Agreement mengikat setelah kedua pihak setuju.`,
   issue_invoice: (t) => `Invoice ${formatIdr(breakdown(t.totalIdr).buyerPaysIdr)} (termasuk PPN 11%) dikirim ke pembeli.`,
-  pay: (t) => (t.terms === 'escrow' ? `${formatIdr(breakdown(t.totalIdr).buyerPaysIdr)} ditahan di escrow dan baru dilepas setelah kamu menerima barang.` : `${formatIdr(breakdown(t.totalIdr).buyerPaysIdr)} dibayarkan ke supplier dan transaksi selesai.`),
   cancel: () => 'Transaksi dibatalkan untuk kedua pihak. Dana escrow (jika ada) dikembalikan. Tercatat di riwayat reputasi.',
 }
 
@@ -218,6 +218,8 @@ export function ActionPanel({ t, scope, deny, children }: { t: TransactionDetail
             <GuardedButton className="h-9 w-full" variant="outline" reason={deny(a)}>{TRADE_ACTION_LABEL[a]}</GuardedButton>
             <p className="text-xs text-muted-foreground">{deny(a)}</p>
           </div>
+        ) : a === 'pay' ? (
+          <PayPanel key={a} t={t} scope={scope} />
         ) : DIALOG_FOR[a] ? (
           <Button key={a} variant={a === 'dispute' ? 'destructive' : a === 'review' || a === 'add_evidence' ? 'outline' : 'default'} className="h-9" onClick={() => setDialog(DIALOG_FOR[a]!)}>
             {TRADE_ACTION_LABEL[a]}
@@ -225,7 +227,7 @@ export function ActionPanel({ t, scope, deny, children }: { t: TransactionDetail
         ) : (
           <ConfirmDialog
             key={a}
-            trigger={<Button variant={a === 'cancel' ? 'outline' : 'default'} className="h-9">{a === 'pay' ? `Bayar ${formatIdr(breakdown(t.totalIdr).buyerPaysIdr)}` : TRADE_ACTION_LABEL[a]}</Button>}
+            trigger={<Button variant={a === 'cancel' ? 'outline' : 'default'} className="h-9">{TRADE_ACTION_LABEL[a]}</Button>}
             title={`${TRADE_ACTION_LABEL[a]}?`}
             impact={IMPACT[a]?.(t)}
             confirmLabel={TRADE_ACTION_LABEL[a]}
