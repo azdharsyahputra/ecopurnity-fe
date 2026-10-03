@@ -33,16 +33,17 @@ export function Wizard({
   return (
     <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
       <div className="min-w-0">
+        <p className="mb-2 text-xs text-muted-foreground sm:hidden" aria-hidden>Langkah {i + 1} dari {steps.length}</p>
         <ol className="mb-8 flex gap-2" aria-label="Langkah">
           {steps.map((s, n) => (
-            <li key={s.id} className="flex flex-1 flex-col gap-1.5">
+            <li key={s.id} className="flex min-w-0 flex-1 flex-col gap-1.5">
               <span className={cn('h-1 rounded-full', n <= i ? 'bg-primary' : 'bg-muted')} />
               <button
                 type="button"
                 disabled={n > i}
                 onClick={() => setI(n)}
                 aria-current={n === i ? 'step' : undefined}
-                className={cn('flex items-center gap-1 text-left text-xs', n === i ? 'font-medium text-foreground' : 'text-muted-foreground', n < i && 'hover:text-foreground')}
+                className={cn('flex min-w-0 items-center gap-1 text-left text-xs', n === i ? 'font-medium text-foreground' : 'text-muted-foreground', 'max-sm:sr-only', n < i && 'hover:text-foreground')}
               >
                 {n < i && <Check className="size-3" />}
                 <span className="truncate">{s.title}</span>

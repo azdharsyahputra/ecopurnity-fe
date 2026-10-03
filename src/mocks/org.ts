@@ -525,6 +525,14 @@ for (const o of Object.values(store.orgs)) {
   }
 }
 
+/** Org evaluate page for an economy lot id (`<orgAuctionId>-l<n>`), or undefined for non-org auctions. */
+export function orgEvaluateHref(economyAuctionId: string) {
+  for (const [orgId, o] of Object.entries(store.orgs)) {
+    if (o.economyAuctions.some((a) => a.id === economyAuctionId)) return `/org/${orgId}/auctions/${economyAuctionId.replace(/-l\d+$/, '')}/evaluate`
+  }
+  return undefined
+}
+
 export function org(orgId: string): OrgData {
   if (!store.orgs[orgId]) {
     store.orgs[orgId] = seedBlank(orgId)

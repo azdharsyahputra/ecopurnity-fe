@@ -13,6 +13,7 @@ import { economy, toAuction, toOpportunity } from './economy'
 import { allPersonal, completeness, newId, notify, personal, savePersonal, type PersonalData } from './personal'
 import { audit } from './audit'
 import { ops, saveMm } from './mm'
+import { orgEvaluateHref } from './org'
 import { admin } from './admin'
 import { reputationTxs } from './profileHandlers'
 import { reputationScore } from '@/domain/reputation'
@@ -353,13 +354,17 @@ export const personalHandlers = [
         .filter((a) => !bidIds.has(a.id) && economy.owners.get(a.id) !== userId && ['live', 'extended', 'qualification', 'scheduled'].includes(a.status) && a.type !== 'forward')
         .map((a) => ({ ...toAuction(a), qualification: p.qualifications[a.id] ?? 'not_started' })),
       bids,
-      owned: economy.auctions.filter((a) => economy.owners.get(a.id) === userId).map(toAuction),
+      owned: economy.auctions.filter((a) => economy.owners.get(a.id) === userId && !orgEvaluateHref(a.id)).map(toAuction),
     })
   })),
   http.get(api('/auctions/:id/me'), authed(({ p, params, userId }) => {
     const a = economy.auctions.find((x) => x.id === params.id)
     if (!a) return fail(404, 'not_found', 'Auction tidak ditemukan')
-    return HttpResponse.json({ qualification: qualification(p, a.id, userId), bid: myBid(p, a) ?? null, owner: economy.owners.get(a.id) === userId })
+    const owner = economy.owners.get(a.id) === userId
+    return HttpResponse.json({
+      qualification: qualification(p, a.id, userId), bid: myBid(p, a) ?? null, owner,
+      evaluateHref: owner ? orgEvaluateHref(a.id) ?? `/app/auctions/${a.id}/evaluate` : undefined,
+    })
   })),
   http.post(api('/auctions/:id/qualification'), authed(async ({ p, params, userId, request }) => {
     const a = economy.auctions.find((x) => x.id === params.id)
@@ -604,7 +609,7 @@ export function onAuctionClosed(auctionId: string) {
   if (!a) return
   const ownerId = economy.owners.get(a.id)
   if (ownerId) {
-    notify(ownerId, { type: 'auction_ending', title: `${a.title} sudah ditutup`, body: `${a.bidCount} bid masuk. Bandingkan penawaran dan tetapkan pemenang.`, href: `/app/auctions/${a.id}/evaluate` })
+    notify(ownerId, { type: 'auction_ending', title: `${a.title} sudah ditutup`, body: `${a.bidCount} bid masuk. Bandingkan penawaran dan tetapkan pemenang.`, href: orgEvaluateHref(a.id) ?? `/app/auctions/${a.id}/evaluate` })
   }
   for (const [userId, p] of allPersonal()) {
     const b = p.bids[auctionId]
