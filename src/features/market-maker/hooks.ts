@@ -7,6 +7,7 @@ import type {
   PipelineStage,
 } from '@/domain/mm'
 import type { MarketRules } from '@/domain/marketRules'
+import type { Settlement } from '@/domain/settlement'
 
 // Market Maker workspace data (PRD §10). Keys start with 'mm'; mutations also refresh the public
 // economy lists because markets, rounds and opportunity statuses are shared with them.
@@ -43,6 +44,12 @@ export const useParticipantAction = (marketId: string) =>
   useMmMutation((v: { id: string; action: ParticipantAction; reason?: string }) => api(`/mm/markets/${marketId}/participants/${v.id}`, json('POST', { action: v.action, reason: v.reason })))
 
 export const useCreateRound = (marketId: string) => useMmMutation((input: CreateRoundInput) => api<{ id: string }>(`/mm/markets/${marketId}/rounds`, json('POST', input)))
+
+export const useSettlement = (marketId: string, auctionId: string) =>
+  useQuery({ queryKey: ['mm', 'settlement', auctionId], queryFn: () => api<Settlement>(`/mm/markets/${marketId}/rounds/${auctionId}/settlement`) })
+
+export const useSettle = (marketId: string) =>
+  useMmMutation((auctionId: string) => api<Settlement>(`/mm/markets/${marketId}/rounds/${auctionId}/settlement`, json('POST')))
 
 export const useSaveRules = (marketId: string) =>
   useMmMutation((v: { rules: MarketRules; reason?: string }) => api(`/mm/markets/${marketId}/rules`, json('PUT', v)))

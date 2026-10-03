@@ -14,7 +14,7 @@ import { audit, auditLog } from './audit'
 import { db } from './db'
 import { economy, toAuction, toOpportunity } from './economy'
 import { actor, currentRound, emitEvent, hash, isMaker, mm, mmId, notifyMarket, operatedIds, ops, saveMm, startedRounds, type MarketOps } from './mm'
-import { allPersonal, notify } from './personal'
+import { allPersonal, notify, savePersonal } from './personal'
 
 // Market Maker API (PRD §10). Every mutation is audited; anything that changes a participant's market notifies them.
 
@@ -243,9 +243,24 @@ export const mmHandlers = [
       o.status = 'market_live'
       o.markets.push(m)
       mm.pipeline[o.id] = { stage: 'market_live', marketId: id }
+      // Contributors carry over: their contributed listings move into the new market (PRD F6).
       for (const [uid, p] of allPersonal()) {
-        if (p.opportunities[o.id]) notify(uid, { type: 'new_market', title: `Market baru dari ${o.title}`, body: `${m.name} sudah live. Gabung untuk ikut round pertama.`, href: `/markets/${id}` })
+        const rel = p.opportunities[o.id]
+        if (!rel) continue
+        const listing = rel.contribution && p.listings.find((l) => l.listing.id === rel.contribution!.listingId)
+        if (listing && !['sold', 'expired', 'fulfilled', 'cancelled'].includes(listing.listing.status)) {
+          listing.listing.marketId = id
+          listing.listing.status = 'in_market'
+          listing.history.unshift({ at: now(), status: 'in_market', note: `Otomatis masuk ${m.name} dari opportunity ${o.code}` })
+          p.markets[id] = { joined: true }
+        }
+        notify(uid, {
+          type: 'new_market', title: `Market baru dari ${o.title}`,
+          body: listing ? `${m.name} sudah live; kontribusimu (${listing.listing.item}) otomatis masuk lot round pertama.` : `${m.name} sudah live. Gabung untuk ikut round pertama.`,
+          href: `/markets/${id}`,
+        })
       }
+      savePersonal()
     }
     audited(userId, m, 'Publish market', {
       changes: [

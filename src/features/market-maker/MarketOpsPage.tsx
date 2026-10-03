@@ -12,7 +12,7 @@ import { formatDate, formatDateTime, formatIdr, formatNumber, formatQty, formatR
 import { fieldError } from '@/lib/api'
 import { toast } from '@/stores/toast'
 import {
-  useCreateRound, useDisputeAction, useMarketAudit, useMarketStatus, useMmMarket, useParam, useParticipantAction, useSaveRules,
+  useCreateRound, useDisputeAction, useMarketAudit, useMarketStatus, useMmMarket, useParam, useParticipantAction, useSaveRules, useSettle, useSettlement,
 } from './hooks'
 import { AlertTags, ReasonConfirm, RulesFields } from './ui'
 import { MarketAnalytics } from './analytics'
@@ -247,6 +247,56 @@ function NewRoundDialog({ d, onClose }: { d: MmMarketOps; onClose: () => void })
   )
 }
 
+function SettlementDialog({ marketId, auctionId, onClose }: { marketId: string; auctionId: string; onClose: () => void }) {
+  const query = useSettlement(marketId, auctionId)
+  const settle = useSettle(marketId)
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>Settlement kolektif</DialogTitle>
+          <DialogDescription>Lot dibagi pro-rata ke anggota sesuai kontribusinya; tiap anggota dapat transaksi escrow sendiri dengan pemenang.</DialogDescription>
+        </DialogHeader>
+        <AsyncView query={query} skeleton={<Skeleton className="h-40 rounded-lg" />}>
+          {(s) => (
+            <div className="flex flex-col gap-3 text-sm">
+              <p>
+                <b>{s.winner}</b> · {formatIdr(s.priceIdr)}/{s.unit} · lot {formatNumber(s.lotQty)} {s.unit}
+              </p>
+              <ul className="divide-y rounded-lg border">
+                {s.lines.map((l) => (
+                  <li key={l.memberId} className="flex flex-wrap items-center gap-2 px-3 py-2">
+                    <span className="font-medium">{l.member}</span>
+                    {!l.userId && <Tag tone="gray">peserta luar</Tag>}
+                    <span className="ml-auto num text-muted-foreground">{formatNumber(l.quantity)} {s.unit} · {Math.round(l.share * 100)}%</span>
+                    <span className="num w-28 text-right font-medium">{formatIdr(l.amountIdr, { compact: true })}</span>
+                  </li>
+                ))}
+              </ul>
+              {s.settled ? (
+                <p className="text-muted-foreground">Sudah di-settle oleh {s.settled.by}, {formatDateTime(s.settled.at)} ({s.settled.trades} transaksi).</p>
+              ) : (
+                <FormError error={settle.error} />
+              )}
+              <DialogFooter>
+                <Button variant="outline" onClick={onClose}>Tutup</Button>
+                {!s.settled && (
+                  <Button
+                    disabled={settle.isPending || !s.lines.length}
+                    onClick={() => settle.mutate(auctionId, { onSuccess: (r) => { toast({ title: `${r.lines.length} transaksi dibuat`, tone: 'green' }); onClose() } })}
+                  >
+                    Settle {s.lines.length} anggota
+                  </Button>
+                )}
+              </DialogFooter>
+            </div>
+          )}
+        </AsyncView>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 function Rounds({ d }: { d: MmMarketOps }) {
   const [dialog, setDialog] = useParam('round')
   const live = d.rounds.filter((a) => isLive(a.status))
@@ -320,6 +370,10 @@ function Rounds({ d }: { d: MmMarketOps }) {
               { key: 'open', header: 'Opening', align: 'right', cell: (r) => formatIdr(r.openingIdr) },
               { key: 'median', header: 'Median', align: 'right', cell: (r) => (r.medianIdr ? formatIdr(r.medianIdr) : '—') },
               { key: 'clear', header: 'Clearing', align: 'right', cell: (r) => (r.clearingIdr ? formatIdr(r.clearingIdr) : '—') },
+              {
+                key: 'settle', header: '', align: 'right',
+                cell: (r) => r.auctionId && <Button size="sm" variant="outline" onClick={() => setDialog(`settle:${r.auctionId}`)}>Settlement</Button>,
+              },
             ]}
           />
         ) : (
@@ -327,6 +381,7 @@ function Rounds({ d }: { d: MmMarketOps }) {
         )}
       </section>
       {dialog === 'new' && canRun(d.market.status) && <NewRoundDialog d={d} onClose={() => setDialog('')} />}
+      {dialog.startsWith('settle:') && <SettlementDialog marketId={d.market.id} auctionId={dialog.slice(7)} onClose={() => setDialog('')} />}
     </div>
   )
 }
