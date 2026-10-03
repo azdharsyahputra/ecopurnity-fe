@@ -1,0 +1,114 @@
+import { useState } from 'react'
+import { ArrowDownToLine, Banknote, Hourglass, Landmark, Lock, Wallet } from 'lucide-react'
+import { formatDateTime, formatIdr } from '@/domain/format'
+import { fieldError } from '@/lib/api'
+import { toast } from '@/stores/toast'
+import { useFinance, useFinanceAction, type Finance } from './hooks'
+import { PageHeader } from '@/components/PageHeader'
+import { StatTile } from '@/components/StatTile'
+import { AsyncView } from '@/components/States'
+import { Tag } from '@/components/Tag'
+import { DataTable } from '@/components/DataTable'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { Field, FormError, SelectField } from '@/components/form'
+import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
+
+const KIND: Record<Finance['entries'][number]['kind'], [string, 'blue' | 'green' | 'red' | 'orange' | 'gray' | 'purple']> = {
+  escrow: ['Escrow', 'blue'], payment: ['Pembayaran', 'gray'], payout: ['Pencairan', 'green'], refund: ['Refund', 'purple'], fee: ['Fee', 'orange'], withdrawal: ['Tarik dana', 'gray'],
+}
+const BANKS = ['BCA', 'BRI', 'Mandiri', 'BNI', 'BSI', 'CIMB Niaga']
+
+function BankForm({ f }: { f: Finance }) {
+  const act = useFinanceAction()
+  const [b, setB] = useState(f.bank ?? { bank: 'BCA', accountNo: '', holder: '' })
+  return (
+    <form
+      className="grid gap-3"
+      onSubmit={(e) => {
+        e.preventDefault()
+        act.mutate({ type: 'bank', bank: b }, { onSuccess: () => toast({ title: 'Rekening disimpan', tone: 'green' }) })
+      }}
+    >
+      <SelectField label="Bank" value={b.bank} onChange={(e) => setB({ ...b, bank: e.target.value })} error={fieldError(act.error, 'bank')}>
+        {BANKS.map((x) => <option key={x}>{x}</option>)}
+      </SelectField>
+      <Field label="Nomor rekening" inputMode="numeric" value={b.accountNo} onChange={(e) => setB({ ...b, accountNo: e.target.value.replace(/\D/g, '') })} error={fieldError(act.error, 'accountNo')} />
+      <Field label="Nama pemilik" value={b.holder} onChange={(e) => setB({ ...b, holder: e.target.value })} error={fieldError(act.error, 'holder')} hint="Harus sama dengan nama di identitas terverifikasi" />
+      <FormError error={act.error} />
+      <Button type="submit" variant="outline" className="h-9" disabled={act.isPending}>{f.bank ? 'Perbarui rekening' : 'Simpan rekening'}</Button>
+    </form>
+  )
+}
+
+function Withdraw({ f }: { f: Finance }) {
+  const act = useFinanceAction()
+  const [amount, setAmount] = useState(String(f.availableIdr))
+  const value = Number(amount)
+  return (
+    <div className="grid gap-3">
+      <Field label="Jumlah (Rp)" type="number" min={0} max={f.availableIdr} value={amount} onChange={(e) => setAmount(e.target.value)} error={fieldError(act.error, 'amountIdr')} hint={`Tersedia ${formatIdr(f.availableIdr)}`} />
+      <ConfirmDialog
+        trigger={<Button className="h-9" disabled={!f.bank || !(value > 0)}><ArrowDownToLine /> Tarik dana</Button>}
+        title={`Tarik ${formatIdr(value)}?`}
+        impact={f.bank ? `Dikirim ke ${f.bank.bank} ••${f.bank.accountNo.slice(-4)} a.n. ${f.bank.holder}, biasanya tiba dalam 1 hari kerja.` : undefined}
+        confirmLabel="Tarik dana"
+        onConfirm={() => act.mutateAsync({ type: 'withdraw', amountIdr: value }).then(() => toast({ title: 'Penarikan diproses', tone: 'green' }))}
+      />
+      {!f.bank && <p className="text-xs text-muted-foreground">Tambahkan rekening pencairan dulu.</p>}
+      <FormError error={act.error} />
+    </div>
+  )
+}
+
+export function FinancePage() {
+  const query = useFinance()
+  return (
+    <>
+      <PageHeader title="Keuangan" description="Dana di escrow, piutang, saldo yang bisa ditarik, dan riwayat uang masuk-keluar." icon={Wallet} tone="green" />
+      <AsyncView query={query} skeleton={<Skeleton className="h-96 rounded-xl" />}>
+        {(f) => (
+          <div className="flex flex-col gap-6">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <StatTile label="Saldo bisa ditarik" icon={Banknote} tone="green" value={formatIdr(f.availableIdr, { compact: true })} hint="hasil penjualan yang sudah selesai" />
+              <StatTile label="Piutang" icon={Hourglass} tone="blue" value={formatIdr(f.receivableIdr, { compact: true })} hint="di escrow atau menunggu pembayaran" />
+              <StatTile label="Dana kamu di escrow" icon={Lock} tone="purple" value={formatIdr(f.escrowHeldIdr, { compact: true })} hint="sebagai pembeli, belum dilepas" />
+              <StatTile label="Sudah ditarik" icon={Landmark} tone="gray" value={formatIdr(f.withdrawnIdr, { compact: true })} />
+            </div>
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+              <section className="min-w-0">
+                <h2 className="mb-3 font-medium">Riwayat</h2>
+                {f.entries.length ? (
+                  <DataTable
+                    caption="Riwayat keuangan"
+                    rows={f.entries}
+                    rowKey={(e) => e.id}
+                    initialSort={{ key: 'at', dir: 'desc' }}
+                    columns={[
+                      { key: 'label', header: 'Keterangan', primary: true, cell: (e) => e.label },
+                      { key: 'kind', header: 'Jenis', cell: (e) => <Tag tone={KIND[e.kind][1]}>{KIND[e.kind][0]}</Tag> },
+                      { key: 'amount', header: 'Jumlah', align: 'right', cell: (e) => <span style={{ color: `var(--tag-${e.amountIdr >= 0 ? 'green' : 'gray'}-fg)` }}>{e.amountIdr >= 0 ? '+' : '−'}{formatIdr(Math.abs(e.amountIdr))}</span>, sortValue: (e) => e.amountIdr },
+                      { key: 'at', header: 'Waktu', cell: (e) => <span className="text-muted-foreground">{formatDateTime(e.at)}</span>, sortValue: (e) => e.at },
+                    ]}
+                  />
+                ) : (
+                  <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">Belum ada pergerakan dana.</p>
+                )}
+              </section>
+              <aside className="flex flex-col gap-4">
+                <section className="rounded-xl border bg-card p-4">
+                  <h2 className="mb-3 font-medium">Tarik dana</h2>
+                  <Withdraw key={f.availableIdr} f={f} />
+                </section>
+                <section className="rounded-xl border bg-card p-4">
+                  <h2 className="mb-3 font-medium">Rekening pencairan</h2>
+                  <BankForm f={f} />
+                </section>
+              </aside>
+            </div>
+          </div>
+        )}
+      </AsyncView>
+    </>
+  )
+}

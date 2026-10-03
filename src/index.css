@@ -1,87 +1,183 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+  Notion-style calm surfaces + Ecopurnity brand color.
+  `accent` stays the shadcn subtle hover; brand lime is `--lime`.
+  Tag colors (--tag-*) are soft bg + dark fg pairs, all ≥ 4.5:1 contrast.
+*/
+:root {
+  --background: #ffffff;
+  --foreground: #1d2433;
+  --card: #ffffff;
+  --card-foreground: #1d2433;
+  --popover: #ffffff;
+  --popover-foreground: #1d2433;
+  --primary: #007a92;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f1ef;
+  --secondary-foreground: #1d2433;
+  --muted: #f4f4f2;
+  --muted-foreground: #5f6673;
+  --accent: #efefed;
+  --accent-foreground: #1d2433;
+  --lime: #b8f500;
+  --lime-foreground: #0b1220;
+  --destructive: #c62828;
+  --border: #ebebe8;
+  --input: #e3e3df;
+  --ring: #10a5c4;
+  --sidebar: #f7f7f5;
+  --sidebar-foreground: #37352f;
+  --hover: rgb(55 53 47 / 0.06);
+
+  /* Categorical, fixed order; validated with the dataviz palette script (light + dark). */
+  --chart-1: #0e9cc0;
+  --chart-2: #c46a12;
+  --chart-3: #8a63c9;
+  --chart-4: #5f9a00;
+  --chart-5: #3b6fc4;
+
+  --tag-gray-bg: #f1f1ef;    --tag-gray-fg: #5f5e5b;
+  --tag-teal-bg: #ddf3ef;    --tag-teal-fg: #00695f;
+  --tag-green-bg: #e5f2e8;   --tag-green-fg: #2b6b3f;
+  --tag-blue-bg: #e3eef9;    --tag-blue-fg: #1f5f99;
+  --tag-yellow-bg: #faf0d2;  --tag-yellow-fg: #7f5a10;
+  --tag-orange-bg: #fce9da;  --tag-orange-fg: #97480f;
+  --tag-red-bg: #fce8e8;     --tag-red-fg: #b3261e;
+  --tag-purple-bg: #efe9f8;  --tag-purple-fg: #6b4597;
+  --tag-pink-bg: #faeaf2;    --tag-pink-fg: #9c3d6e;
+  --tag-lime-bg: #ecf8c6;    --tag-lime-fg: #4a6200;
+
+  --brand-from: #22c3e6;
+  --brand-to: #2f6fe0;
+
+  --radius: 0.625rem;
+}
+
+.dark {
+  --background: #0f1623;
+  --foreground: #eef1f5;
+  --card: #151d2b;
+  --card-foreground: #eef1f5;
+  --popover: #172030;
+  --popover-foreground: #eef1f5;
+  --primary: #3cc8e4;
+  --primary-foreground: #0b1220;
+  --secondary: #1e2838;
+  --secondary-foreground: #eef1f5;
+  --muted: #1a2332;
+  --muted-foreground: #94a3b8;
+  --accent: #1e2838;
+  --accent-foreground: #eef1f5;
+  --lime: #b8f500;
+  --lime-foreground: #0b1220;
+  --destructive: #f28b82;
+  --border: #232d3d;
+  --input: #2a3546;
+  --ring: #3cc8e4;
+  --sidebar: #121a27;
+  --sidebar-foreground: #d5dbe4;
+  --hover: rgb(255 255 255 / 0.055);
+
+  --chart-1: #1898b5;
+  --chart-2: #c9762f;
+  --chart-3: #9d7fdc;
+  --chart-4: #679600;
+  --chart-5: #5b95e0;
+
+  --tag-gray-bg: #1e2838;              --tag-gray-fg: #a5abb5;
+  --tag-teal-bg: rgb(44 196 182 / .14); --tag-teal-fg: #4fd1c5;
+  --tag-green-bg: rgb(123 207 149 / .14); --tag-green-fg: #7bcf95;
+  --tag-blue-bg: rgb(125 182 240 / .14); --tag-blue-fg: #7db6f0;
+  --tag-yellow-bg: rgb(232 196 106 / .14); --tag-yellow-fg: #e8c46a;
+  --tag-orange-bg: rgb(240 162 106 / .14); --tag-orange-fg: #f0a26a;
+  --tag-red-bg: rgb(242 139 130 / .14); --tag-red-fg: #f28b82;
+  --tag-purple-bg: rgb(183 154 232 / .14); --tag-purple-fg: #b79ae8;
+  --tag-pink-bg: rgb(238 143 192 / .14); --tag-pink-fg: #ee8fc0;
+  --tag-lime-bg: rgb(198 242 74 / .12); --tag-lime-fg: #c6f24a;
+}
+
+@theme inline {
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-sans);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-lime: var(--lime);
+  --color-lime-foreground: var(--lime-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-hover: var(--hover);
+  --color-brand-from: var(--brand-from);
+  --color-brand-to: var(--brand-to);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
 
 @layer base {
-  .theme {
-    --font-heading: var(--font-sans);
-    --font-sans: 'Geist Variable', sans-serif
-  }
-  :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0)
-  }
-  .dark {
-    --background: #0B1220; /* Economic Navy */
-    --foreground: #F5F7FA; /* Cloud */
-    --card: #0c1524;
-    --card-foreground: #F5F7FA;
-    --popover: #111827; /* Ink */
-    --popover-foreground: #F5F7FA;
-    --primary: #00B8A9; /* Market Teal */
-    --primary-foreground: #ffffff;
-    --secondary: #67E8F9; /* Soft Cyan */
-    --secondary-foreground: #0B1220;
-    --muted: #1e293b;
-    --muted-foreground: #94a3b8;
-    --accent: #B8F500; /* Opportunity Lime */
-    --accent-foreground: #0B1220;
-    --destructive: #ef4444;
-    --border: #1e293b;
-    --input: #1e293b;
-    --ring: #00B8A9;
-    --chart-1: #00B8A9; /* Market Teal */
-    --chart-2: #B8F500; /* Opportunity Lime */
-    --chart-3: #67E8F9; /* Soft Cyan */
-    --chart-4: #0B1220; /* Economic Navy */
-    --chart-5: #D1D5DB; /* Slate */
-    --sidebar: #0B1220;
-    --sidebar-foreground: #F5F7FA;
-    --sidebar-primary: #00B8A9;
-    --sidebar-primary-foreground: #ffffff;
-    --sidebar-accent: #111827;
-    --sidebar-accent-foreground: #F5F7FA;
-    --sidebar-border: #1e293b;
-    --sidebar-ring: #00B8A9;
-  }
   * {
-    @apply border-border;
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans antialiased;
   }
   body {
     @apply bg-background text-foreground;
   }
-  html {
-    @apply font-sans;
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+}
+
+@utility num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* One soft flash when a live value changes (respects reduced motion). */
+@keyframes live-flash {
+  from { background-color: var(--tag-lime-bg); }
+  to { background-color: transparent; }
+}
+@utility animate-live-flash {
+  animation: live-flash 1.2s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }
