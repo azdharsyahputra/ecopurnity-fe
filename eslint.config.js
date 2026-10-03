@@ -7,7 +7,7 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
   // Legacy screens are reference only and get deleted as F2–F5 rebuild them.
-  globalIgnores(['dist', 'public', 'src/legacy']),
+  globalIgnores(['dist', 'public', 'src/legacy', '.claude']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

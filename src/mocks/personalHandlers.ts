@@ -17,12 +17,26 @@ const fail = (status: number, code: string, message: string, fields?: Record<str
   HttpResponse.json({ error: { code, message, fields } }, { status })
 const now = () => new Date().toISOString()
 
-// Re-attach auctions that users created in earlier sessions.
+// The economy resets on reload but users' data persists: re-attach their auctions and re-apply their bids.
 for (const [userId, p] of allPersonal()) {
   for (const a of p.ownedAuctions ?? []) {
     if (!economy.auctions.some((x) => x.id === a.id)) economy.auctions.unshift(a)
     economy.owners.set(a.id, userId)
     economy.bestPrice.set(a.id, a.currentPriceIdr ?? a.openingPriceIdr)
+  }
+  for (const [auctionId, b] of Object.entries(p.bids)) {
+    const a = economy.auctions.find((x) => x.id === auctionId)
+    if (!a || a.type === 'sealed' || !['leading', 'outbid'].includes(b.status)) continue
+    const best = economy.bestPrice.get(a.id) ?? a.openingPriceIdr
+    const mineBetter = lowerWins(a.type) ? b.priceIdr <= best : b.priceIdr >= best
+    b.status = mineBetter ? 'leading' : 'outbid'
+    if (mineBetter) {
+      economy.bestPrice.set(a.id, b.priceIdr)
+      if (a.visibility === 'full') {
+        a.currentPriceIdr = b.priceIdr
+        a.bids = [{ id: `${a.id}-me-restored`, bidder: 'Kamu', priceIdr: b.priceIdr, at: b.updatedAt, mine: true }, ...a.bids]
+      }
+    }
   }
 }
 
@@ -488,7 +502,7 @@ export const personalHandlers = [
     const t = p.transactions.find((x) => x.id === params.id)
     return t ? HttpResponse.json(t) : fail(404, 'not_found', 'Transaksi tidak ditemukan')
   })),
-  http.post(api('/me/transactions/:id/actions'), authed(async ({ p, params, userId, request }) => {
+  http.post(api('/me/transactions/:id/actions'), authed(async ({ p, params, request }) => {
     const t = p.transactions.find((x) => x.id === params.id)
     if (!t) return fail(404, 'not_found', 'Transaksi tidak ditemukan')
     const { action, note, file } = (await request.json()) as { action: TransactionAction; note?: string; file?: string }
@@ -511,7 +525,7 @@ export const personalHandlers = [
     if (action === 'cancel' && t.payment.status === 'escrow') t.payment.status = 'refunded'
     if (action === 'dispute') t.dispute = { status: 'open', reason: note!, openedAt: now() }
     savePersonal()
-    notify(userId, { type: action === 'pay' || action === 'confirm_receipt' ? 'payment' : action === 'ship' || action === 'upload_proof' ? 'delivery' : 'transaction_update', title: `${t.code}: ${ACTION_NOTE[action]}`, body: t.title, href: `/app/transactions/${t.id}` })
+    // The counterparty gets notified, not the actor; mock counterparties aren't real accounts.
     return HttpResponse.json(t)
   })),
 

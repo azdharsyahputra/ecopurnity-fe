@@ -11,7 +11,8 @@ export default defineConfig({
       '@': path.resolve(import.meta.dirname, './src'),
     },
   },
-  server: { port: Number(process.env.PORT) || 5173 },
+  // Agent worktrees live under .claude/; keep their edits from reloading this dev server.
+  server: { port: Number(process.env.PORT) || 5173, watch: { ignored: ['**/.claude/**'] } },
   test: {
     include: ['src/**/*.test.ts'],
   },

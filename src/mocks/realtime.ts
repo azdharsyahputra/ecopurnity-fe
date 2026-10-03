@@ -12,6 +12,10 @@ const now = () => new Date().toISOString()
 const jitter = (n: number) => Math.round(n * (Math.random() * 0.02 - 0.005))
 const isLive = (a: AuctionDetail) => a.status === 'live' || a.status === 'extended'
 
+// ponytail: extension cap lives in the mock only; the BE should expose it as an auction rule.
+const MAX_EXTENSIONS = 3
+const extensions = new Map<string, number>()
+
 function emitActivity(event: ActivityEvent) {
   db.activity.unshift(event)
   db.activity.length = Math.min(db.activity.length, 50)
@@ -52,7 +56,9 @@ function bidTick() {
   })
 
   const left = new Date(a.endsAt).getTime() - Date.now()
-  if (left < a.extension.windowMinutes * 60_000) {
+  const used = extensions.get(a.id) ?? 0
+  if (left < a.extension.windowMinutes * 60_000 && used < MAX_EXTENSIONS) {
+    extensions.set(a.id, used + 1)
     a.endsAt = new Date(new Date(a.endsAt).getTime() + a.extension.extendMinutes * 60_000).toISOString()
     a.status = 'extended'
     auctionEvent(a, { kind: 'extended', endsAt: a.endsAt })
