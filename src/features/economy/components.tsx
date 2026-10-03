@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { auctionPriceLabel, useUrlFilters } from './utils'
 import { ChevronLeft, ChevronRight, MapPin, Search, Users } from 'lucide-react'
-import type { Auction, CategoryId, LabeledValue, Market, Opportunity, Page, Quantity } from '@/domain/types'
+import type { Auction, CategoryId, LabeledValue, Market, Opportunity, Page, PublicListing, Quantity } from '@/domain/types'
 import { AUCTION_TYPES, CATEGORIES, MECHANISMS, OPPORTUNITY_KINDS, REGIONS } from '@/domain/catalog'
 import { formatIdr, formatNumber, formatPercent, formatQty } from '@/domain/format'
 import { cn } from '@/lib/utils'
@@ -129,6 +129,31 @@ export function AuctionCard({ a }: { a: Auction }) {
   )
 }
 
+/** Catalog card; the call to action is passed in because it needs the session. */
+export function ListingCard({ l, action }: { l: PublicListing; action: React.ReactNode }) {
+  const supply = l.kind === 'supply'
+  return (
+    <article className="flex flex-col rounded-xl border bg-card p-4">
+      <div className="flex items-center gap-1.5">
+        <Tag tone={supply ? 'green' : 'blue'}>{supply ? 'Supply' : 'Demand'}</Tag>
+        <CategoryTag id={l.categoryId} />
+        <span className="ml-auto text-xs text-muted-foreground">{l.code}</span>
+      </div>
+      <h3 className="mt-3 font-medium leading-snug">{l.item}</h3>
+      <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+        <EntityAvatar name={l.owner.name} verified={l.owner.verified} size={16} />
+        {l.owner.username ? <Link to={`/u/${l.owner.username}`} className="truncate hover:underline">{l.owner.name}</Link> : <span className="truncate">{l.owner.name}</span>}
+      </p>
+      <dl className="mt-4 grid grid-cols-2 gap-2">
+        <Metric label="Kuantitas" value={formatQty(l.quantity)} />
+        <Metric label={supply ? 'Harga minta' : 'Budget'} value={`${formatIdr(l.unitPriceIdr, { compact: true })}/${l.quantity.unit}`} />
+      </dl>
+      <p className="mt-3 flex items-center gap-1 text-xs text-muted-foreground"><MapPin className="size-3.5" /> {l.location}</p>
+      <div className="mt-4 flex-1 content-end">{action}</div>
+    </article>
+  )
+}
+
 export function RulesList({ rules }: { rules: LabeledValue[] }) {
   return (
     <dl className="divide-y text-sm">
@@ -148,10 +173,13 @@ const selectClass =
 export function FilterBar({
   placeholder,
   statuses,
+  statusLabel = ['Status', 'Semua status'],
   showRegion = true,
 }: {
   placeholder: string
   statuses?: [value: string, label: string][]
+  /** Accessible name and "all" option of the status select, for lists that filter something else there. */
+  statusLabel?: [label: string, all: string]
   showRegion?: boolean
 }) {
   const { filters, set } = useUrlFilters()
@@ -183,8 +211,8 @@ export function FilterBar({
         </select>
       )}
       {statuses && (
-        <select aria-label="Status" className={selectClass} value={filters.status} onChange={(e) => set('status', e.target.value)}>
-          <option value="">Semua status</option>
+        <select aria-label={statusLabel[0]} className={selectClass} value={filters.status} onChange={(e) => set('status', e.target.value)}>
+          <option value="">{statusLabel[1]}</option>
           {statuses.map(([v, l]) => (
             <option key={v} value={v}>{l}</option>
           ))}

@@ -7,6 +7,7 @@ import type {
 import type { QualificationStatus } from '@/domain/status'
 import type { TradeActionInput } from '@/domain/trade'
 import type { KycLevel } from '@/domain/kyc'
+import type { Contract, ContractAction, ContractEvery } from '@/domain/contract'
 
 // Personal workspace data (PRD §8). Every key starts with 'me' so a sign-out or a live event can
 // invalidate the whole workspace at once.
@@ -233,5 +234,26 @@ export function useKycAction() {
   return useMutation({
     mutationFn: ({ type, ...body }: KycAction) => api<Kyc>({ phone: '/me/kyc/phone', otp: '/me/kyc/phone/verify', identity: '/me/kyc/identity' }[type], json('POST', body)),
     onSuccess: () => invalidate(['me', 'kyc'], ['me', 'identity']),
+  })
+}
+
+export type ContractView = Contract & { side: 'buyer' | 'supplier'; actions: ContractAction[] }
+
+export const useContracts = () => useQuery({ queryKey: ['me', 'contracts'], queryFn: () => api<ContractView[]>('/me/contracts'), refetchInterval: 10_000 })
+export const useContract = (id: string) => useQuery({ queryKey: ['me', 'contracts', id], queryFn: () => api<ContractView>(`/me/contracts/${id}`), refetchInterval: 10_000 })
+
+export function useCreateContract() {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: (b: { fromTx: string; every: ContractEvery; runs: number; startAt: string }) => api<ContractView>('/me/contracts', json('POST', b)),
+    onSuccess: () => invalidate(['me', 'contracts']),
+  })
+}
+
+export function useContractAction(id: string) {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: (action: ContractAction) => api<ContractView>(`/me/contracts/${id}/actions`, json('POST', { action })),
+    onSuccess: () => invalidate(['me', 'contracts'], ['me', 'transactions'], ['me', 'dashboard']),
   })
 }

@@ -36,7 +36,7 @@ const save = () => {
   }
 }
 
-const userParty = (userId: string): TradeParty => {
+export const userParty = (userId: string): TradeParty => {
   const u = db.users.find((x) => x.id === userId)
   return { name: u?.name ?? 'Pengguna', kind: 'person', verified: !!u?.emailVerified, userId }
 }

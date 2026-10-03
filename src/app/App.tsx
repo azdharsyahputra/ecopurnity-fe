@@ -27,6 +27,7 @@ const ExplorerPage = named(economy, 'ExplorerPage')
 const OpportunitiesPage = named(economy, 'OpportunitiesPage')
 const OpportunityDetailPage = named(economy, 'OpportunityDetailPage')
 const MarketsPage = named(economy, 'MarketsPage')
+const ListingsPage = named(economy, 'ListingsPage')
 const MarketDetailPage = named(economy, 'MarketDetailPage')
 const AuctionsPage = named(economy, 'AuctionsPage')
 const AuctionRoomPage = named(economy, 'AuctionRoomPage')
@@ -40,6 +41,7 @@ const P = {
   notifications: named(me, 'NotificationsPage'), settings: named(me, 'SettingsPage'), supply: named(me, 'SupplyPage'),
   demand: named(me, 'DemandPage'), supplyForm: named(me, 'SupplyFormPage'), demandForm: named(me, 'DemandFormPage'),
   supplyDetail: named(me, 'SupplyDetailPage'), demandDetail: named(me, 'DemandDetailPage'), finance: named(me, 'FinancePage'),
+  contracts: named(me, 'ContractsPage'), contract: named(me, 'ContractDetailPage'),
 }
 const mm = () => import('@/features/market-maker/pages')
 const M = {
@@ -116,6 +118,7 @@ export default function App({ location, client = queryClient }: { location?: str
                 <Route path="opportunities" element={<OpportunitiesPage />} />
                 <Route path="opportunities/:id" element={<OpportunityDetailPage />} />
                 <Route path="markets" element={<MarketsPage />} />
+                <Route path="listings" element={<ListingsPage />} />
                 <Route path="markets/:id" element={<MarketDetailPage />} />
                 <Route path="auctions" element={<AuctionsPage />} />
                 <Route path="auctions/:id" element={<AuctionRoomPage />} />
@@ -142,7 +145,7 @@ export default function App({ location, client = queryClient }: { location?: str
                   <Route path="app">
                     {workspaceRoutes(personal, {
                       '': P.dashboard, identity: P.identity, supply: P.supply, demand: P.demand, opportunities: P.opportunities,
-                      markets: P.markets, auctions: P.auctions, transactions: P.transactions, notifications: P.notifications, settings: P.settings, finance: P.finance, rfq: Q.list, messages: Q.messages,
+                      markets: P.markets, auctions: P.auctions, transactions: P.transactions, notifications: P.notifications, settings: P.settings, finance: P.finance, contracts: P.contracts, rfq: Q.list, messages: Q.messages,
                       matches: R.matches, reputation: R.reputation,
                     })}
                     <Route path="supply/new" element={<P.supplyForm />} />
@@ -154,6 +157,7 @@ export default function App({ location, client = queryClient }: { location?: str
                     <Route path="auctions/new" element={<P.createAuction />} />
                     <Route path="auctions/:id/evaluate" element={<P.evaluate />} />
                     <Route path="transactions/:id" element={<P.transaction />} />
+                    <Route path="contracts/:id" element={<P.contract />} />
                     <Route path="rfq/new" element={<Q.create />} />
                     <Route path="rfq/:id" element={<Q.detail />} />
                     <Route path="messages/:id" element={<Q.messages />} />

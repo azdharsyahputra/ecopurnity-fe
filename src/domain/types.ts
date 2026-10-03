@@ -351,6 +351,13 @@ export interface DemandListing extends ListingBase {
 
 export type Listing = SupplyListing | DemandListing
 
+/** A listing in the public catalog (PRD F6): who posted it, never their contact details. */
+export type PublicListing = Pick<Listing, 'id' | 'code' | 'kind' | 'item' | 'categoryId' | 'quantity' | 'location' | 'spec' | 'delivery' | 'marketId' | 'createdAt'> & {
+  /** Per unit: the supplier's asking price, or the buyer's budget divided by quantity. */
+  unitPriceIdr: number
+  owner: { name: string; username?: string; userId?: string; verified: boolean }
+}
+
 export type ListingInput =
   | Omit<SupplyListing, 'id' | 'code' | 'status' | 'createdAt' | 'updatedAt' | 'marketId'>
   | Omit<DemandListing, 'id' | 'code' | 'status' | 'createdAt' | 'updatedAt' | 'marketId' | 'auctionId'>
