@@ -19,9 +19,17 @@ export class ApiError extends Error {
 /** A field-level message from `error.fields`, for showing under that input. */
 export const fieldError = (error: unknown, name: string) => (error instanceof ApiError ? error.fields?.[name] : undefined)
 
+let backendReady: Promise<unknown> = Promise.resolve()
+
+/** Requests wait for this (the mock service worker while it boots) instead of blocking the first render. */
+export function waitForBackend(p: Promise<unknown>) {
+  backendReady = p
+}
+
 /** The only place that calls fetch. Session rides on an httpOnly cookie (PRD §13). */
 export async function api<T>(path: string, init: Omit<RequestInit, 'body'> & { json?: unknown } = {}): Promise<T> {
   const { json, headers, ...rest } = init
+  await backendReady
   const res = await fetch(BASE + path, {
     credentials: 'include',
     ...rest,
