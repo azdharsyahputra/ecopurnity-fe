@@ -1,11 +1,9 @@
-import { useId, type ComponentProps, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { MailOpen } from 'lucide-react'
-import { api, ApiError } from '@/lib/api'
+import { api } from '@/lib/api'
 import { passwordStrength, STRENGTH_LABEL } from '@/domain/password'
-import { cn } from '@/lib/utils'
-import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 
 export const MOCKS = import.meta.env.VITE_USE_MOCKS !== 'false'
@@ -16,34 +14,6 @@ export function AuthHeading({ title, children }: { title: string; children?: Rea
       <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
       {children && <p className="mt-1 text-sm text-muted-foreground">{children}</p>}
     </div>
-  )
-}
-
-/** Label + input + field error from the API's `error.fields` (PRD §13). */
-export function Field({ label, error, hint, aside, ...input }: { label: string; error?: string; hint?: ReactNode; aside?: ReactNode } & ComponentProps<'input'>) {
-  const id = useId()
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="flex justify-between text-sm font-medium">
-        {label}
-        {aside}
-      </label>
-      <Input id={id} aria-invalid={!!error} aria-describedby={error || hint ? `${id}-msg` : undefined} className="h-10" {...input} />
-      {(error || hint) && (
-        <p id={`${id}-msg`} className={cn('text-xs', error ? 'text-destructive' : 'text-muted-foreground')}>
-          {error ?? hint}
-        </p>
-      )}
-    </div>
-  )
-}
-
-export function FormError({ error }: { error: unknown }) {
-  if (!error || (error instanceof ApiError && error.fields)) return null
-  return (
-    <p role="alert" className="rounded-lg px-3 py-2 text-sm" style={{ background: 'var(--tag-red-bg)', color: 'var(--tag-red-fg)' }}>
-      {error instanceof Error ? error.message : 'Terjadi kesalahan'}
-    </p>
   )
 }
 

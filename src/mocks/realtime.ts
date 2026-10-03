@@ -2,6 +2,8 @@ import { publish } from '@/lib/realtime'
 import type { ActivityEvent, AuctionDetail, AuctionEvent } from '@/domain/types'
 import { db, makeActivity } from './db'
 import { economy } from './economy'
+import { onAuctionClosed, onCompetitorBid } from './personalHandlers'
+import { savePersonal } from './personal'
 
 // Fake event source standing in for the WebSocket server.
 // ponytail: random but plausible bidding on a timer; scripted scenarios come if QA needs repeatable runs.
@@ -28,14 +30,19 @@ function bidTick() {
 
   const dir = a.type === 'forward' ? 1 : -1
   const steps = 1 + Math.floor(Math.random() * 3)
-  const price = (a.currentPriceIdr ?? a.openingPriceIdr) + dir * steps * Math.max(a.minStepIdr, 1)
+  const base = economy.bestPrice.get(a.id) ?? a.currentPriceIdr ?? a.openingPriceIdr
+  // Sealed bids aren't bound by the step; they just land somewhere sensible.
+  const price = a.type === 'sealed' ? Math.round(a.openingPriceIdr * (0.85 + Math.random() * 0.12)) : base + dir * steps * Math.max(a.minStepIdr, 1)
+  if (a.type !== 'sealed' || price < base) economy.bestPrice.set(a.id, a.type === 'sealed' ? Math.min(base, price) : price)
+  if (economy.owners.has(a.id)) savePersonal()
   a.bidCount++
-  if (Math.random() < 0.15) a.participants++
+  if (Math.random() < (a.participants < 4 ? 0.7 : 0.15)) a.participants++ // new auctions fill up fast
   const hidden = a.visibility !== 'full'
   if (!hidden) a.currentPriceIdr = price
 
   const bid = { id: `${a.id}-live-${a.bidCount}`, bidder: `${a.type === 'reverse' ? 'Supplier' : 'Bidder'} ${1 + Math.floor(Math.random() * a.participants)}`, priceIdr: price, at: now() }
   if (!hidden) a.bids = [bid, ...a.bids].slice(0, 30)
+  if (a.type !== 'sealed') onCompetitorBid(a.id, price)
   auctionEvent(a, {
     kind: 'bid',
     bid: hidden ? { ...bid, priceIdr: 0 } : bid,
@@ -69,6 +76,8 @@ function closeTick() {
     if (new Date(a.endsAt).getTime() > Date.now()) continue
     a.status = 'closed'
     auctionEvent(a, { kind: 'closed', status: a.status })
+    onAuctionClosed(a.id)
+    if (economy.owners.has(a.id)) savePersonal()
     emitActivity({ ...makeActivity(), type: 'auction_closed', title: `Auction ditutup: ${a.title}` })
   }
 }

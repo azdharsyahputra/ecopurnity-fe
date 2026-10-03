@@ -7,7 +7,8 @@ import {
   ONBOARDING_GOAL_KEY, ONBOARDING_RETURN_KEY, useForgotPassword, useGoogleSignIn, useMe, useRegister, useResendVerification, useResetPassword, useSetMe,
   useVerifyEmail,
 } from './hooks'
-import { AuthHeading, Field, FormError, GoogleButton, MockOutbox, OrDivider, StrengthMeter } from './ui'
+import { AuthHeading, GoogleButton, MockOutbox, OrDivider, StrengthMeter } from './ui'
+import { Field, FormError } from '@/components/form'
 import { IconChip } from '@/components/IconChip'
 import { Button } from '@/components/ui/button'
 

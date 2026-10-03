@@ -65,6 +65,12 @@ export const STATUS = {
     cancelled: ['Cancelled', 'gray'],
     disputed: ['Disputed', 'red'],
   },
+  qualification: {
+    not_started: ['Belum kualifikasi', 'gray'],
+    pending: ['Menunggu review', 'yellow'],
+    qualified: ['Terkualifikasi', 'green'],
+    rejected: ['Ditolak', 'red'],
+  },
   dispute: {
     open: ['Open', 'orange'],
     evidence: ['Evidence', 'yellow'],
@@ -84,6 +90,7 @@ export type AuctionStatus = StatusOf<'auction'>
 export type BidStatus = StatusOf<'bid'>
 export type TransactionStatus = StatusOf<'transaction'>
 export type DisputeStatus = StatusOf<'dispute'>
+export type QualificationStatus = StatusOf<'qualification'>
 
 export function statusMeta<E extends Entity>(entity: E, status: StatusOf<E>) {
   const [label, tone, live] = (STATUS[entity] as Record<string, Meta>)[status]

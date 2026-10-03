@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Bell, Check, ChevronsUpDown, Globe, LogOut, Menu, Search } from 'lucide-react'
 import { useLogout, useMe } from '@/features/auth/hooks'
+import { useNotifications } from '@/features/me/hooks'
 import { activeWorkspace, href, workspacesFor, type NavItem, type Workspace } from '../nav'
 import { useUi } from '@/stores/ui'
 import { cn } from '@/lib/utils'
@@ -10,6 +11,7 @@ import { EntityAvatar } from '@/components/EntityAvatar'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Logo } from '@/components/Logo'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
@@ -121,6 +123,20 @@ function Sidebar({ ws, all, onNavigate }: { ws: Workspace; all: Workspace[]; onN
   )
 }
 
+function NotificationBell() {
+  const unread = useNotifications().data?.filter((n) => !n.read).length ?? 0
+  return (
+    <Button variant="ghost" size="icon-sm" className="relative" render={<Link to="/app/notifications" />} aria-label={unread ? `Notifikasi, ${unread} belum dibaca` : 'Notifikasi'}>
+      <Bell />
+      {unread > 0 && (
+        <span className="num absolute -top-0.5 -right-0.5 grid min-w-4 place-items-center rounded-full bg-destructive px-1 text-[10px] leading-4 font-semibold text-white dark:text-[#0b1220]">
+          {unread > 9 ? '9+' : unread}
+        </span>
+      )}
+    </Button>
+  )
+}
+
 export function AppLayout() {
   const { data: me } = useMe()
   const { pathname } = useLocation()
@@ -158,15 +174,15 @@ export function AppLayout() {
             )}
           </nav>
           <div className="ml-auto flex items-center gap-1">
-            <Button variant="ghost" size="icon-sm" render={<Link to="/app/notifications" />} aria-label="Notifikasi">
-              <Bell />
-            </Button>
+            <NotificationBell />
             <EntityAvatar name={me!.name} src={me!.avatarUrl} size={26} className="ml-1" />
           </div>
         </header>
         <main className="flex-1">
           <div className="mx-auto w-full max-w-6xl px-4 pt-6 pb-16 md:px-10 md:pt-10">
-            <Outlet />
+            <Suspense fallback={<Skeleton className="h-96 rounded-xl" />}>
+              <Outlet />
+            </Suspense>
           </div>
         </main>
       </div>

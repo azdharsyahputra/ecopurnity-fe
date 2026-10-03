@@ -60,3 +60,53 @@ describe('passwordStrength', () => {
     expect(passwordStrength('abcdEFGH12!')).toBe(4)
   })
 })
+
+describe('transaction state machine', () => {
+  it('walks the happy path with the right roles', async () => {
+    const { transition } = await import('./transaction')
+    expect(transition('agreement', 'supplier', 'issue_invoice')).toBe('invoiced')
+    expect(transition('invoiced', 'buyer', 'pay')).toBe('paid')
+    expect(transition('paid', 'supplier', 'ship')).toBe('fulfilling')
+    expect(transition('fulfilling', 'supplier', 'upload_proof')).toBe('delivered')
+    expect(transition('delivered', 'buyer', 'confirm_receipt')).toBe('completed')
+  })
+
+  it('rejects wrong role, wrong state, and actions after the end', async () => {
+    const { transition, allowedActions } = await import('./transaction')
+    expect(transition('invoiced', 'supplier', 'pay')).toBeNull()
+    expect(transition('agreement', 'buyer', 'confirm_receipt')).toBeNull()
+    expect(transition('paid', 'buyer', 'cancel')).toBeNull()
+    expect(allowedActions('completed', 'buyer')).toEqual([])
+    expect(allowedActions('delivered', 'buyer')).toEqual(['confirm_receipt', 'dispute'])
+  })
+})
+
+describe('auction rules', () => {
+  const reverse = { type: 'reverse' as const, openingPriceIdr: 2400, currentPriceIdr: 2050, minStepIdr: 25 }
+
+  it('enforces the minimum step in the winning direction', async () => {
+    const { validateBid, bidLimit } = await import('./auction')
+    expect(bidLimit(reverse)).toBe(2025)
+    expect(validateBid(reverse, 2025)).toBeNull()
+    expect(validateBid(reverse, 2040)).toMatch(/≤/)
+    expect(validateBid({ ...reverse, type: 'forward', currentPriceIdr: 91_500, minStepIdr: 500 }, 91_600)).toMatch(/≥/)
+    expect(validateBid({ ...reverse, type: 'sealed', currentPriceIdr: undefined }, 2399)).toBeNull()
+  })
+
+  it('ranks with ties going to the earlier bid', async () => {
+    const { rankOf } = await import('./auction')
+    expect(rankOf('reverse', 2000, [2050, 2100])).toBe(1)
+    expect(rankOf('reverse', 2050, [2050, 2000])).toBe(3)
+    expect(rankOf('forward', 12_500, [12_450])).toBe(1)
+  })
+
+  it('allocates cheapest first, capped by capacity', async () => {
+    const { suggestAllocation } = await import('./auction')
+    const offer = (id: string, priceIdr: number, cap: number, reputation = 90) => ({
+      id, priceIdr, capacity: { value: cap, unit: 'unit' }, submittedAt: '', supplier: { name: id, kind: 'business' as const, verified: true, reputation },
+    })
+    const lines = suggestAllocation([offer('a', 1600, 300), offer('b', 1550, 200), offer('c', 1600, 500, 99)], 600)
+    expect(lines.map((l) => [l.offerId, l.quantity])).toEqual([['b', 200], ['c', 400]])
+    expect(suggestAllocation([offer('a', 1, 10)], 50).reduce((s, l) => s + l.quantity, 0)).toBe(10)
+  })
+})
