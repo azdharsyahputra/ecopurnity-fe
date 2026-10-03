@@ -377,6 +377,8 @@ export interface PersonalOpportunity extends Opportunity {
 
 export interface MyMarket extends Market {
   joined: boolean
+  /** Membership state in markets that require the market maker's approval. */
+  approval?: 'pending' | 'active' | 'rejected' | 'suspended'
   /** Alert when the median price crosses this value. */
   watchPriceIdr?: number
   myListings: number

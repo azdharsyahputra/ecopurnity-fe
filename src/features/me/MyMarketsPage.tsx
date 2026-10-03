@@ -9,7 +9,7 @@ import { useListingAction, useListings, useMarketAction, useMyMarkets } from './
 import { CategoryTag } from '@/features/economy/components'
 import { PageHeader } from '@/components/PageHeader'
 import { AsyncView, EmptyState } from '@/components/States'
-import { StatusBadge } from '@/components/Tag'
+import { StatusBadge, Tag } from '@/components/Tag'
 import { DataTable } from '@/components/DataTable'
 import { Field, FormError, Segmented, SelectField } from '@/components/form'
 import { Button } from '@/components/ui/button'
@@ -114,7 +114,10 @@ export function MyMarketsPage() {
               rowHref={(m) => `/markets/${m.id}`}
               initialSort={{ key: 'volume', dir: 'desc' }}
               columns={[
-                { key: 'name', header: 'Market', primary: true, cell: (m) => m.name, sortValue: (m) => m.name },
+                {
+                  key: 'name', header: 'Market', primary: true, sortValue: (m) => m.name,
+                  cell: (m) => <span>{m.name} {m.approval === 'pending' && <Tag tone="yellow">Menunggu approval</Tag>}{m.approval === 'suspended' && <Tag tone="red">Disuspend</Tag>}</span>,
+                },
                 { key: 'cat', header: 'Kategori', cell: (m) => <CategoryTag id={m.categoryId} /> },
                 { key: 'mech', header: 'Mekanisme', cell: (m) => <span className="text-muted-foreground">{MECHANISMS[m.mechanism].label}</span> },
                 { key: 'price', header: 'Harga', align: 'right', cell: (m) => `${formatNumber(m.priceRange.minIdr, { compact: true })}–${formatNumber(m.priceRange.maxIdr, { compact: true })}`, sortValue: (m) => m.priceRange.minIdr },
