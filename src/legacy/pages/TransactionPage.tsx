@@ -85,7 +85,7 @@ export default function TransactionPage() {
             const StatusIcon = status.icon
             return (
               <Card key={tx.id} className="bg-slate-900 border-slate-800 hover:border-slate-700 transition-colors cursor-pointer"
-                onClick={() => navigate(`/transactions/${tx.id}`)}>
+                onClick={() => navigate(`/legacy/transactions/${tx.id}`)}>
                 <CardContent className="p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
                     <div className={`h-10 w-10 rounded-xl ${status.bg} border ${status.border} flex items-center justify-center flex-shrink-0`}>
@@ -126,7 +126,7 @@ export default function TransactionPage() {
             const StatusIcon = status.icon
             return (
               <Card key={tx.id} className="bg-slate-900/60 border-slate-800/60 hover:border-slate-700 transition-colors cursor-pointer opacity-80 hover:opacity-100"
-                onClick={() => navigate(`/transactions/${tx.id}`)}>
+                onClick={() => navigate(`/legacy/transactions/${tx.id}`)}>
                 <CardContent className="p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
                     <div className={`h-10 w-10 rounded-xl ${status.bg} border ${status.border} flex items-center justify-center flex-shrink-0`}>
@@ -166,7 +166,7 @@ export default function TransactionPage() {
             </div>
           </div>
           <button
-            onClick={() => navigate('/reputation')}
+            onClick={() => navigate('/legacy/reputation')}
             className="ml-4 shrink-0 text-xs font-semibold text-emerald-400 hover:text-emerald-300 flex items-center gap-1.5 whitespace-nowrap"
           >
             View Reputation <ArrowRight className="h-3.5 w-3.5" />

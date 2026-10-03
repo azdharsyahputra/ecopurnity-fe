@@ -235,7 +235,7 @@ export default function MarketFormationPage() {
             <div className="flex justify-center gap-4">
               <Button 
                 variant="outline" 
-                onClick={() => navigate('/auctions')}
+                onClick={() => navigate('/legacy/auctions')}
                 className="border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10"
               >
                 View Active Markets & Auctions →

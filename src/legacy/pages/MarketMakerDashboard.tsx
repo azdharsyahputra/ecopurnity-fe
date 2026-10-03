@@ -34,7 +34,7 @@ export default function MarketMakerDashboard() {
           <Button className="bg-slate-800 text-slate-200 hover:bg-slate-700">
             <PlusCircle className="mr-2 h-4 w-4" /> New Coalition
           </Button>
-          <Link to="/market/form">
+          <Link to="/legacy/market/form">
             <Button className="bg-emerald-500 hover:bg-emerald-600 text-white">
               <Gavel className="mr-2 h-4 w-4" /> Form Market
             </Button>

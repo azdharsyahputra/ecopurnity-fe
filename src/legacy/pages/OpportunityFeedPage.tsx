@@ -98,14 +98,14 @@ export default function OpportunityFeedPage() {
 
               <CardFooter className="pt-2 border-t border-slate-800/50 flex gap-2">
                 <Button
-                  onClick={() => navigate(`/graph?opp=${opp.id}`)}
+                  onClick={() => navigate(`/legacy/graph?opp=${opp.id}`)}
                   variant="outline"
                   className="flex-1 border-slate-700 hover:bg-slate-800 text-slate-300 text-xs"
                 >
                   Explore Graph
                 </Button>
                 <Button
-                  onClick={() => navigate('/market/form')}
+                  onClick={() => navigate('/legacy/market/form')}
                   className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs flex items-center justify-center gap-1"
                 >
                   Form Market <ArrowRight className="h-3.5 w-3.5" />

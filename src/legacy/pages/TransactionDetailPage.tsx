@@ -59,7 +59,7 @@ export default function TransactionDetailPage() {
     <div className="space-y-6 max-w-4xl">
       {/* Back Button */}
       <button
-        onClick={() => navigate('/transactions')}
+        onClick={() => navigate('/legacy/transactions')}
         className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-200 transition-colors"
       >
         <ArrowLeft className="h-4 w-4" /> Back to Transactions

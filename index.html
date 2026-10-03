@@ -1,10 +1,19 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="id">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ecopurnity</title>
+    <meta name="description" content="Ecopurnity: temukan market yang belum ada. Opportunity, market, dan auction ekonomi secara real-time." />
+    <title>Ecopurnity</title>
+    <script>
+      // Apply theme before first paint to avoid a flash (mirrors src/stores/ui.ts).
+      try {
+        var t = localStorage.getItem('ecp-theme') || 'system'
+        if (t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches))
+          document.documentElement.classList.add('dark')
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -135,7 +135,7 @@ export default function SimulationPage() {
             </div>
             
             <Button 
-              onClick={() => navigate('/market/form')}
+              onClick={() => navigate('/legacy/market/form')}
               className="w-full bg-blue-600 hover:bg-blue-500 text-white mt-4"
             >
               Convert to Real Coalition <ArrowRight className="ml-2 h-4 w-4" />
