@@ -40,7 +40,47 @@ const session = () => {
   return userId && db.users.some((u) => u.id === userId) ? userId : null
 }
 
+// Uploads (same rules as the API): presigned-URL stand-in served by MSW itself.
+const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+const uploads: Record<string, { owner: string; purpose: string; fileName: string; type: string; size: number; uploaded: boolean; used: boolean }> = {}
+
+function claim(userId: string, id: string | undefined, purpose: string, field: string): string | Record<string, string> {
+  const u = id ? uploads[id] : undefined
+  if (!u || u.owner !== userId) return { [field]: 'File tidak ditemukan. Unggah ulang.' }
+  if (u.purpose !== purpose) return { [field]: 'File ini diunggah untuk keperluan lain.' }
+  if (u.used) return { [field]: 'File ini sudah dipakai. Unggah ulang.' }
+  if (!u.uploaded) return { [field]: 'File belum selesai diunggah.' }
+  return u.fileName
+}
+
 export const kycHandlers = [
+  http.post(api('/uploads'), async ({ request }) => {
+    await delay(150)
+    const userId = session()
+    if (!userId) return fail(401, 'unauthenticated', 'Belum login')
+    const b = (await request.json()) as { purpose: string; fileName: string; contentType: string; sizeBytes: number }
+    const fields: Record<string, string> = {}
+    if (!['kyc_ktp', 'kyc_selfie'].includes(b.purpose)) fields.purpose = 'Jenis upload tidak dikenal'
+    if (!IMAGE_TYPES.includes(b.contentType)) fields.contentType = 'Format file tidak didukung. Pakai JPG, PNG, atau WebP.'
+    if (!(b.sizeBytes > 0 && b.sizeBytes <= 8 << 20)) fields.sizeBytes = 'Ukuran file maksimal 8 MB.'
+    if (!b.fileName?.trim()) fields.fileName = 'Nama file wajib diisi'
+    if (Object.keys(fields).length) return fail(422, 'validation', 'File tidak bisa diunggah', fields)
+    const id = crypto.randomUUID()
+    uploads[id] = { owner: userId, purpose: b.purpose, fileName: b.fileName.trim(), type: b.contentType, size: b.sizeBytes, uploaded: false, used: false }
+    return HttpResponse.json(
+      { uploadId: id, method: 'PUT', url: api(`/_mock/storage/${id}`), headers: { 'Content-Type': b.contentType, 'Content-Length': String(b.sizeBytes) }, expiresAt: new Date(Date.now() + 600_000).toISOString() },
+      { status: 201 },
+    )
+  }),
+  /** Mock-only: the "object storage" the presigned URL points at. */
+  http.put(api('/_mock/storage/:id'), async ({ params, request }) => {
+    const u = uploads[String(params.id)]
+    const body = await request.arrayBuffer()
+    if (!u || body.byteLength !== u.size) return new HttpResponse(null, { status: 403 })
+    u.uploaded = true
+    return new HttpResponse(null, { status: 200 })
+  }),
+
   http.get(api('/me/kyc'), async () => {
     await delay(150)
     const userId = session()
@@ -76,19 +116,25 @@ export const kycHandlers = [
     await delay(500)
     const userId = session()
     if (!userId) return fail(401, 'unauthenticated', 'Belum login')
-    const { nik, fullName, ktpFile, selfieFile } = (await request.json()) as Record<string, string | undefined>
+    const { nik, fullName, ktpUploadId, selfieUploadId } = (await request.json()) as Record<string, string | undefined>
     const fields: Record<string, string> = {}
     if (!/^\d{16}$/.test(nik ?? '')) fields.nik = 'NIK 16 digit'
     if (!fullName?.trim()) fields.fullName = 'Sesuai KTP'
-    if (!ktpFile) fields.ktpFile = 'Unggah foto KTP'
-    if (!selfieFile) fields.selfieFile = 'Unggah selfie dengan KTP'
+    if (!ktpUploadId) fields.ktpUploadId = 'Unggah foto KTP'
+    if (!selfieUploadId) fields.selfieUploadId = 'Unggah selfie dengan KTP'
     if (Object.keys(fields).length) return fail(422, 'validation', 'Data belum lengkap', fields)
     const v = verificationOf(userId)
     if (v.identity !== 'none') return fail(409, 'already_submitted', v.identity === 'verified' ? 'Identitas sudah terverifikasi' : 'Pengajuan sedang ditinjau')
+    const ktpFile = claim(userId, ktpUploadId, 'kyc_ktp', 'ktpUploadId')
+    const selfieFile = claim(userId, selfieUploadId, 'kyc_selfie', 'selfieUploadId')
+    if (typeof ktpFile !== 'string' || typeof selfieFile !== 'string')
+      return fail(422, 'validation', 'Periksa kembali file yang diunggah', { ...(typeof ktpFile === 'string' ? {} : ktpFile), ...(typeof selfieFile === 'string' ? {} : selfieFile) })
+    uploads[ktpUploadId!].used = true
+    uploads[selfieUploadId!].used = true
     const owner = db.users.find((u) => u.id === userId)!.name
     admin.verifications.unshift({
       id: `ver-${userId}-${Date.now().toString(36)}`, kind: 'personal', business: fullName!.trim(), owner, submittedAt: now(), status: 'pending',
-      form: [{ label: 'Nama lengkap', value: fullName!.trim() }, { label: 'NIK', value: nik! }],
+      form: [{ label: 'Nama lengkap', value: fullName!.trim() }, { label: 'NIK', value: `${nik!.slice(0, 4)}********${nik!.slice(12)}` }],
       documents: [
         { kind: 'ktp', fileName: ktpFile!, fields: [{ label: 'NIK', value: nik! }, { label: 'Nama lengkap', value: fullName!.trim().toUpperCase() }] },
         { kind: 'selfie', fileName: selfieFile!, fields: [{ label: 'Kecocokan wajah', value: 'Tinggi (demo)' }] },

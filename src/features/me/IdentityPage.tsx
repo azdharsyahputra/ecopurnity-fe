@@ -9,6 +9,8 @@ import { fieldError } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { toast } from '@/stores/toast'
 import { useIdentity, useKyc, useKycAction, useSaveIdentity } from './hooks'
+import { uploadFile, uploadErrorMessage } from '@/lib/upload'
+import { MOCKS } from '@/features/auth/ui'
 import { KYC_LEVELS, type KycLevel } from '@/domain/kyc'
 import { PageHeader } from '@/components/PageHeader'
 import { AsyncView } from '@/components/States'
@@ -66,7 +68,7 @@ function PhoneDialog({ otpPending, onClose }: { otpPending: boolean; onClose: ()
           {!sent ? (
             <Field label="Nomor HP" inputMode="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} error={fieldError(act.error, 'phone')} hint="Contoh: 0812xxxxxxxx" />
           ) : (
-            <Field label="Kode OTP" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} error={fieldError(act.error, 'code')} hint="Mode demo: kodenya 246810" />
+            <Field label="Kode OTP" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} error={fieldError(act.error, 'code')} hint={MOCKS ? 'Mode demo: kodenya 246810' : 'Cek SMS/WhatsApp kamu'} />
           )}
           <FormError error={act.error} />
           <DialogFooter>
@@ -81,22 +83,56 @@ function PhoneDialog({ otpPending, onClose }: { otpPending: boolean; onClose: ()
 
 function IdentityDialog({ onClose }: { onClose: () => void }) {
   const act = useKycAction()
-  const [f, setF] = useState({ nik: '', fullName: '', ktpFile: '', selfieFile: '' })
-  const file = (k: 'ktpFile' | 'selfieFile') => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.files?.[0]?.name ?? '' })
+  const [f, setF] = useState({ nik: '', fullName: '' })
+  const [files, setFiles] = useState<{ ktp?: File; selfie?: File }>({})
+  const [uploading, setUploading] = useState(false)
+  const [uploadErr, setUploadErr] = useState<{ ktp?: string; selfie?: string }>({})
+  const pick = (k: 'ktp' | 'selfie') => (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFiles({ ...files, [k]: e.target.files?.[0] })
+    setUploadErr({ ...uploadErr, [k]: undefined })
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!files.ktp || !files.selfie) {
+      setUploadErr({ ktp: files.ktp ? undefined : 'Unggah foto KTP', selfie: files.selfie ? undefined : 'Unggah selfie dengan KTP' })
+      return
+    }
+    setUploading(true)
+    const [ktp, selfie] = await Promise.allSettled([uploadFile(files.ktp, 'kyc_ktp'), uploadFile(files.selfie, 'kyc_selfie')])
+    setUploading(false)
+    if (ktp.status === 'rejected' || selfie.status === 'rejected') {
+      setUploadErr({
+        ktp: ktp.status === 'rejected' ? uploadErrorMessage(ktp.reason) : undefined,
+        selfie: selfie.status === 'rejected' ? uploadErrorMessage(selfie.reason) : undefined,
+      })
+      return
+    }
+    act.mutate(
+      { type: 'identity', ...f, ktpUploadId: ktp.value, selfieUploadId: selfie.value },
+      { onSuccess: () => { toast({ title: 'KTP diajukan', body: 'Kami kabari lewat notifikasi setelah ditinjau.', tone: 'green' }); onClose() } },
+    )
+  }
+
+  const busy = uploading || act.isPending
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Verifikasi KTP</DialogTitle>
-          <DialogDescription>Ditinjau tim governance, biasanya kurang dari 1 hari kerja. Dokumen hanya dipakai untuk verifikasi.</DialogDescription>
+          <DialogDescription>Ditinjau tim governance, biasanya kurang dari 1 hari kerja. Dokumen disimpan terenkripsi dan hanya dipakai untuk verifikasi.</DialogDescription>
         </DialogHeader>
-        <form className="grid gap-3" onSubmit={(e) => { e.preventDefault(); act.mutate({ type: 'identity', ...f }, { onSuccess: () => { toast({ title: 'KTP diajukan', body: 'Kami kabari lewat notifikasi setelah ditinjau.', tone: 'green' }); onClose() } }) }}>
+        <form className="grid gap-3" onSubmit={submit}>
           <Field label="NIK" inputMode="numeric" maxLength={16} value={f.nik} onChange={(e) => setF({ ...f, nik: e.target.value.replace(/\D/g, '') })} error={fieldError(act.error, 'nik')} />
           <Field label="Nama lengkap sesuai KTP" value={f.fullName} onChange={(e) => setF({ ...f, fullName: e.target.value })} error={fieldError(act.error, 'fullName')} />
-          <Field label="Foto KTP" type="file" accept="image/*,.pdf" onChange={file('ktpFile')} error={fieldError(act.error, 'ktpFile')} />
-          <Field label="Selfie memegang KTP" type="file" accept="image/*" capture="user" onChange={file('selfieFile')} error={fieldError(act.error, 'selfieFile')} />
+          <Field label="Foto KTP" type="file" accept="image/jpeg,image/png,image/webp" onChange={pick('ktp')}
+            error={uploadErr.ktp ?? fieldError(act.error, 'ktpUploadId')} hint="JPG, PNG, atau WebP, maks. 8 MB" />
+          <Field label="Selfie memegang KTP" type="file" accept="image/jpeg,image/png,image/webp" capture="user" onChange={pick('selfie')}
+            error={uploadErr.selfie ?? fieldError(act.error, 'selfieUploadId')} />
           <FormError error={act.error} />
-          <DialogFooter><Button type="submit" disabled={act.isPending}>Ajukan verifikasi</Button></DialogFooter>
+          <DialogFooter>
+            <Button type="submit" disabled={busy}>{uploading ? 'Mengunggah foto…' : act.isPending ? 'Mengirim…' : 'Ajukan verifikasi'}</Button>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
@@ -113,7 +149,7 @@ function Verification() {
       {(k) => {
         const v = k.verification
         const steps = [
-          ['email', 'Email', v.email, 'Diverifikasi lewat link email'],
+          ['email', 'Email', v.email, 'Kode 6 digit dikirim ke email'],
           ['phone', 'Nomor HP', v.phone, 'Kode OTP ke WhatsApp/SMS'],
           ['identity', 'Identitas (KTP)', v.identity === 'verified', v.identity === 'pending' ? 'Sedang ditinjau tim governance' : 'Foto KTP + selfie'],
         ] as const
@@ -138,7 +174,8 @@ function Verification() {
                   <IconChip icon={ok ? BadgeCheck : id === 'identity' && v.identity === 'pending' ? Clock : CircleDashed} tone={ok ? 'green' : 'gray'} />
                   <div className="min-w-0 flex-1"><p className="font-medium">{label}</p><p className="text-sm text-muted-foreground">{detail}</p></div>
                   {ok ? <span className="text-sm font-medium" style={{ color: 'var(--tag-green-fg)' }}>Terverifikasi</span>
-                    : id !== 'email' && !(id === 'identity' && v.identity === 'pending') && <Button variant="outline" className="h-8" onClick={() => setOpen(id)}>Verifikasi</Button>}
+                    : id === 'email' ? <Button variant="outline" className="h-8" render={<Link to="/verify-email" />}>Verifikasi</Button>
+                    : !(id === 'identity' && v.identity === 'pending') && <Button variant="outline" className="h-8" onClick={() => setOpen(id)}>Verifikasi</Button>}
                 </li>
               ))}
             </ul>

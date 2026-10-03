@@ -225,7 +225,7 @@ export interface Kyc {
 
 export const useKyc = () => useQuery({ queryKey: ['me', 'kyc'], queryFn: () => api<Kyc>('/me/kyc') })
 
-export type KycAction = { type: 'phone'; phone: string } | { type: 'otp'; code: string } | { type: 'identity'; nik: string; fullName: string; ktpFile?: string; selfieFile?: string }
+export type KycAction = { type: 'phone'; phone: string } | { type: 'otp'; code: string } | { type: 'identity'; nik: string; fullName: string; ktpUploadId: string; selfieUploadId: string }
 
 export function useKycAction() {
   const invalidate = useInvalidate()
