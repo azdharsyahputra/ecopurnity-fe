@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { auctionPriceLabel, useUrlFilters } from './utils'
-import { ChevronLeft, ChevronRight, MapPin, Search, Users } from 'lucide-react'
+import { ChevronLeft, ChevronRight, MapPin, Paperclip, Search, Users } from 'lucide-react'
 import type { Auction, CategoryId, LabeledValue, Market, Opportunity, Page, PublicListing, Quantity } from '@/domain/types'
 import { AUCTION_TYPES, CATEGORIES, MECHANISMS, OPPORTUNITY_KINDS, REGIONS } from '@/domain/catalog'
 import { formatIdr, formatNumber, formatPercent, formatQty } from '@/domain/format'
@@ -10,6 +10,9 @@ import { Countdown } from '@/components/Countdown'
 import { EntityAvatar } from '@/components/EntityAvatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { AttachmentGallery } from '@/components/Attachments'
+import { thumbnailOf } from '@/domain/attachments'
 
 export function CategoryTag({ id }: { id: CategoryId }) {
   return <Tag tone={CATEGORIES[id].tone}>{CATEGORIES[id].label}</Tag>
@@ -132,8 +135,14 @@ export function AuctionCard({ a }: { a: Auction }) {
 /** Catalog card; the call to action is passed in because it needs the session. */
 export function ListingCard({ l, action }: { l: PublicListing; action: React.ReactNode }) {
   const supply = l.kind === 'supply'
+  const thumb = thumbnailOf(l.attachments)
   return (
     <article className="flex flex-col rounded-xl border bg-card p-4">
+      {thumb && (
+        <a href={thumb.url} target="_blank" rel="noreferrer" className="-mx-4 -mt-4 mb-3 block aspect-[16/9] overflow-hidden rounded-t-xl border-b bg-muted">
+          <img src={thumb.url} alt={`Foto ${l.item}`} loading="lazy" className="size-full object-cover" />
+        </a>
+      )}
       <div className="flex items-center gap-1.5">
         <Tag tone={supply ? 'green' : 'blue'}>{supply ? 'Supply' : 'Demand'}</Tag>
         <CategoryTag id={l.categoryId} />
@@ -148,7 +157,22 @@ export function ListingCard({ l, action }: { l: PublicListing; action: React.Rea
         <Metric label="Kuantitas" value={formatQty(l.quantity)} />
         <Metric label={supply ? 'Harga minta' : 'Budget'} value={`${formatIdr(l.unitPriceIdr, { compact: true })}/${l.quantity.unit}`} />
       </dl>
-      <p className="mt-3 flex items-center gap-1 text-xs text-muted-foreground"><MapPin className="size-3.5" /> {l.location}</p>
+      <div className="mt-3 flex items-center gap-1 text-xs text-muted-foreground">
+        <MapPin className="size-3.5" /> {l.location}
+        {l.attachments.length > 0 && (
+          <Dialog>
+            <DialogTrigger render={<button type="button" className="ml-auto inline-flex items-center gap-1 hover:text-foreground hover:underline" />}>
+              <Paperclip className="size-3.5" /> {l.attachments.length} lampiran
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Lampiran {l.item}</DialogTitle>
+              </DialogHeader>
+              <AttachmentGallery attachments={l.attachments} />
+            </DialogContent>
+          </Dialog>
+        )}
+      </div>
       <div className="mt-4 flex-1 content-end">{action}</div>
     </article>
   )
