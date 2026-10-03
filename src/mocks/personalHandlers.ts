@@ -13,6 +13,9 @@ import { economy, toAuction, toOpportunity } from './economy'
 import { allPersonal, completeness, newId, notify, personal, savePersonal, type PersonalData } from './personal'
 import { audit } from './audit'
 import { ops, saveMm } from './mm'
+import { admin } from './admin'
+import { reputationTxs } from './profileHandlers'
+import { reputationScore } from '@/domain/reputation'
 
 const api = (path: string) => `/api/v1${path}`
 const fail = (status: number, code: string, message: string, fields?: Record<string, string>) =>
@@ -136,6 +139,9 @@ const ACTION_NOTE: Record<TransactionAction, string> = {
   confirm_receipt: 'Diterima pembeli, dana dilepas', cancel: 'Dibatalkan', dispute: 'Dispute diajukan',
 }
 
+/** Restricted or suspended accounts can browse but not trade (PRD §11 user governance). */
+const restricted = (userId: string) => ['restricted', 'suspended'].includes(admin.users[userId]?.status ?? 'active')
+
 /** The user's membership state in a market's participant list, if the market maker tracks it. */
 function approvalOf(marketId: string) {
   return ops(marketId).participants.find((x) => x.userId === db.sessionUserId)?.status
@@ -176,7 +182,7 @@ export const personalHandlers = [
         runningTransactions: tx.filter((t) => !['completed', 'cancelled'].includes(t.status)).length,
         earnings30dIdr: done30.filter((t) => t.role === 'supplier').reduce((s, t) => s + t.totalIdr, 0),
         savings30dIdr: Math.round(tx.filter((t) => t.role === 'buyer').reduce((s, t) => s + t.totalIdr, 0) * 0.11),
-        reputation: db.sessionUserId?.startsWith('usr-new-') ? 80 : 94,
+        reputation: reputationScore(reputationTxs(db.sessionUserId!)).score,
       },
       actions,
       topMatches: opps.filter((o) => o.relation === 'none').sort((a, b) => score(b) - score(a)).slice(0, 3),
@@ -369,6 +375,7 @@ export const personalHandlers = [
     return HttpResponse.json(qualification(p, a.id, userId))
   })),
   http.post(api('/auctions/:id/bids'), authed(async ({ p, params, userId, request }) => {
+    if (restricted(userId)) return fail(403, 'account_restricted', 'Akunmu dibatasi tim governance: belum bisa bid atau membuat auction.')
     const a = economy.auctions.find((x) => x.id === params.id)
     if (!a) return fail(404, 'not_found', 'Auction tidak ditemukan')
     if (a.status !== 'live' && a.status !== 'extended') return fail(409, 'auction_closed', 'Auction tidak sedang berjalan')
@@ -404,6 +411,7 @@ export const personalHandlers = [
     return HttpResponse.json(myBid(p, a))
   })),
   http.post(api('/auctions/:id/accept'), authed(({ p, params, userId }) => {
+    if (restricted(userId)) return fail(403, 'account_restricted', 'Akunmu dibatasi tim governance: belum bisa bid atau membuat auction.')
     const a = economy.auctions.find((x) => x.id === params.id)
     if (!a || a.type !== 'dutch' || (a.status !== 'live' && a.status !== 'extended')) return fail(409, 'auction_closed', 'Harga tidak bisa diterima sekarang')
     if (p.qualifications[a.id] !== 'qualified') return fail(403, 'not_qualified', 'Selesaikan kualifikasi dulu')
@@ -421,6 +429,7 @@ export const personalHandlers = [
 
   // Buyer flow: create → evaluate → award (PRD §8.8 buyer)
   http.post(api('/me/auctions'), authed(async ({ p, userId, request }) => {
+    if (restricted(userId)) return fail(403, 'account_restricted', 'Akunmu dibatasi tim governance: belum bisa bid atau membuat auction.')
     const input = (await request.json()) as CreateAuctionInput
     const s = p.listings.find((l) => l.listing.id === input.demandId)
     if (!s || s.listing.kind !== 'demand') return fail(404, 'not_found', 'Demand tidak ditemukan')

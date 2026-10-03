@@ -54,7 +54,7 @@ export function DashboardPage() {
               <StatTile label="Reputasi" icon={BadgeCheck} tone="teal" value={formatNumber(d.stats.reputation)} hint="dari 100" />
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
               <div className="flex min-w-0 flex-col gap-6">
                 <section className="rounded-xl border bg-card p-4 md:p-5">
                   <h2 className="font-medium">Butuh tindakanmu</h2>
