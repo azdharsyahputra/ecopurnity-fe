@@ -8,6 +8,7 @@ import { db } from './db'
 import { economy } from './economy'
 import { newId, notify, personal } from './personal'
 import { createTrade } from './trade'
+import { commitGuard } from './kyc'
 
 // RFQ, quotes, and conversations (PRD F6 direct trade). Fictional suppliers quote and negotiate on timers.
 
@@ -224,6 +225,8 @@ export const rfqHandlers = [
     const me = userParty(userId)
     if ((action === 'counter' || action === 'revise') && !(Number(priceIdr) > 0)) return fail(422, 'validation', 'Isi harga', { priceIdr: 'Isi harga per unit' })
     if (action === 'accept' || action === 'accept_counter') {
+      const blocked = commitGuard(userId, dealPrice(q, action) * q.quantity)
+      if (blocked) return blocked
       accept(r, q, dealPrice(q, action), me.name)
     } else {
       q.status = next

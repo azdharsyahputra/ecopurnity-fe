@@ -6,6 +6,7 @@ import type {
 } from '@/domain/types'
 import type { QualificationStatus } from '@/domain/status'
 import type { TradeActionInput } from '@/domain/trade'
+import type { KycLevel } from '@/domain/kyc'
 
 // Personal workspace data (PRD §8). Every key starts with 'me' so a sign-out or a live event can
 // invalidate the whole workspace at once.
@@ -211,5 +212,26 @@ export function useFinanceAction() {
     mutationFn: (a: { type: 'bank'; bank: Finance['bank'] } | { type: 'withdraw'; amountIdr: number }) =>
       a.type === 'bank' ? api<Finance>('/me/finance/bank', json('PUT', a.bank)) : api<Finance>('/me/finance/withdrawals', json('POST', { amountIdr: a.amountIdr })),
     onSuccess: (f) => qc.setQueryData(['me', 'finance'], f),
+  })
+}
+
+export interface Kyc {
+  level: KycLevel
+  label: string
+  limitIdr: number
+  next?: string
+  verification: Identity['profile']['verification']
+  otpPending: boolean
+}
+
+export const useKyc = () => useQuery({ queryKey: ['me', 'kyc'], queryFn: () => api<Kyc>('/me/kyc') })
+
+export type KycAction = { type: 'phone'; phone: string } | { type: 'otp'; code: string } | { type: 'identity'; nik: string; fullName: string; ktpFile?: string; selfieFile?: string }
+
+export function useKycAction() {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: ({ type, ...body }: KycAction) => api<Kyc>({ phone: '/me/kyc/phone', otp: '/me/kyc/phone/verify', identity: '/me/kyc/identity' }[type], json('POST', body)),
+    onSuccess: () => invalidate(['me', 'kyc'], ['me', 'identity']),
   })
 }

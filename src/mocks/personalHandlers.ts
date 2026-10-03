@@ -16,6 +16,7 @@ import { isMaker, operatedIds, ops, saveMm } from './mm'
 import { orgEvaluateHref } from './org'
 import { admin } from './admin'
 import { reputationTxs } from './profileHandlers'
+import { commitGuard } from './kyc'
 import { reputationScore } from '@/domain/reputation'
 
 const api = (path: string) => `/api/v1${path}`
@@ -390,6 +391,8 @@ export const personalHandlers = [
     if (p.qualifications[a.id] !== 'qualified') return fail(403, 'not_qualified', 'Selesaikan kualifikasi dulu')
     if (economy.owners.get(a.id) === userId) return fail(403, 'owner', 'Pembuat auction tidak bisa ikut bid')
     const { priceIdr } = (await request.json()) as { priceIdr: number }
+    const blocked = commitGuard(userId, priceIdr * a.lot.quantity.value)
+    if (blocked) return blocked
     const error = validateBid({ ...a, currentPriceIdr: a.type === 'sealed' ? undefined : economy.bestPrice.get(a.id) }, priceIdr)
     if (error) return fail(422, 'invalid_bid', error, { price: error })
     const prev = p.bids[a.id]
@@ -425,6 +428,8 @@ export const personalHandlers = [
     if (!a || a.type !== 'dutch' || (a.status !== 'live' && a.status !== 'extended')) return fail(409, 'auction_closed', 'Harga tidak bisa diterima sekarang')
     if (p.qualifications[a.id] !== 'qualified') return fail(403, 'not_qualified', 'Selesaikan kualifikasi dulu')
     const price = a.currentPriceIdr ?? a.openingPriceIdr
+    const blocked = commitGuard(userId, price * a.lot.quantity.value)
+    if (blocked) return blocked
     a.status = 'awarded'
     p.bids[a.id] = { priceIdr: price, status: 'won', submittedAt: now(), updatedAt: now() }
     const tx = createTransaction(userId, {
@@ -444,6 +449,8 @@ export const personalHandlers = [
     if (!s || s.listing.kind !== 'demand') return fail(404, 'not_found', 'Demand tidak ditemukan')
     if (!(input.openingPriceIdr > 0)) return fail(422, 'validation', 'Harga pembuka wajib diisi', { openingPriceIdr: 'Isi harga pembuka per unit' })
     const d = s.listing as DemandListing
+    const blocked = commitGuard(userId, input.openingPriceIdr * d.quantity.value)
+    if (blocked) return blocked
     const id = newId('auc')
     const a: AuctionDetail = {
       id, code: `AUC-${id.slice(-4).toUpperCase()}`, title: `${d.item} ${d.quantity.value.toLocaleString('id-ID')} ${d.quantity.unit}`,

@@ -319,6 +319,12 @@ export const adminHandlers = [
     saveAdmin()
     audit({ actor, action: { approve: 'Setujui verifikasi bisnis', reject: 'Tolak verifikasi bisnis', reupload: 'Minta unggah ulang dokumen' }[action], entity: { type: 'business', id: v.id, label: v.business }, reason: reason?.trim() || undefined, changes: [{ field: 'status', before: 'pending', after: to }] })
     const owner = dbUserId(v.owner)
+    if (owner && v.kind === 'personal') {
+      if (to === 'approved') admin.users[owner] = { ...admin.users[owner], status: admin.users[owner]?.status ?? 'active', verified: true }
+      personal(owner).identity.profile.verification.identity = to === 'approved' ? 'verified' : 'none'
+      savePersonal()
+      saveAdmin()
+    }
     if (owner) notify(owner, { type: 'transaction_update', title: `Verifikasi ${v.business}: ${{ approved: 'disetujui', rejected: 'ditolak', reupload: 'perlu unggah ulang' }[to]}`, body: v.decision.note, href: '/app/settings' })
     return HttpResponse.json(v)
   })),

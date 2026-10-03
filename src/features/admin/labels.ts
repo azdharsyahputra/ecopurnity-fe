@@ -14,7 +14,7 @@ export const VERIFICATION_STATUS: Record<VerificationStatus, [string, Tone]> = {
   reupload: ['Unggah ulang', 'orange'],
 }
 
-export const DOC_KIND: Record<DocKind, string> = { nib: 'NIB', npwp: 'NPWP', akta: 'Akta pendirian' }
+export const DOC_KIND: Record<DocKind, string> = { nib: 'NIB', npwp: 'NPWP', akta: 'Akta pendirian', ktp: 'KTP', selfie: 'Selfie + KTP' }
 
 export const ALERT_TYPE: Record<AlertType, { label: string; network: boolean }> = {
   bid_manipulation: { label: 'Bid manipulation', network: false },
