@@ -1,4 +1,6 @@
 import type { AllocationLine, AuctionType, Offer } from './types'
+import type { AuctionStatus, BidStatus } from './status'
+import type { WithdrawRule } from './org'
 
 // Bid rules + Smart Allocation (PRD §8.8, §9.6). Shared by the bid box and the mock API.
 
@@ -19,6 +21,20 @@ export function validateBid(a: Priced, priceIdr: number): string | null {
   const limit = bidLimit(a)
   if (lowerWins(a.type) && priceIdr > limit) return `Bid harus ≤ Rp ${limit.toLocaleString('id-ID')}`
   if (!lowerWins(a.type) && priceIdr < limit) return `Bid harus ≥ Rp ${limit.toLocaleString('id-ID')}`
+  return null
+}
+
+/**
+ * Why a bid cannot be withdrawn now, or null when it can (MyBid.canWithdraw; the API runs the same table). Lots of a
+ * business auction follow its withdraw rule; every other auction allows it until 30 minutes before the close. A leading
+ * bid never: it is the auction's best price.
+ */
+export function withdrawBlock(a: { status: AuctionStatus; endsAt: string }, bid: BidStatus, rule: WithdrawRule = 'before_last_30', now = Date.now()): string | null {
+  if (a.status !== 'live' && a.status !== 'extended') return 'Auction tidak sedang berjalan'
+  if (bid === 'withdrawn') return 'Bid sudah ditarik'
+  if (rule === 'never') return 'Bid di auction ini mengikat, tidak bisa ditarik'
+  if (rule === 'anytime' && bid === 'leading') return 'Bid terdepan tidak bisa ditarik'
+  if (rule === 'before_last_30' && (bid === 'leading' || new Date(a.endsAt).getTime() - now <= 30 * 60_000)) return 'Bid terdepan atau 30 menit terakhir tidak bisa ditarik'
   return null
 }
 
