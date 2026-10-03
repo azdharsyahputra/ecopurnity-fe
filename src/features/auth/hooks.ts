@@ -77,7 +77,7 @@ export function useGoogleSignIn() {
 export function useVerifyEmail() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (token: string) => api<User>('/auth/verify-email', { method: 'POST', json: { token } }),
+    mutationFn: (code: string) => api<User>('/auth/verify-email', { method: 'POST', json: { code } }),
     onSuccess: (user) => qc.setQueryData(ME, (old: User | null | undefined) => (old?.id === user.id ? user : old)),
   })
 }

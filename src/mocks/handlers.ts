@@ -30,6 +30,11 @@ const sessionUser = () => db.users.find((u) => u.id === db.sessionUserId)
 
 const token = () => Math.random().toString(36).slice(2, 12)
 
+function issueCode(email: string) {
+  const code = String(Math.floor(Math.random() * 1_000_000)).padStart(6, '0')
+  db.verifyCodes.set(email, { code, attempts: 0, sentAt: Date.now(), expiresAt: Date.now() + 10 * 60_000 })
+}
+
 /** `?page=&pageSize=` over an already filtered list (PRD §13 list contract). */
 function paginate<T>(items: T[], url: URL): Page<T> {
   const page = Math.max(1, Number(url.searchParams.get('page') ?? 1))
@@ -100,7 +105,7 @@ export const handlers = [
     }
     db.users.push(user)
     saveUsers()
-    db.verifyTokens.set(normalized, token())
+    issueCode(normalized)
     db.setSession(user.id)
     return HttpResponse.json(toUser(user), { status: 201 })
   }),
@@ -127,14 +132,27 @@ export const handlers = [
     return noContent()
   }),
 
+  // Email verification by 6-digit code: needs the session; 10 minutes, 5 attempts, resend once a minute.
   http.post(api('/auth/verify-email'), async ({ request }) => {
     await delay(400)
-    const { token: t } = (await request.json()) as { token: string }
-    const email = [...db.verifyTokens].find(([, v]) => v === t)?.[0]
-    const user = db.users.find((u) => u.email === email)
-    if (!user) return fail(400, 'invalid_token', 'Link verifikasi tidak valid atau sudah kedaluwarsa')
+    const user = sessionUser()
+    if (!user) return fail(401, 'unauthenticated', 'Belum login')
+    const { code } = (await request.json()) as { code: string }
+    if (!/^\d{6}$/.test(code ?? '')) return fail(422, 'validation', 'Periksa kembali isian', { code: 'Masukkan 6 digit kode' })
+    if (user.emailVerified) return HttpResponse.json(toUser(user))
+    const live = db.verifyCodes.get(user.email)
+    if (!live || live.expiresAt < Date.now()) return fail(422, 'code_expired', 'Kode sudah kedaluwarsa. Minta kode baru.', { code: 'Kode sudah kedaluwarsa. Minta kode baru.' })
+    if (live.code !== code) {
+      live.attempts++
+      if (live.attempts >= 5) {
+        db.verifyCodes.delete(user.email)
+        return fail(429, 'too_many_attempts', 'Terlalu banyak percobaan. Minta kode baru.', { code: 'Terlalu banyak percobaan. Minta kode baru.' })
+      }
+      const msg = `Kode salah. Sisa ${5 - live.attempts} percobaan.`
+      return fail(422, 'invalid_code', msg, { code: msg })
+    }
     user.emailVerified = true
-    db.verifyTokens.delete(user.email)
+    db.verifyCodes.delete(user.email)
     saveUsers()
     return HttpResponse.json(toUser(user))
   }),
@@ -143,7 +161,10 @@ export const handlers = [
     await delay(300)
     const user = sessionUser()
     if (!user) return fail(401, 'unauthenticated', 'Belum login')
-    db.verifyTokens.set(user.email, token())
+    if (user.emailVerified) return noContent()
+    const wait = Math.ceil(((db.verifyCodes.get(user.email)?.sentAt ?? 0) + 60_000 - Date.now()) / 1000)
+    if (wait > 0) return fail(429, 'resend_cooldown', `Tunggu ${wait} detik sebelum minta kode baru.`)
+    issueCode(user.email)
     return noContent()
   }),
 
@@ -169,10 +190,10 @@ export const handlers = [
     return noContent()
   }),
 
-  /** Mock-only: lets the UI show the link a real BE would have emailed. */
+  /** Mock-only: lets the UI show what a real BE would have emailed (verification code, reset link token). */
   http.get(api('/_mock/outbox'), ({ request }) => {
     const email = new URL(request.url).searchParams.get('email')?.trim().toLowerCase() ?? sessionUser()?.email ?? ''
-    return HttpResponse.json({ verifyToken: db.verifyTokens.get(email) ?? null, resetToken: db.resetTokens.get(email) ?? null })
+    return HttpResponse.json({ verifyCode: db.verifyCodes.get(email)?.code ?? null, resetToken: db.resetTokens.get(email) ?? null })
   }),
 
   http.patch(api('/me/onboarding'), async ({ request }) => {
