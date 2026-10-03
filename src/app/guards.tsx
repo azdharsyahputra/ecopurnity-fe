@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link, Navigate, Outlet, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { ShieldX } from 'lucide-react'
 import { useMe } from '@/features/auth/hooks'
@@ -12,14 +13,21 @@ export function RequireAuth() {
   if (me.isPending) return <FullPageLoader />
   if (me.isError) return <ErrorState error={me.error} onRetry={() => me.refetch()} className="m-8" />
   if (!me.data) return <Navigate to={`/login?returnTo=${encodeURIComponent(pathname + search)}`} replace />
+  if (!me.data.onboarded && pathname !== '/onboarding') return <Navigate to="/onboarding" replace />
   return <Outlet />
 }
 
+/**
+ * Bounces users who arrive already signed in. Signing in *on* these pages doesn't trigger it:
+ * the page itself decides where to go next (verify email, onboarding, or returnTo).
+ */
 export function GuestOnly() {
   const me = useMe()
   const [params] = useSearchParams()
-  if (me.isPending) return <FullPageLoader />
-  if (me.data) return <Navigate to={safeReturnTo(params.get('returnTo'))} replace />
+  const [arrival, setArrival] = useState<'unknown' | 'guest' | 'user'>('unknown')
+  if (arrival === 'unknown' && !me.isPending) setArrival(me.data ? 'user' : 'guest')
+  if (arrival === 'unknown') return <FullPageLoader />
+  if (arrival === 'user') return <Navigate to={safeReturnTo(params.get('returnTo'))} replace />
   return <Outlet />
 }
 

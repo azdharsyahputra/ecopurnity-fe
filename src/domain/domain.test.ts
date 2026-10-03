@@ -50,3 +50,13 @@ describe('status', () => {
     expect(statusMeta('auction', 'closed').live).toBe(false)
   })
 })
+
+describe('passwordStrength', () => {
+  it('scores length then variety', async () => {
+    const { passwordStrength } = await import('./password')
+    expect(passwordStrength('Ab1!')).toBe(0)
+    expect(passwordStrength('abcdefgh')).toBe(1)
+    expect(passwordStrength('abcdEFGH')).toBe(2)
+    expect(passwordStrength('abcdEFGH12!')).toBe(4)
+  })
+})

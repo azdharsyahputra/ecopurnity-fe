@@ -22,7 +22,7 @@
   --secondary: #f1f1ef;
   --secondary-foreground: #1d2433;
   --muted: #f4f4f2;
-  --muted-foreground: #6b7280;
+  --muted-foreground: #5f6673;
   --accent: #efefed;
   --accent-foreground: #1d2433;
   --lime: #b8f500;
@@ -35,11 +35,12 @@
   --sidebar-foreground: #37352f;
   --hover: rgb(55 53 47 / 0.06);
 
+  /* Categorical, fixed order; validated with the dataviz palette script (light + dark). */
   --chart-1: #0e9cc0;
-  --chart-2: #3b82c4;
-  --chart-3: #8bc400;
-  --chart-4: #d9822b;
-  --chart-5: #8a63c9;
+  --chart-2: #c46a12;
+  --chart-3: #8a63c9;
+  --chart-4: #5f9a00;
+  --chart-5: #3b6fc4;
 
   --tag-gray-bg: #f1f1ef;    --tag-gray-fg: #5f5e5b;
   --tag-teal-bg: #ddf3ef;    --tag-teal-fg: #00695f;
@@ -83,11 +84,11 @@
   --sidebar-foreground: #d5dbe4;
   --hover: rgb(255 255 255 / 0.055);
 
-  --chart-1: #3cc8e4;
-  --chart-2: #7db6f0;
-  --chart-3: #b8f500;
-  --chart-4: #f0a26a;
-  --chart-5: #b79ae8;
+  --chart-1: #1898b5;
+  --chart-2: #c9762f;
+  --chart-3: #9d7fdc;
+  --chart-4: #679600;
+  --chart-5: #5b95e0;
 
   --tag-gray-bg: #1e2838;              --tag-gray-fg: #a5abb5;
   --tag-teal-bg: rgb(44 196 182 / .14); --tag-teal-fg: #4fd1c5;
@@ -156,6 +157,10 @@
   [role="button"]:not(:disabled) {
     cursor: pointer;
   }
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
 }
 
 @utility num {

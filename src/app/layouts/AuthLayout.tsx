@@ -40,11 +40,11 @@ export function AuthLayout() {
           <Logo />
           <ThemeToggle />
         </div>
-        <div className="flex flex-1 items-center justify-center py-10">
+        <main className="flex flex-1 items-center justify-center py-10">
           <div className="w-full max-w-sm">
             <Outlet />
           </div>
-        </div>
+        </main>
       </div>
       <LivePanel />
     </div>

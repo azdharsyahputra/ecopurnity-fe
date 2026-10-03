@@ -7,7 +7,7 @@ import type { Tone } from '@/domain/status'
 /** Mock-only test password shared by every demo account. */
 export const DEMO_PASSWORD = 'demo1234'
 
-type MockUser = User & { password: string }
+export type MockUser = User & { password: string }
 
 const users: MockUser[] = [
   {
@@ -31,6 +31,22 @@ const users: MockUser[] = [
 ]
 
 const SESSION_KEY = 'ecp-mock-session'
+const USERS_KEY = 'ecp-mock-users'
+
+// Accounts created via register/Google survive reloads; seeded demo accounts always come from code.
+try {
+  users.push(...(JSON.parse(localStorage.getItem(USERS_KEY) ?? '[]') as MockUser[]))
+} catch {
+  // storage blocked or corrupt: start clean
+}
+
+export function saveUsers() {
+  try {
+    localStorage.setItem(USERS_KEY, JSON.stringify(users.filter((u) => u.id.startsWith('usr-new-'))))
+  } catch {
+    // per-tab only
+  }
+}
 
 function readSession() {
   try {
@@ -68,6 +84,10 @@ export const db = {
   } satisfies PublicStats,
   // Newest first, spaced 7 minutes apart.
   activity: Array.from({ length: 12 }, (_, i) => makeActivity(new Date(Date.now() - i * 7 * 60_000))),
+
+  /** One-time tokens a real BE would email: email → token. */
+  verifyTokens: new Map<string, string>(),
+  resetTokens: new Map<string, string>(),
 
   sessionUserId: readSession(),
   setSession(userId: string | null) {
