@@ -1,5 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { api } from '@/lib/api'
+import { api, qs } from '@/lib/api'
 import type { AuditEntry } from '@/domain/types'
 import type {
   AdminAuction, AdminAuctionDetail, AdminMarket, AdminOverview, AdminUser, AdminUserDetail, DisputeCase, DisputeSummary, FraudAlert,
@@ -13,7 +13,7 @@ export const useAdminOverview = () => useQuery({ queryKey: ['admin', 'overview']
 export const useAdminUsers = (q: string, status: string) =>
   useQuery({
     queryKey: ['admin', 'users', q, status],
-    queryFn: () => api<AdminUser[]>(`/admin/users?${new URLSearchParams({ q, status })}`),
+    queryFn: () => api<AdminUser[]>(`/admin/users${qs({ q, status })}`),
     placeholderData: keepPreviousData,
   })
 export const useAdminUser = (id: string) => useQuery({ queryKey: ['admin', 'users', 'detail', id], queryFn: () => api<AdminUserDetail>(`/admin/users/${id}`) })
