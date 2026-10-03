@@ -243,13 +243,10 @@ export function InventoryPage() {
         isEmpty={(d) => !d.items.length && !d.capacity.length}
         empty={<EmptyState icon={Factory} tone="blue" title="Inventory masih kosong" description="Tambah item satu per satu atau import dari spreadsheet." action={<Button onClick={() => open('import')} disabled={!!createDeny}><Download /> Import CSV</Button>} />}
       >
-        {(inv) => (
-          <>
-            <Body inv={inv} />
-            {dialog === 'add' && !createDeny && <AddItemDialog warehouses={inv.warehouses.map((w) => w.name)} onClose={() => open(null)} />}
-          </>
-        )}
+        {(inv) => <Body inv={inv} />}
       </AsyncView>
+      {/* Outside AsyncView: the first item is added from the empty state too. */}
+      {dialog === 'add' && !createDeny && query.data && <AddItemDialog warehouses={query.data.warehouses.map((w) => w.name)} onClose={() => open(null)} />}
       {dialog === 'import' && !createDeny && <ImportDialog onClose={() => open(null)} />}
       {dialog === 'schedule' && !access.deny('inventory', 'manage') && <ScheduleDialog onClose={() => open(null)} />}
     </>
