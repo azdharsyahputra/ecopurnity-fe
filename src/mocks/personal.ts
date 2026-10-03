@@ -1,6 +1,6 @@
 import type {
   AppNotification, AuctionDetail, CategoryId, DemandListing, Identity, Listing, NotificationPrefs, NotificationType, OnboardingInput, PartyRef,
-  SupplyListing, TransactionDetail,
+  ListingAttachment, SupplyListing, TransactionDetail,
 } from '@/domain/types'
 import type { BidStatus, QualificationStatus } from '@/domain/status'
 import { publish } from '@/lib/realtime'
@@ -38,9 +38,16 @@ export interface PersonalData {
 }
 
 const KEY = 'ecp-mock-personal'
+const legacyAttachment = (fileName: string): ListingAttachment => ({
+  id: `att-${fileName}`, fileName, contentType: /\.pdf$/i.test(fileName) ? 'application/pdf' : /\.(jpe?g|png|webp)$/i.test(fileName) ? 'image/jpeg' : 'application/octet-stream',
+})
 const store: Record<string, PersonalData> = (() => {
   try {
-    return JSON.parse(localStorage.getItem(KEY) ?? '{}')
+    const saved = JSON.parse(localStorage.getItem(KEY) ?? '{}') as Record<string, PersonalData>
+    // Saved before uploads: attachments were file names; keep them as legacy entries without a file (like the API).
+    for (const p of Object.values(saved))
+      for (const s of p.listings ?? []) s.listing.attachments = (s.listing.attachments as (string | ListingAttachment)[]).map((a) => (typeof a === 'string' ? legacyAttachment(a) : a))
+    return saved
   } catch {
     return {}
   }
@@ -143,7 +150,7 @@ function seed(userId: string): PersonalData {
 
   const supply = (id: string, item: string, cat: CategoryId, qty: number, unit: string, price: number, status: SupplyListing['status'], marketId?: string): SupplyListing => ({
     kind: 'supply', id, code: `SUP-${id.slice(-3).toUpperCase()}`, item, categoryId: cat, quantity: { value: qty, unit }, priceIdr: price, location: 'Garut, Jawa Barat',
-    spec: 'Sesuai standar mutu market', delivery: 'both', attachments: ['foto-produk.jpg'], status, marketId,
+    spec: 'Sesuai standar mutu market', delivery: 'both', attachments: [legacyAttachment('foto-produk.jpg')], status, marketId,
     availableFrom: ago(1440), expiresAt: ahead(30 * 1440), createdAt: ago(9 * 1440), updatedAt: ago(1440),
   })
   const demand = (id: string, item: string, cat: CategoryId, qty: number, unit: string, budget: number, status: DemandListing['status'], marketId?: string): DemandListing => ({
