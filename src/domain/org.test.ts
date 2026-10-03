@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
-  approvalState, awardLines, awardSummary, can, canApprove, inventoryFromCsv, parseCsv, pipelineCounts, poolTotals, procurementActions,
-  projectedUnitPrice, requiredApprovers, scaleDiscount, statusAfterApproval, toCsv, weightedScores, type ApprovalRule, type LotOffer,
+  approvalState, approverUserIds, awardLines, awardSummary, can, canApprove, canTransact, inventoryFromCsv, parseCsv, pipelineCounts, poolTotals,
+  procurementActions, projectedUnitPrice, requiredApprovers, scaleDiscount, statusAfterApproval, toCsv, txDeniedReason, weightedScores,
+  type ApprovalRule, type LotOffer,
 } from './org'
 
 const RULES: ApprovalRule[] = [
@@ -17,6 +18,26 @@ describe('permissions', () => {
     expect(can({ owner: {} }, 'owner', 'team', 'manage')).toBe(true)
     expect(can({ 'custom-qc': { inventory: ['view'] } }, 'custom-qc', 'inventory', 'view')).toBe(true)
     expect(can({ 'custom-qc': { inventory: ['view'] } }, 'custom-qc', 'inventory', 'manage')).toBe(false)
+  })
+})
+
+describe('transaction permissions', () => {
+  it('gates each step by role', () => {
+    expect(canTransact(undefined, 'finance', 'pay')).toBe(true)
+    expect(canTransact(undefined, 'procurement', 'pay')).toBe(false)
+    expect(canTransact(undefined, 'sales', 'issue_invoice')).toBe(true)
+    expect(canTransact(undefined, 'operations', 'ship')).toBe(true)
+    expect(canTransact(undefined, 'finance', 'upload_proof')).toBe(false)
+    expect(canTransact(undefined, 'procurement', 'confirm_receipt')).toBe(true)
+    expect(canTransact(undefined, 'operations', 'cancel')).toBe(false)
+    expect(canTransact(undefined, 'owner', 'dispute')).toBe(true)
+  })
+
+  it('custom roles fall back to transactions.manage; denials name who may act', () => {
+    expect(canTransact({ 'custom-ap': { transactions: ['view', 'manage'] } }, 'custom-ap', 'pay')).toBe(true)
+    expect(canTransact({ 'custom-qc': { transactions: ['view'] } }, 'custom-qc', 'pay')).toBe(false)
+    expect(txDeniedReason(undefined, 'finance', 'Finance', 'pay')).toBeUndefined()
+    expect(txDeniedReason(undefined, 'sales', 'Sales', 'pay')).toBe('Bayar ke escrow hanya untuk Owner, Finance; peranmu Sales')
   })
 })
 
@@ -36,6 +57,14 @@ describe('approval rules', () => {
     expect(statusAfterApproval([], [])).toBe('approved')
     expect(canApprove('owner', req, [ok('finance')])).toBe(true)
     expect(canApprove('finance', req, [ok('finance')])).toBe(false)
+  })
+
+  it('asks the users holding a still-pending role, not the one who just acted', () => {
+    const members = [{ userId: 'ajar', role: 'owner' }, { userId: 'maya', role: 'finance' }, { userId: 'bima', role: 'procurement' }]
+    expect(approverUserIds(['finance', 'owner'], [], members, 'bima')).toEqual(['ajar', 'maya'])
+    expect(approverUserIds(['finance', 'owner'], [], members, 'ajar')).toEqual(['maya'])
+    expect(approverUserIds(['finance', 'owner'], [ok('finance')], members)).toEqual(['ajar'])
+    expect(approverUserIds(['finance', 'owner'], [{ ...ok('finance'), decision: 'rejected' }], members)).toEqual([])
   })
 
   it('only offers actions the role may take', () => {
@@ -58,8 +87,22 @@ const offer = (id: string, price: number, cap: number, q = 80, supplierId = id):
 })
 
 describe('scoring and award rules', () => {
-  it('scores price relative to the cheapest offer', () => {
-    expect(weightedScores([offer('a', 100, 1), offer('b', 200, 1)], { price: 100, quality: 0, delivery: 0, reliability: 0 })).toEqual([100, 50])
+  it('scores price relative to the best offer: cheapest when buying, highest when selling', () => {
+    const priceOnly = { price: 100, quality: 0, delivery: 0, reliability: 0 }
+    expect(weightedScores([offer('a', 100, 1), offer('b', 200, 1)], priceOnly)).toEqual([100, 50])
+    expect(weightedScores([offer('a', 100, 1), offer('b', 200, 1)], priceOnly, true)).toEqual([50, 100])
+  })
+
+  it('selling auctions flip every rule to the highest price', () => {
+    const lots = [{ quantity: 100, offers: [offer('a', 100, 60, 100), offer('b', 105, 70, 50), offer('c', 90, 100, 100)] }]
+    expect(awardLines(lots, 'lowest', undefined, true)[0][0].offerId).toBe('b')
+    expect(awardLines(lots, 'split', undefined, true)[0].map((l) => [l.offerId, l.quantity])).toEqual([['b', 70], ['a', 30]])
+    expect(awardLines(lots, 'weighted', { price: 20, quality: 80, delivery: 0, reliability: 0 }, true)[0][0].offerId).toBe('a')
+    const two = [
+      { quantity: 10, offers: [offer('a1', 100, 10, 80, 'a'), offer('b1', 120, 10, 80, 'b')] },
+      { quantity: 10, offers: [offer('a2', 110, 10, 80, 'a'), offer('b2', 80, 10, 80, 'b')] },
+    ]
+    expect(awardLines(two, 'bundled', undefined, true).map((l) => l[0]?.offerId)).toEqual(['a1', 'a2'])
   })
 
   it('awards per rule', () => {
