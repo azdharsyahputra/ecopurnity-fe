@@ -5,7 +5,7 @@ import type {
   ListingDetail, ListingInput, MyBid, MyMarket, NotificationPrefs, PersonalOpportunity, Qualification, Transaction, TransactionDetail,
 } from '@/domain/types'
 import type { QualificationStatus } from '@/domain/status'
-import type { TradeActionInput } from '@/domain/trade'
+import type { TradeScope } from '@/features/trade/hooks'
 import type { KycLevel } from '@/domain/kyc'
 import type { Contract, ContractAction, ContractEvery } from '@/domain/contract'
 
@@ -159,16 +159,14 @@ export const useTransactions = (role?: string) =>
 export const useTransaction = (id: string) =>
   useQuery({ queryKey: ['me', 'transactions', 'detail', id], queryFn: () => api<TransactionDetail>(`/me/transactions/${id}`) })
 
-export function useTransactionAction(id: string) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (body: TradeActionInput) => api<TransactionDetail>(`/me/transactions/${id}/actions`, json('POST', body)),
-    onSuccess: (t) => {
-      qc.setQueryData(['me', 'transactions', 'detail', id], t)
-      qc.invalidateQueries({ queryKey: ['me', 'transactions'] })
-      qc.invalidateQueries({ queryKey: ['me', 'dashboard'] })
-    },
-  })
+/** Where personal trade actions go (shared trade UI, F6). */
+export const personalTradeScope: TradeScope = {
+  actionUrl: (id) => `/me/transactions/${id}/actions`,
+  onSuccess: (qc, t) => {
+    qc.setQueryData(['me', 'transactions', 'detail', t.id], t)
+    qc.invalidateQueries({ queryKey: ['me', 'transactions'] })
+    qc.invalidateQueries({ queryKey: ['me', 'dashboard'] })
+  },
 }
 
 // ── Notifications ──
