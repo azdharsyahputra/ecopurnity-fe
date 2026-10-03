@@ -1,3 +1,5 @@
+import type { CapacityItem, CategoryId } from './types'
+
 // Smart Matching score (PRD §8.6): "what you have" against "what an opportunity needs".
 // Shared by the mock API; the BE engine should expose the same parts so the UI can explain a score.
 
@@ -33,6 +35,20 @@ export function scoreMatch(m: MatchInput): { score: number; parts: MatchParts } 
   }
   return { score: parts.category + parts.distance + parts.coverage + parts.confidence, parts }
 }
+
+// ponytail: keyword guess only for items saved before they carried a category.
+const CATEGORY_HINTS: [RegExp, CategoryId][] = [
+  [/truk|angkut|kirim|trip|logistik|pengiriman|gudang/i, 'logistics'],
+  [/kemasan|pouch|karton|box|karung/i, 'packaging'],
+  [/kopi|bean|pupuk|tani|panen/i, 'agri'],
+  [/developer|backend|frontend|software|aplikasi/i, 'it'],
+  [/surya|listrik|energi|jelantah/i, 'energy'],
+  [/makan|bubuk|gula|katering|beras/i, 'food'],
+]
+
+/** The category an identity item is matched in: its own when set, else a keyword guess (undefined = unmatched). */
+export const itemCategory = (i: Pick<CapacityItem, 'name' | 'detail' | 'categoryId'>): CategoryId | undefined =>
+  i.categoryId ?? CATEGORY_HINTS.find(([re]) => re.test(`${i.name} ${i.detail}`))?.[1]
 
 /** Value of the part of the gap this user can fill: min(have, gap) × unit price. */
 export const estimateMatchValue = (haveQty: number, gapQty: number, unitPriceIdr: number) =>

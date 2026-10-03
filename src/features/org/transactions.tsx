@@ -81,13 +81,19 @@ function Actions({ t }: { t: OrgTransactionPage }) {
   const [note, setNote] = useState('')
   const [open, setOpen] = useState(false)
   const actions = allowedActions(t.status, t.role)
-  const deny = access.deny('transactions', 'manage')
   const done = (a: TransactionAction) => () => toast({ title: ACTION_LABEL[a], body: t.code, tone: 'green' })
   if (!actions.length) return <p className="text-sm text-muted-foreground">Tidak ada aksi yang menunggu tim.</p>
-  if (deny) return <div className="flex flex-col gap-2">{actions.map((a) => <GuardedButton key={a} className="h-9" variant="outline" reason={deny}>{ACTION_LABEL[a]}</GuardedButton>)}</div>
   return (
     <div className="flex flex-col gap-2">
       {actions.map((a) => {
+        const deny = access.txDeny(a)
+        if (deny)
+          return (
+            <div key={a} className="flex flex-col gap-1">
+              <GuardedButton className="h-9 w-full" variant="outline" reason={deny}>{ACTION_LABEL[a]}</GuardedButton>
+              <p className="text-xs text-muted-foreground">{deny}</p>
+            </div>
+          )
         if (a === 'upload_proof')
           return (
             <div key={a} className="flex flex-col gap-2 rounded-lg border border-dashed p-3">

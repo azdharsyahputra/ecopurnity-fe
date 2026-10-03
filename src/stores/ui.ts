@@ -3,7 +3,8 @@ import { create } from 'zustand'
 export type ThemePref = 'light' | 'dark' | 'system'
 
 const THEME_KEY = 'ecp-theme'
-const media = window.matchMedia('(prefers-color-scheme: dark)')
+// Undefined while prerendering (src/entry-server.tsx), where there is no window.
+const media = typeof window === 'undefined' ? undefined : window.matchMedia('(prefers-color-scheme: dark)')
 
 function readTheme(): ThemePref {
   try {
@@ -14,7 +15,7 @@ function readTheme(): ThemePref {
 }
 
 function applyTheme(pref: ThemePref) {
-  const dark = pref === 'dark' || (pref === 'system' && media.matches)
+  const dark = pref === 'dark' || (pref === 'system' && !!media?.matches)
   document.documentElement.classList.toggle('dark', dark)
 }
 
@@ -30,7 +31,9 @@ interface UiState {
 }
 
 export const useUi = create<UiState>((set) => ({
-  theme: readTheme(),
+  // Starts as the prerendered value; the saved theme is set below, so hydration (which reads the
+  // store's initial state as its server snapshot) matches the HTML and the toggle updates right after.
+  theme: 'system',
   setTheme: (theme) => {
     try {
       localStorage.setItem(THEME_KEY, theme)
@@ -47,5 +50,8 @@ export const useUi = create<UiState>((set) => ({
   setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
 }))
 
-applyTheme(useUi.getState().theme)
-media.addEventListener('change', () => applyTheme(useUi.getState().theme))
+if (media) {
+  useUi.setState({ theme: readTheme() })
+  applyTheme(useUi.getState().theme)
+  media.addEventListener('change', () => applyTheme(useUi.getState().theme))
+}

@@ -285,6 +285,8 @@ export interface CapacityItem {
   name: string
   /** Level, quantity per period, condition… e.g. "500 unit/bulan". */
   detail: string
+  /** What Smart Matching pairs it with; older items fall back to a keyword guess. */
+  categoryId?: CategoryId
 }
 
 export interface Identity {

@@ -1,7 +1,7 @@
 import type { AuctionDetail, AuditEntry, CategoryId, PublicBid, TransactionDetail } from '@/domain/types'
 import type { TransactionStatus } from '@/domain/status'
 import {
-  DEFAULT_PERMISSIONS, DEFAULT_WEIGHTS, ROLE_LABEL, auctionValue, requiredApprovers, type ApprovalRule, type CollectivePool, type InventoryData,
+  DEFAULT_PERMISSIONS, DEFAULT_WEIGHTS, ROLE_LABEL, auctionValue, awardRuleInfo, higherWins, requiredApprovers, type ApprovalRule, type CollectivePool, type InventoryData,
   type OrgAuction, type OrgLot, type OrgMember, type OrgSettings, type PoolMember, type ProcurementRequest, type Supplier,
   type SupplierRelation,
 } from '@/domain/org'
@@ -52,7 +52,7 @@ type StoredPoolMember = PoolMember & { orgId?: string }
 export type StoredPool = Omit<CollectivePool, 'members'> & { members: StoredPoolMember[] }
 
 interface Store {
-  v: 1
+  v: 2
   orgs: Record<string, OrgData>
   pools: StoredPool[]
 }
@@ -118,7 +118,7 @@ export const supplierById = (id: string) => SUPPLIERS.find((s) => s.id === id)
 
 const RULES = (): ApprovalRule[] => [
   { id: 'rule-50jt', label: 'Procurement > Rp 50 jt', minAmountIdr: 50_000_000, approvers: ['finance', 'owner'], appliesTo: ['procurement', 'auction'] },
-  { id: 'rule-auction-200jt', label: 'Auction > Rp 200 jt', minAmountIdr: 200_000_000, approvers: ['owner'], appliesTo: ['auction'] },
+  { id: 'rule-auction-200jt', label: 'Auction > Rp 200 jt', minAmountIdr: 200_000_000, approvers: ['owner', 'procurement'], appliesTo: ['auction'] },
 ]
 
 const baseSettings = (name: string, industry: string, location: string, categories: CategoryId[]): OrgSettings => ({
@@ -186,7 +186,7 @@ export function lotAuction(orgName: string, oa: OrgAuction, lot: OrgLot, i: numb
       ...(oa.rules.minStepIdr ? [{ label: oa.type === 'forward' ? 'Kenaikan minimum' : 'Penurunan minimum', value: formatIdr(oa.rules.minStepIdr) }] : []),
       { label: 'Perpanjangan otomatis', value: oa.rules.autoExtension ? '+5 menit jika ada bid di 2 menit terakhir' : 'Tidak ada' },
       { label: 'Kualifikasi', value: `Rating ≥ ${oa.qualification.minRating}${oa.qualification.documents.length ? `, dokumen: ${oa.qualification.documents.join(', ')}` : ''}${oa.qualification.regions.length ? `, wilayah: ${oa.qualification.regions.join(', ')}` : ''}` },
-      { label: 'Penetapan pemenang', value: { lowest: 'Harga terendah', weighted: 'Weighted score', split: 'Split award (Smart Allocation)', bundled: 'Bundled ke satu supplier' }[oa.rules.award] },
+      { label: 'Penetapan pemenang', value: awardRuleInfo(oa.rules.award, higherWins(oa.type)).label },
     ],
     bids: [],
   }
@@ -273,8 +273,8 @@ function seedSkn(): OrgData {
     settings: baseSettings('PT Solusi Kemasan Nusantara', 'Manufaktur kemasan karton & fleksibel', 'Bandung, Jawa Barat', ['packaging', 'manufacturing', 'logistics']),
     members: [
       { id: 'mem-ajar', userId: 'usr-ajar', name: 'Ajar Pratama', email: 'ajar@demo.ecopurnity.id', role: 'owner', department: 'Direksi', status: 'active', joinedAt: ago(700 * DAY) },
-      { id: 'mem-laras', name: 'Larasati Putri', email: 'laras@solusikemasan.co.id', role: 'finance', department: 'Keuangan', status: 'active', joinedAt: ago(540 * DAY) },
-      { id: 'mem-bima', name: 'Bima Santoso', email: 'bima@solusikemasan.co.id', role: 'procurement', department: 'Pengadaan', status: 'active', joinedAt: ago(420 * DAY) },
+      { id: 'mem-maya', userId: 'usr-maya', name: 'Maya Sari', email: 'maya@demo.ecopurnity.id', role: 'finance', department: 'Keuangan', status: 'active', joinedAt: ago(540 * DAY) },
+      { id: 'mem-bima', userId: 'usr-bima', name: 'Bima Santoso', email: 'bima@demo.ecopurnity.id', role: 'procurement', department: 'Pengadaan', status: 'active', joinedAt: ago(420 * DAY) },
       { id: 'mem-wulan', name: 'Wulan Sari', email: 'wulan@solusikemasan.co.id', role: 'operations', department: 'Operasional', status: 'active', joinedAt: ago(300 * DAY) },
       { id: 'mem-fajar', name: 'Fajar Nugraha', email: 'fajar@solusikemasan.co.id', role: 'sales', department: 'Penjualan', status: 'active', joinedAt: ago(200 * DAY) },
       { id: 'mem-hendra', name: 'hendra@solusikemasan.co.id', email: 'hendra@solusikemasan.co.id', role: 'operations', department: 'Operasional', status: 'invited', joinedAt: ago(2 * DAY) },
@@ -351,7 +351,7 @@ function seedSkn(): OrgData {
   P({ id: 'prq-1027', code: 'PRQ-1027', need: 'Pallet kayu 120×100', categoryId: 'packaging', quantity: q(400, 'pcs'), budgetIdr: 36_000_000, deadline: ago(3 * DAY), spec: 'Heat treated ISPM 15', deliveryLocation: 'Gudang Rancaekek', visibility: 'public', status: 'po_issued', createdBy: 'Wulan Sari (Operations)', createdMin: 21 * DAY })
   P({ id: 'prq-1029', code: 'PRQ-1029', need: 'Standing pouch 250 g food grade', categoryId: 'packaging', quantity: q(60_000, 'unit'), budgetIdr: 108_000_000, deadline: ahead(18 * DAY), spec: 'Food grade, zipper, 3 warna', deliveryLocation: 'Gudang Rancaekek', visibility: 'aggregate', status: 'in_collective', poolId: 'pool-pouch-bdg', createdBy: 'Bima Santoso (Procurement)', createdMin: 7 * DAY })
   P({ id: 'prq-1020', code: 'PRQ-1020', need: 'Solar industri', categoryId: 'energy', quantity: q(12_000, 'liter'), budgetIdr: 190_000_000, deadline: ago(10 * DAY), spec: 'B35, kirim bertahap', deliveryLocation: 'Gudang Cimahi', visibility: 'private', status: 'rejected', createdBy: 'Wulan Sari (Operations)', createdMin: 30 * DAY })
-  o.procurements.find((r) => r.id === 'prq-1020')!.approvals = [{ role: 'finance', by: 'Larasati Putri (Finance)', at: ago(29 * DAY), decision: 'rejected', note: 'Pakai kontrak solar tahunan yang sudah ada.' }]
+  o.procurements.find((r) => r.id === 'prq-1020')!.approvals = [{ role: 'finance', by: 'Maya Sari (Finance)', at: ago(29 * DAY), decision: 'rejected', note: 'Pakai kontrak solar tahunan yang sudah ada.' }]
 
   // Auctions: one live, one closed awaiting evaluation (2 lots), one awarded, one pending approval.
   const A = (x: Parameters<typeof orgAuction>[1]) => {
@@ -375,6 +375,10 @@ function seedSkn(): OrgData {
   awarded.award = { lines: [[{ offerId: 'oau-1190-l1-Supplier 4', supplier: 'PT Polimer Jaya', quantity: 8_000, priceIdr: 29_400 }]], reason: 'Harga terendah dan supplier terverifikasi dengan skor kualitas 87.', at: ago(10 * DAY), by: 'Ajar Pratama (Owner)' }
   A({ id: 'oau-1204', code: 'OAU-1204', title: 'Jasa angkut Bandung–Jakarta 40 trip', categoryId: 'logistics', type: 'reverse', status: 'pending_approval', createdBy: 'Bima Santoso (Procurement)', createdMin: 5 * 60, durationMinutes: DAY, approvedBy: ['finance'],
     lots: [{ id: 'lot-1', item: 'Trip truk CDD Bandung–Jakarta', quantity: q(40, 'trip'), spec: 'CDD 5 ton, GPS, asuransi muatan', reservePriceIdr: 1_600_000 }] })
+  // Selling surplus stock above Rp 200 jt: the owner signed; Finance (Maya) and Procurement (Bima) still have to.
+  A({ id: 'oau-1206', code: 'OAU-1206', title: 'Jual stok box karton RSC 84.000 pcs', categoryId: 'packaging', type: 'forward', status: 'pending_approval', createdBy: 'Ajar Pratama (Owner)', createdMin: 3 * 60, durationMinutes: DAY, approvedBy: ['owner'],
+    rules: { award: 'split' },
+    lots: [{ id: 'lot-1', item: 'Box karton RSC 3 ply', quantity: q(84_000, 'pcs'), spec: '40×30×20 cm, cetak 1 warna', reservePriceIdr: 2_450 }] }).objective = 'selling'
 
   o.transactions = [
     makeTx({ title: 'Pallet kayu 120×100 · 400 pcs', role: 'buyer', counterparty: party('PT Kertas Prima Jabar'), supplierId: 'sup-kertas-prima', quantity: q(400, 'pcs'), unitPriceIdr: 84_500, status: 'delivered', createdMin: 6 * DAY, poNumber: 'PO-SKN-0417', address: 'Gudang Rancaekek' }),
@@ -387,11 +391,11 @@ function seedSkn(): OrgData {
 
   o.activity = [
     ['mem-bima', 'Ajukan procurement', 'procurement', 'prq-1042', 'PRQ-1042 Tinta flexo', 6 * 60],
-    ['mem-laras', 'Approve procurement (Finance)', 'procurement', 'prq-1041', 'PRQ-1041 Kertas kraft', DAY],
+    ['mem-maya', 'Approve procurement (Finance)', 'procurement', 'prq-1041', 'PRQ-1041 Kertas kraft', DAY],
     ['mem-bima', 'Buka auction', 'auction', 'oau-1201', 'OAU-1201 Box karton', 4 * DAY],
     ['mem-wulan', 'Konfirmasi barang diterima', 'transaction', 'po-0417', 'PO-SKN-0417 Pallet kayu', 2 * DAY],
     ['mem-ajar', 'Award auction', 'auction', 'oau-1190', 'OAU-1190 Plastik PE film', 10 * DAY],
-    ['mem-laras', 'Bayar ke escrow', 'transaction', 'po-0423', 'PO-SKN-0423 Jasa angkut', 2 * DAY - 120],
+    ['mem-maya', 'Bayar ke escrow', 'transaction', 'po-0423', 'PO-SKN-0423 Jasa angkut', 2 * DAY - 120],
   ].map(([m, action, type, id, label, min], i) => ({
     id: `aud-seed-skn-${i}`, actor: actorOf(o, String(m)), action: String(action), entity: { type: type as AuditEntry['entity']['type'], id: String(id), label: String(label) }, at: ago(Number(min)),
   })).sort((a, b) => b.at.localeCompare(a.at))
@@ -496,11 +500,11 @@ function seedPools(): StoredPool[] {
 const store: Store = (() => {
   try {
     const s = JSON.parse(localStorage.getItem(KEY) ?? 'null') as Store | null
-    if (s?.v === 1) return s
+    if (s?.v === 2) return s
   } catch {
     // corrupt: reseed
   }
-  return { v: 1, orgs: {}, pools: [] }
+  return { v: 2, orgs: {}, pools: [] }
 })()
 
 export function saveOrg() {
