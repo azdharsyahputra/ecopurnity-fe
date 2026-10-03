@@ -10,6 +10,11 @@ const AREAS = {
   'adminHandlers.ts': 'Admin governance',
   'profileHandlers.ts': 'Matching, reputation & public profiles',
   'roles.ts': 'Role activation (market maker applications, org invitations, create organisation)',
+  'rfq.ts': 'RFQ, quotes & conversations',
+  'settle.ts': 'Collective settlement of market rounds',
+  'kyc.ts': 'Personal verification (phone OTP, KTP) & limits',
+  'catalog.ts': 'Public listing catalog, price suggestion & direct market orders',
+  'contracts.ts': 'Standing supply contracts',
 }
 
 const rows = []
