@@ -191,9 +191,8 @@ export const mmHandlers = [
     if (stage === 'dismissed' && !reason?.trim()) return fail(422, 'validation', 'Alasan wajib diisi', { reason: 'Jelaskan kenapa opportunity ini di-dismiss' })
     mm.pipeline[o.id] = { stage, reason: stage === 'dismissed' ? reason!.trim() : undefined }
     o.status = stage === 'evaluating' ? 'detected' : stage
-    // ponytail: AuditEntry has no 'opportunity' entity type yet; logged under 'market' with the opportunity id.
     audit({
-      actor: actor(userId), action: `Pipeline: ${PIPELINE_STAGES[from].label} → ${PIPELINE_STAGES[stage].label}`, entity: { type: 'market', id: o.id, label: `${o.code} · ${o.title}` },
+      actor: actor(userId), action: `Pipeline: ${PIPELINE_STAGES[from].label} → ${PIPELINE_STAGES[stage].label}`, entity: { type: 'opportunity', id: o.id, label: `${o.code} · ${o.title}` },
       reason: stage === 'dismissed' ? reason!.trim() : undefined, changes: [{ field: 'Tahap', before: PIPELINE_STAGES[from].label, after: PIPELINE_STAGES[stage].label }],
     })
     emitEvent(userId, { type: 'opportunity_detected', title: `${o.title} dipindah ke ${PIPELINE_STAGES[stage].label}` })
