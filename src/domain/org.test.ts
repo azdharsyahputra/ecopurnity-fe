@@ -31,13 +31,15 @@ describe('transaction permissions', () => {
     expect(canTransact(undefined, 'procurement', 'confirm_receipt')).toBe(true)
     expect(canTransact(undefined, 'operations', 'cancel')).toBe(false)
     expect(canTransact(undefined, 'owner', 'dispute')).toBe(true)
+    expect(canTransact(undefined, 'sales', 'accept_agreement')).toBe(true)
+    expect(canTransact(undefined, 'finance', 'review')).toBe(false)
   })
 
   it('custom roles fall back to transactions.manage; denials name who may act', () => {
     expect(canTransact({ 'custom-ap': { transactions: ['view', 'manage'] } }, 'custom-ap', 'pay')).toBe(true)
     expect(canTransact({ 'custom-qc': { transactions: ['view'] } }, 'custom-qc', 'pay')).toBe(false)
     expect(txDeniedReason(undefined, 'finance', 'Finance', 'pay')).toBeUndefined()
-    expect(txDeniedReason(undefined, 'sales', 'Sales', 'pay')).toBe('Bayar ke escrow hanya untuk Owner, Finance; peranmu Sales')
+    expect(txDeniedReason(undefined, 'sales', 'Sales', 'pay')).toBe('Bayar hanya untuk Owner, Finance; peranmu Sales')
   })
 })
 

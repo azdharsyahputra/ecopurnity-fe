@@ -267,7 +267,7 @@ function SettlementDialog({ marketId, auctionId, onClose }: { marketId: string; 
                 {s.lines.map((l) => (
                   <li key={l.memberId} className="flex flex-wrap items-center gap-2 px-3 py-2">
                     <span className="font-medium">{l.member}</span>
-                    {!l.userId && <Tag tone="gray">peserta luar</Tag>}
+                    {!l.userId && !l.orgId && <Tag tone="gray">peserta luar</Tag>}
                     <span className="ml-auto num text-muted-foreground">{formatNumber(l.quantity)} {s.unit} · {Math.round(l.share * 100)}%</span>
                     <span className="num w-28 text-right font-medium">{formatIdr(l.amountIdr, { compact: true })}</span>
                   </li>
