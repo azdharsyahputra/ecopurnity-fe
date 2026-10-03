@@ -17,6 +17,8 @@ export interface Match {
   score: number
   parts: MatchParts
   state: MatchState
+  /** Opened when the user connects (PRD F6). */
+  conversationId?: string
 }
 
 export type MatchAction = 'connect' | 'save' | 'dismiss' | 'reset'

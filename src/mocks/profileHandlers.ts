@@ -6,8 +6,9 @@ import type { BusinessProfile, Match, MatchAction, MatchState, PublicProfile } f
 import { slugify } from '@/features/reputation/slug'
 import { db } from './db'
 import { economy, toAuction } from './economy'
-import { personal, savePersonal } from './personal'
+import { notify, personal, savePersonal } from './personal'
 import { admin } from './admin'
+import { botReply, createConversation } from './rfq'
 
 // Smart Matching, reputation and public profiles (PRD §8.6, §8.10).
 
@@ -54,7 +55,7 @@ export function reputationTxs(userId: string): ReputationTx[] {
 // ── Smart Matching ───────────────────────────────────────────────
 
 const MATCH_KEY = 'ecp-mock-matches'
-const matchStore: Record<string, Record<string, { state: MatchState; reason?: string }>> = (() => {
+const matchStore: Record<string, Record<string, { state: MatchState; reason?: string; conversationId?: string }>> = (() => {
   try {
     return JSON.parse(localStorage.getItem(MATCH_KEY) ?? '{}')
   } catch {
@@ -92,7 +93,7 @@ function matchesFor(userId: string): Match[] {
       const { score, parts } = scoreMatch({ categoryMatch: true, distanceKm, radiusKm: prefs.deliveryRadiusKm, coverage: sameUnit ? have.listing!.quantity.value / gap : null, confidence: o.confidence })
       const id = `${have.id}--${o.id}`
       return {
-        id, distanceKm, score, parts, state: states[id]?.state ?? 'new',
+        id, distanceKm, score, parts, state: states[id]?.state ?? 'new', conversationId: states[id]?.conversationId,
         have: { source: have.source, id: have.id, label: have.label, detail: have.detail },
         need: { opportunityId: o.id, title: o.title, region: o.region, categoryId: o.categoryId, gap: { value: gap, unit: o.demand.unit }, detail: o.requiredContribution },
         estimatedValueIdr: sameUnit ? estimateMatchValue(have.listing!.quantity.value, gap, have.listing!.priceIdr) : Math.round(o.potentialValueIdr / Math.max(1, o.participants)),
@@ -150,15 +151,31 @@ export const profileHandlers = [
     const { action, reason } = (await request.json()) as { action: MatchAction; reason?: string }
     const next: Record<MatchAction, MatchState> = { connect: 'connected', save: 'saved', dismiss: 'dismissed', reset: 'new' }
     if (!next[action]) return fail(422, 'validation', 'Aksi tidak dikenal')
-    matchStore[userId] = { ...matchStore[userId], [m.id]: { state: next[action], reason: reason?.trim() || undefined } }
-    saveMatches()
-    // Connecting follows the opportunity, so it shows up in Opportunities → Following.
+    let conversationId = matchStore[userId]?.[m.id]?.conversationId
+    // Connecting follows the opportunity and opens a conversation with whoever coordinates it (PRD F6).
     if (action === 'connect') {
       const p = personal(userId)
       if (!p.opportunities[m.need.opportunityId]) p.opportunities[m.need.opportunityId] = { relation: 'following' }
       savePersonal()
+      if (!conversationId) {
+        const opp = economy.opportunities.find((o) => o.id === m.need.opportunityId)
+        const maker = opp?.markets[0]?.maker.name ?? `Tim ${opp?.code ?? 'opportunity'}`
+        const makerUser = db.users.find((u) => u.capabilities.includes('market_maker') && u.orgs.some((o) => o.orgName === maker))
+        const me = db.users.find((u) => u.id === userId)!
+        const c = createConversation(
+          `Match: ${m.need.title}`,
+          [{ name: me.name, kind: 'person', verified: me.emailVerified, userId }, { name: maker, kind: 'business', verified: true, userId: makerUser?.id }],
+          { type: 'match', id: m.id, href: `/opportunities/${m.need.opportunityId}` },
+          { by: { name: me.name, kind: 'person', verified: me.emailVerified, userId }, text: `Halo, saya punya ${m.have.label} (${m.have.detail}) dan tertarik dengan ${m.need.title}. Bisa diskusi kebutuhannya?` },
+        )
+        conversationId = c.id
+        if (makerUser) notify(makerUser.id, { type: 'opportunity_detected', title: `${me.name} ingin terhubung`, body: m.need.title, href: `/app/messages/${c.id}` })
+        else botReply(c)
+      }
     }
-    return HttpResponse.json({ ...m, state: next[action] })
+    matchStore[userId] = { ...matchStore[userId], [m.id]: { state: next[action], reason: reason?.trim() || undefined, conversationId } }
+    saveMatches()
+    return HttpResponse.json({ ...m, state: next[action], conversationId })
   }),
 
   http.get(api('/profiles/u/:username'), async ({ params }) => {

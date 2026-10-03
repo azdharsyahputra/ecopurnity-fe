@@ -65,7 +65,10 @@ function MatchCard({ m, onDismiss }: { m: Match; onDismiss: () => void }) {
 
       <div className="mt-4 flex flex-wrap gap-2">
         {m.state === 'connected' ? (
-          <Button variant="outline" className="h-8" render={<Link to={`/opportunities/${m.need.opportunityId}`} />}>Buka opportunity</Button>
+          <>
+            {m.conversationId && <Button className="h-8" render={<Link to={`/app/messages/${m.conversationId}`} />}>Buka percakapan</Button>}
+            <Button variant="outline" className="h-8" render={<Link to={`/opportunities/${m.need.opportunityId}`} />}>Buka opportunity</Button>
+          </>
         ) : m.state === 'dismissed' ? (
           <Button variant="outline" className="h-8" disabled={act.isPending} onClick={run('reset', 'Match dikembalikan')}><Undo2 /> Kembalikan</Button>
         ) : (

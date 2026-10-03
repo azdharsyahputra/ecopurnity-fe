@@ -46,6 +46,8 @@ const M = {
   operations: named(mm, 'OperationsPage'), pipeline: named(mm, 'PipelinePage'), createMarket: named(mm, 'CreateMarketPage'),
   market: named(mm, 'MarketOpsPage'), analytics: named(mm, 'AnalyticsPage'),
 }
+const rfq = () => import('@/features/rfq/pages')
+const Q = { list: named(rfq, 'RfqListPage'), create: named(rfq, 'RfqNewPage'), detail: named(rfq, 'RfqDetailPage'), messages: named(rfq, 'MessagesPage') }
 const rep = () => import('@/features/reputation/pages')
 const R = {
   matches: named(rep, 'MatchesPage'), reputation: named(rep, 'ReputationPage'),
@@ -140,7 +142,7 @@ export default function App({ location, client = queryClient }: { location?: str
                   <Route path="app">
                     {workspaceRoutes(personal, {
                       '': P.dashboard, identity: P.identity, supply: P.supply, demand: P.demand, opportunities: P.opportunities,
-                      markets: P.markets, auctions: P.auctions, transactions: P.transactions, notifications: P.notifications, settings: P.settings, finance: P.finance,
+                      markets: P.markets, auctions: P.auctions, transactions: P.transactions, notifications: P.notifications, settings: P.settings, finance: P.finance, rfq: Q.list, messages: Q.messages,
                       matches: R.matches, reputation: R.reputation,
                     })}
                     <Route path="supply/new" element={<P.supplyForm />} />
@@ -152,6 +154,9 @@ export default function App({ location, client = queryClient }: { location?: str
                     <Route path="auctions/new" element={<P.createAuction />} />
                     <Route path="auctions/:id/evaluate" element={<P.evaluate />} />
                     <Route path="transactions/:id" element={<P.transaction />} />
+                    <Route path="rfq/new" element={<Q.create />} />
+                    <Route path="rfq/:id" element={<Q.detail />} />
+                    <Route path="messages/:id" element={<Q.messages />} />
                   </Route>
                   <Route path="org/:orgId" element={<RequireOrg />}>
                     {workspaceRoutes(org, {

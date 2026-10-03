@@ -85,7 +85,7 @@ const BOT_REPLIES = [
 ]
 
 /** Fictional participants answer the latest human message once. */
-function botReply(c: Conversation) {
+export function botReply(c: Conversation) {
   const last = c.messages.at(-1)
   const bot = c.participants.find((p) => !p.userId)
   if (!last || !last.userId || !bot) return
