@@ -1,6 +1,6 @@
 import { delay, http, HttpResponse } from 'msw'
 import type { CategoryId, SupplyListing } from '@/domain/types'
-import { estimateMatchValue, scoreMatch } from '@/domain/matching'
+import { estimateMatchValue, itemCategory, scoreMatch } from '@/domain/matching'
 import { reputationReport, reputationScore, type ReputationTx } from '@/domain/reputation'
 import type { BusinessProfile, Match, MatchAction, MatchState, PublicProfile } from '@/features/reputation/types'
 import { slugify } from '@/features/reputation/slug'
@@ -53,17 +53,6 @@ export function reputationTxs(userId: string): ReputationTx[] {
 
 // ── Smart Matching ───────────────────────────────────────────────
 
-// ponytail: keyword guess until identity items carry a category.
-const CATEGORY_HINTS: [RegExp, CategoryId][] = [
-  [/truk|angkut|kirim|trip|logistik|pengiriman|gudang/i, 'logistics'],
-  [/kemasan|pouch|karton|box|karung/i, 'packaging'],
-  [/kopi|bean|pupuk|tani|panen/i, 'agri'],
-  [/developer|backend|frontend|software|aplikasi/i, 'it'],
-  [/surya|listrik|energi|jelantah/i, 'energy'],
-  [/makan|bubuk|gula|katering|beras/i, 'food'],
-]
-const guessCategory = (text: string) => CATEGORY_HINTS.find(([re]) => re.test(text))?.[1]
-
 const MATCH_KEY = 'ecp-mock-matches'
 const matchStore: Record<string, Record<string, { state: MatchState; reason?: string }>> = (() => {
   try {
@@ -88,7 +77,7 @@ function matchesFor(userId: string): Match[] {
       .map((s) => s.listing)
       .filter((l): l is SupplyListing => l.kind === 'supply' && ['available', 'in_market', 'reserved'].includes(l.status))
       .map((l) => ({ source: 'supply' as const, id: l.id, label: l.item, detail: `${l.quantity.value.toLocaleString('id-ID')} ${l.quantity.unit} · Rp ${l.priceIdr.toLocaleString('id-ID')}/${l.quantity.unit}`, categoryId: l.categoryId as CategoryId | undefined, listing: l })),
-    ...p.identity.items.map((i) => ({ source: 'identity' as const, id: i.id, label: i.name, detail: i.detail, categoryId: guessCategory(`${i.name} ${i.detail}`), listing: undefined })),
+    ...p.identity.items.map((i) => ({ source: 'identity' as const, id: i.id, label: i.name, detail: i.detail, categoryId: itemCategory(i), listing: undefined })),
   ]
   const open = economy.opportunities.filter((o) => !['dismissed', 'closed'].includes(o.status) && o.demand.value > o.supply.value)
   const states = matchStore[userId] ?? {}
