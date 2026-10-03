@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
 import { api } from '@/lib/api'
+import { uploadFile } from '@/lib/upload'
 import type { AllocationLine, AuditEntry, Transaction, TransactionDetail } from '@/domain/types'
 import type { TradeAction } from '@/domain/trade'
 import type { TradeScope } from '@/features/trade/hooks'
@@ -58,7 +59,9 @@ export const useOverview = () => {
 // ── Profile & team ──
 export const useSaveProfile = () => useOrgMutation((orgId, p: OrgProfile) => api<OrgProfile>(`${base(orgId)}/profile`, json('PUT', p)))
 export const useUploadDocument = () =>
-  useOrgMutation((orgId, d: { name: string; kind: OrgProfile['documents'][number]['kind'] }) => api<OrgProfile>(`${base(orgId)}/profile/documents`, json('POST', d)))
+  useOrgMutation(async (orgId, d: { file: File; kind: OrgProfile['documents'][number]['kind'] }) =>
+    api<OrgProfile>(`${base(orgId)}/profile/documents`, json('POST', { uploadId: await uploadFile(d.file, 'org_document'), kind: d.kind })),
+  )
 export const useRequestVerification = () => useOrgMutation<void, OrgProfile>((orgId) => api<OrgProfile>(`${base(orgId)}/profile/verification`, json('POST')))
 
 export const useTeam = () => {

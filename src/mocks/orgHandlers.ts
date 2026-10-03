@@ -11,6 +11,7 @@ import {
 } from '@/domain/org'
 import { formatIdr } from '@/domain/format'
 import { db } from './db'
+import { consumeUpload } from './kyc'
 import { economy } from './economy'
 import { allPersonal, notify } from './personal'
 import { SUPPLIERS, allOrgs, lotAuction, makeTx, newId, org, orgAudit, orgUserIds, pools, saveOrg, supplierById, type HistoryRow, type OrgData, type StoredPool } from './org'
@@ -355,8 +356,9 @@ export const orgHandlers = [
   })),
   http.post(api('/profile/documents'), orgAuthed(async (c) => {
     if (!c.allowed('profile', 'manage')) return deny(c, 'profile', 'manage')
-    const { name, kind } = await body<{ name: string; kind: OrgProfile['documents'][number]['kind'] }>(c.request)
-    if (!name) return fail(422, 'validation', 'Pilih file', { file: 'Pilih file dokumen' })
+    const { uploadId, kind } = await body<{ uploadId: string; kind: OrgProfile['documents'][number]['kind'] }>(c.request)
+    const name = consumeUpload(c.userId, uploadId, 'org_document', 'uploadId')
+    if (typeof name !== 'string') return fail(422, 'validation', 'File tidak valid', name)
     const p = c.o.settings.profile
     p.documents = [...p.documents.filter((d) => d.kind === 'other' || d.kind !== kind), { name, kind, uploadedAt: now() }]
     orgAudit(c.o, { actor: c.actor, action: 'Unggah dokumen verifikasi', entity: { type: 'business', id: c.orgId, label: name } })
@@ -602,6 +604,7 @@ export const orgHandlers = [
     const fields: Record<string, string> = {}
     if (!input.title?.trim()) fields.title = 'Judul wajib diisi'
     if (!input.lots?.length) fields.lots = 'Tambah minimal satu lot'
+    if (input.type === 'dutch') fields.type = 'Dutch auction belum tersedia untuk auction bisnis'
     input.lots?.forEach((l, i) => {
       if (!l.item.trim() || !(l.quantity.value > 0) || !(l.reservePriceIdr > 0)) fields[`lot-${i}`] = 'Lengkapi item, kuantitas, dan harga'
     })

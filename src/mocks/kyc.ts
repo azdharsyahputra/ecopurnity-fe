@@ -42,6 +42,11 @@ const session = () => {
 
 // Uploads (same rules as the API): presigned-URL stand-in served by MSW itself.
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+const RULES: Record<string, { types: string[]; mb: number; typeError: string }> = {
+  kyc_ktp: { types: IMAGE_TYPES, mb: 8, typeError: 'Format file tidak didukung. Pakai JPG, PNG, atau WebP.' },
+  kyc_selfie: { types: IMAGE_TYPES, mb: 8, typeError: 'Format file tidak didukung. Pakai JPG, PNG, atau WebP.' },
+  org_document: { types: ['application/pdf', ...IMAGE_TYPES], mb: 10, typeError: 'Format file tidak didukung. Pakai PDF, JPG, PNG, atau WebP.' },
+}
 const uploads: Record<string, { owner: string; purpose: string; fileName: string; type: string; size: number; uploaded: boolean; used: boolean }> = {}
 
 function claim(userId: string, id: string | undefined, purpose: string, field: string): string | Record<string, string> {
@@ -53,6 +58,13 @@ function claim(userId: string, id: string | undefined, purpose: string, field: s
   return u.fileName
 }
 
+/** Claims an upload for one use (other mock areas): the file name, or field errors. */
+export function consumeUpload(userId: string, id: string | undefined, purpose: string, field: string) {
+  const r = claim(userId, id, purpose, field)
+  if (typeof r === 'string') uploads[id!].used = true
+  return r
+}
+
 export const kycHandlers = [
   http.post(api('/uploads'), async ({ request }) => {
     await delay(150)
@@ -60,9 +72,12 @@ export const kycHandlers = [
     if (!userId) return fail(401, 'unauthenticated', 'Belum login')
     const b = (await request.json()) as { purpose: string; fileName: string; contentType: string; sizeBytes: number }
     const fields: Record<string, string> = {}
-    if (!['kyc_ktp', 'kyc_selfie'].includes(b.purpose)) fields.purpose = 'Jenis upload tidak dikenal'
-    if (!IMAGE_TYPES.includes(b.contentType)) fields.contentType = 'Format file tidak didukung. Pakai JPG, PNG, atau WebP.'
-    if (!(b.sizeBytes > 0 && b.sizeBytes <= 8 << 20)) fields.sizeBytes = 'Ukuran file maksimal 8 MB.'
+    const rule = RULES[b.purpose]
+    if (!rule) fields.purpose = 'Jenis upload tidak dikenal'
+    else {
+      if (!rule.types.includes(b.contentType)) fields.contentType = rule.typeError
+      if (!(b.sizeBytes > 0 && b.sizeBytes <= rule.mb << 20)) fields.sizeBytes = `Ukuran file maksimal ${rule.mb} MB.`
+    }
     if (!b.fileName?.trim()) fields.fileName = 'Nama file wajib diisi'
     if (Object.keys(fields).length) return fail(422, 'validation', 'File tidak bisa diunggah', fields)
     const id = crypto.randomUUID()
