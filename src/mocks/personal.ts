@@ -16,6 +16,8 @@ export interface StoredListing {
 
 export interface StoredBid {
   priceIdr: number
+  /** Stated capacity (reverse/sealed), lot unit; undefined = the whole lot. */
+  quantity?: number
   status: BidStatus
   submittedAt: string
   updatedAt: string

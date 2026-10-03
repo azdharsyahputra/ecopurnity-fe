@@ -4,7 +4,8 @@ import type {
   ListingInput, MyBid, MyMarket, NotificationPrefs, Offer, PersonalOpportunity, Qualification, TransactionDetail,
 } from '@/domain/types'
 import { tradeActions } from '@/domain/trade'
-import { lowerWins, rankOf, suggestAllocation, validateBid } from '@/domain/auction'
+import { lowerWins, rankOf, suggestAllocation, validateBid, withdrawBlock } from '@/domain/auction'
+import { can } from '@/domain/org'
 import { formatIdr } from '@/domain/format'
 import { publish } from '@/lib/realtime'
 import { db } from './db'
@@ -15,7 +16,7 @@ import type { PaymentInput } from '@/domain/payment'
 import { allPersonal, completeness, newId, notify, personal, savePersonal, type PersonalData } from './personal'
 import { audit } from './audit'
 import { isMaker, operatedIds, ops, saveMm } from './mm'
-import { orgEvaluateHref } from './org'
+import { lotOwner, notifyOrgLotsClosed, orgEvaluateHref, orgRoleOf } from './org'
 import { admin } from './admin'
 import { reputationTxs } from './profileHandlers'
 import { commitGuard } from './kyc'
@@ -101,13 +102,21 @@ function myBid(p: PersonalData, a: AuctionDetail): MyBid | undefined {
   for (const x of a.bids) if (!x.mine && (!others.has(x.bidder) || (lowerWins(a.type) ? x.priceIdr < others.get(x.bidder)! : x.priceIdr > others.get(x.bidder)!))) others.set(x.bidder, x.priceIdr)
   const best = economy.bestPrice.get(a.id)
   if (best !== undefined && best !== b.priceIdr) others.set('_best', best)
-  const left = new Date(a.endsAt).getTime() - Date.now()
   const live = a.status === 'live' || a.status === 'extended'
   return {
     auction: toAuction(a), priceIdr: b.priceIdr, status: b.status, submittedAt: b.submittedAt, updatedAt: b.updatedAt,
     rank: a.type === 'sealed' && live ? undefined : b.status === 'leading' || b.status === 'won' ? 1 : rankOf(a.type, b.priceIdr, [...new Set(others.values())]),
-    canWithdraw: live && b.status !== 'leading' && left > 30 * 60_000 && b.status !== 'withdrawn',
+    canWithdraw: withdrawBlock(a, b.status, lotOwner(a.id)?.oa.rules.withdraw) === null,
+    ...(lowerWins(a.type) ? { capacity: { value: b.quantity ?? a.lot.quantity.value, unit: a.lot.quantity.unit } } : {}),
   }
+}
+
+/** Org lots: members whose role can view auctions act as the owner (evaluate the business auction); personal: the buyer. */
+function ownerView(a: AuctionDetail, userId: string) {
+  const lot = lotOwner(a.id)
+  if (!lot) return economy.owners.get(a.id) === userId
+  const role = orgRoleOf(lot.orgId, userId)
+  return !!role && can(lot.o.settings.permissions, role, 'auctions', 'view')
 }
 
 function qualification(p: PersonalData, auctionId: string, userId: string): Qualification {
@@ -366,7 +375,7 @@ export const personalHandlers = [
   http.get(api('/auctions/:id/me'), authed(({ p, params, userId }) => {
     const a = economy.auctions.find((x) => x.id === params.id)
     if (!a) return fail(404, 'not_found', 'Auction tidak ditemukan')
-    const owner = economy.owners.get(a.id) === userId
+    const owner = ownerView(a, userId)
     return HttpResponse.json({
       qualification: qualification(p, a.id, userId), bid: myBid(p, a) ?? null, owner,
       evaluateHref: owner ? orgEvaluateHref(a.id) ?? `/app/auctions/${a.id}/evaluate` : undefined,
@@ -391,14 +400,20 @@ export const personalHandlers = [
     if (!a) return fail(404, 'not_found', 'Auction tidak ditemukan')
     if (a.status !== 'live' && a.status !== 'extended') return fail(409, 'auction_closed', 'Auction tidak sedang berjalan')
     if (p.qualifications[a.id] !== 'qualified') return fail(403, 'not_qualified', 'Selesaikan kualifikasi dulu')
-    if (economy.owners.get(a.id) === userId) return fail(403, 'owner', 'Pembuat auction tidak bisa ikut bid')
-    const { priceIdr } = (await request.json()) as { priceIdr: number }
+    const lot = lotOwner(a.id)
+    if (lot ? orgRoleOf(lot.orgId, userId) : economy.owners.get(a.id) === userId) return fail(403, 'owner', 'Pembuat auction tidak bisa ikut bid')
+    const { priceIdr, quantity } = (await request.json()) as { priceIdr: number; quantity?: number }
+    const capacity = lowerWins(a.type) ? quantity : undefined
+    if (capacity !== undefined && !(capacity > 0 && capacity <= a.lot.quantity.value)) {
+      const msg = `Kapasitas harus lebih dari 0 dan maksimal ${a.lot.quantity.value.toLocaleString('id-ID')} ${a.lot.quantity.unit}`
+      return fail(422, 'validation', msg, { quantity: msg })
+    }
     const blocked = commitGuard(userId, priceIdr * a.lot.quantity.value)
     if (blocked) return blocked
     const error = validateBid({ ...a, currentPriceIdr: a.type === 'sealed' ? undefined : economy.bestPrice.get(a.id) }, priceIdr)
     if (error) return fail(422, 'invalid_bid', error, { price: error })
     const prev = p.bids[a.id]
-    p.bids[a.id] = { priceIdr, status: a.type === 'sealed' ? 'submitted' : 'leading', submittedAt: prev?.submittedAt ?? now(), updatedAt: now() }
+    p.bids[a.id] = { priceIdr, quantity: capacity, status: a.type === 'sealed' ? 'submitted' : 'leading', submittedAt: prev?.submittedAt ?? now(), updatedAt: now() }
     if (a.type !== 'sealed') {
       economy.bestPrice.set(a.id, priceIdr)
       if (a.visibility === 'full') a.currentPriceIdr = priceIdr
@@ -419,7 +434,8 @@ export const personalHandlers = [
     const a = economy.auctions.find((x) => x.id === params.id)
     const mine = a && myBid(p, a)
     if (!a || !mine) return fail(404, 'not_found', 'Belum ada bid')
-    if (!mine.canWithdraw) return fail(409, 'cannot_withdraw', 'Bid terdepan atau 30 menit terakhir tidak bisa ditarik')
+    const blocked = withdrawBlock(a, mine.status, lotOwner(a.id)?.oa.rules.withdraw)
+    if (blocked) return fail(409, 'cannot_withdraw', blocked)
     p.bids[a.id] = { ...p.bids[a.id], status: 'withdrawn', updatedAt: now() }
     savePersonal()
     return HttpResponse.json(myBid(p, a))
@@ -483,16 +499,17 @@ export const personalHandlers = [
   })),
   http.get(api('/auctions/:id/evaluation'), authed(({ p, params, userId }) => {
     const a = economy.auctions.find((x) => x.id === params.id)
-    if (!a || economy.owners.get(a.id) !== userId) return fail(404, 'not_found', 'Auction tidak ditemukan')
-    // One offer per bidder: their best price; capacity and reputation are mock supplier facts.
+    if (!a || economy.owners.get(a.id) !== userId || lotOwner(a.id)) return fail(404, 'not_found', 'Auction tidak ditemukan')
+    // One offer per bidder: their best price; capacity as stated by platform bidders, else (bots) and reputation are mock supplier facts.
     const best = new Map<string, Offer>()
     for (const b of a.bids) {
       const prev = best.get(b.bidder)
       if (!prev || b.priceIdr < prev.priceIdr) {
         const h = hash(b.bidder)
+        const bidder = economy.bidOwners.get(b.id)
         best.set(b.bidder, {
           id: `${a.id}-${b.bidder}`, priceIdr: b.priceIdr, submittedAt: b.at,
-          capacity: { value: Math.round(a.lot.quantity.value * (0.3 + (h % 50) / 100)), unit: a.lot.quantity.unit },
+          capacity: { value: bidder ? personal(bidder).bids[a.id]?.quantity ?? a.lot.quantity.value : Math.round(a.lot.quantity.value * (0.3 + (h % 50) / 100)), unit: a.lot.quantity.unit },
           supplier: { name: b.bidder.replace('Supplier', 'Supplier #'), kind: 'business', verified: h % 3 !== 0, reputation: 78 + (h % 21) },
         })
       }
@@ -517,7 +534,7 @@ export const personalHandlers = [
   })),
   http.post(api('/auctions/:id/award'), authed(async ({ p, params, userId, request }) => {
     const a = economy.auctions.find((x) => x.id === params.id)
-    if (!a || economy.owners.get(a.id) !== userId) return fail(404, 'not_found', 'Auction tidak ditemukan')
+    if (!a || economy.owners.get(a.id) !== userId || lotOwner(a.id)) return fail(404, 'not_found', 'Auction tidak ditemukan')
     if (a.status !== 'closed') return fail(409, 'not_closed', 'Award hanya setelah auction ditutup')
     const { lines } = (await request.json()) as { lines: AllocationLine[] }
     if (!lines?.length) return fail(422, 'validation', 'Pilih minimal satu supplier')
@@ -658,11 +675,13 @@ export function onCompetitorBid(auctionId: string, priceIdr: number) {
 export function onAuctionClosed(auctionId: string) {
   const a = economy.auctions.find((x) => x.id === auctionId)
   if (!a) return
+  // Org lots: the team is told once, when the business auction's last lot closes; bids settle at the org's award.
+  if (notifyOrgLotsClosed(a.id)) return
   const ownerId = economy.owners.get(a.id)
   if (ownerId) {
-    notify(ownerId, { type: 'auction_ending', title: `${a.title} sudah ditutup`, body: `${a.bidCount} bid masuk. Bandingkan penawaran dan tetapkan pemenang.`, href: orgEvaluateHref(a.id) ?? `/app/auctions/${a.id}/evaluate` })
+    notify(ownerId, { type: 'auction_ending', title: `${a.title} sudah ditutup`, body: `${a.bidCount} bid masuk. Bandingkan penawaran dan tetapkan pemenang.`, href: `/app/auctions/${a.id}/evaluate` })
+    return // participants' bids on a buyer's auction are settled when the buyer awards
   }
-  if (ownerId) return // participants' bids on a buyer's auction are settled when the buyer awards
   // Rounds of a market run by a market maker account are settled per member (PRD F6, mocks/settle.ts).
   const collective = db.users.some((u) => isMaker(u.id) && operatedIds(u.id).includes(a.marketId))
   for (const [userId, p] of allPersonal()) {

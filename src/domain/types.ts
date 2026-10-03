@@ -410,6 +410,8 @@ export interface MyBid {
   submittedAt: string
   updatedAt: string
   canWithdraw: boolean
+  /** Reverse/sealed: the capacity stated with this bid (the whole lot when none). Own view only. */
+  capacity?: Quantity
 }
 
 export interface Offer {
