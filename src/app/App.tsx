@@ -42,6 +42,11 @@ const P = {
   demand: named(me, 'DemandPage'), supplyForm: named(me, 'SupplyFormPage'), demandForm: named(me, 'DemandFormPage'),
   supplyDetail: named(me, 'SupplyDetailPage'), demandDetail: named(me, 'DemandDetailPage'),
 }
+const mm = () => import('@/features/market-maker/pages')
+const M = {
+  operations: named(mm, 'OperationsPage'), pipeline: named(mm, 'PipelinePage'), createMarket: named(mm, 'CreateMarketPage'),
+  market: named(mm, 'MarketOpsPage'), analytics: named(mm, 'AnalyticsPage'),
+}
 
 const [personal, org, marketOps, governance] = ROUTE_WORKSPACES
 
@@ -130,8 +135,8 @@ export default function App() {
                   </Route>
                   <Route path="org/:orgId" element={<RequireOrg />}>{workspaceRoutes(org)}</Route>
                   <Route path="mm" element={<RequireCapability cap="market_maker" />}>
-                    {workspaceRoutes(marketOps)}
-                    <Route path="markets/:id" element={<Placeholder title="Operasi market" phase="F4" tone="purple" />} />
+                    {workspaceRoutes(marketOps, { '': M.operations, opportunities: M.pipeline, 'markets/new': M.createMarket, analytics: M.analytics })}
+                    <Route path="markets/:id" element={<M.market />} />
                   </Route>
                   <Route path="admin" element={<RequireCapability cap="admin" />}>{workspaceRoutes(governance)}</Route>
                 </Route>
