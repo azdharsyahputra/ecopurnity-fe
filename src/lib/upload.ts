@@ -3,7 +3,7 @@ import { api, ApiError } from './api'
 // Files go straight from the browser to object storage (Cloudflare R2 in production) through a presigned URL from
 // POST /uploads; the endpoint that uses the file gets the upload id and verifies it (contract: api/openapi.yaml).
 
-export type UploadPurpose = 'kyc_ktp' | 'kyc_selfie'
+export type UploadPurpose = 'kyc_ktp' | 'kyc_selfie' | 'org_document'
 
 interface UploadTicket {
   uploadId: string
