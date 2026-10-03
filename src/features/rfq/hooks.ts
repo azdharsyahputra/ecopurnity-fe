@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { useChannel } from '@/lib/realtime'
 import type { Conversation, Quote, Rfq, TradeParty } from '@/domain/types'
 import type { QuoteAction } from '@/domain/rfq'
 
@@ -47,19 +48,38 @@ export function useRfqAction(id: string) {
   })
 }
 
-export const useConversations = () =>
-  useQuery({ queryKey: ['me', 'conversations'], queryFn: () => api<Conversation[]>('/me/conversations'), refetchInterval: 10_000 })
+const MOCKS = import.meta.env.VITE_USE_MOCKS !== 'false'
+type Message = Conversation['messages'][number]
 
-export const useConversation = (id: string) =>
-  useQuery({ queryKey: ['me', 'conversations', id], queryFn: () => api<Conversation>(`/me/conversations/${id}`), refetchInterval: 4_000, enabled: !!id })
+// Against the API, threads update live from `conversation:{id}`; the mock has no chat feed, so it polls.
+export const useConversations = () =>
+  useQuery({ queryKey: ['me', 'conversations'], queryFn: () => api<Conversation[]>('/me/conversations'), refetchInterval: MOCKS ? 10_000 : 30_000 })
+
+export function useConversation(id: string) {
+  const qc = useQueryClient()
+  useChannel<Message>(id ? `conversation:${id}` : undefined, ({ type, payload: m }) => {
+    if (type !== 'message.created') return
+    qc.setQueryData<Conversation>(['me', 'conversations', id], (c) =>
+      c && !c.messages.some((x) => x.id === m.id) ? { ...c, messages: [...c.messages, m], updatedAt: m.at } : c,
+    )
+    qc.invalidateQueries({ queryKey: ['me', 'conversations'], exact: true })
+  })
+  return useQuery({
+    queryKey: ['me', 'conversations', id],
+    queryFn: () => api<Conversation>(`/me/conversations/${id}`),
+    refetchInterval: MOCKS ? 4_000 : false,
+    enabled: !!id,
+  })
+}
 
 export function useSendMessage(id: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (text: string) => api<Conversation>(`/me/conversations/${id}/messages`, json('POST', { text })),
+    // clientMsgId makes a retried send idempotent on the server.
+    mutationFn: (text: string) => api<Conversation>(`/me/conversations/${id}/messages`, json('POST', { text, clientMsgId: crypto.randomUUID() })),
     onSuccess: (c) => {
       qc.setQueryData(['me', 'conversations', id], c)
-      qc.invalidateQueries({ queryKey: ['me', 'conversations'] })
+      qc.invalidateQueries({ queryKey: ['me', 'conversations'], exact: true })
     },
   })
 }
