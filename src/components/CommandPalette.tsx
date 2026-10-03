@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CornerDownLeft, Globe, Moon, Search, Sun, type LucideIcon } from 'lucide-react'
+import { useSearch } from '@/features/economy/hooks'
+import { SEARCH_META } from '@/features/search/searchMeta'
+import { SEARCH_TYPES } from '@/domain/catalog'
 import { Dialog, DialogContent, DialogTitle } from './ui/dialog'
 import { IconChip } from './IconChip'
 import { useUi } from '@/stores/ui'
@@ -17,7 +20,7 @@ interface Command {
   run: () => void
 }
 
-// ponytail: jumps to pages only. Entity search (products, markets, auctions…) plugs in here in F1 (PRD §6.6).
+/** ⌘K: entity search (PRD §6.6) on top, then page jumps and actions. */
 export function CommandPalette() {
   const { paletteOpen: open, setPaletteOpen: setOpen, setTheme } = useUi()
   const { data: me } = useMe()
@@ -53,7 +56,17 @@ export function CommandPalette() {
   }, [me, navigate, setTheme])
 
   const q = query.trim().toLowerCase()
-  const results = q ? commands.filter((c) => `${c.label} ${c.group}`.toLowerCase().includes(q)) : commands
+  const hits = useSearch(query, { limit: 8 })
+  const entityResults: Command[] =
+    q.length >= 2
+      ? [
+          ...(hits.data ?? []).map((h) => ({
+            group: SEARCH_TYPES[h.type], label: h.title, icon: SEARCH_META[h.type][0], tone: SEARCH_META[h.type][1], run: () => navigate(h.href),
+          })),
+          { group: 'Pencarian', label: `Lihat semua hasil “${query.trim()}”`, icon: Search, tone: 'gray', run: () => navigate(`/search?q=${encodeURIComponent(query.trim())}`) },
+        ]
+      : []
+  const results = [...entityResults, ...(q ? commands.filter((c) => `${c.label} ${c.group}`.toLowerCase().includes(q)) : commands)]
 
   function onOpenChange(next: boolean) {
     setOpen(next)
@@ -81,7 +94,7 @@ export function CommandPalette() {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent showCloseButton={false} className="top-[15vh] translate-y-0 gap-0 overflow-hidden p-0 sm:max-w-lg">
-        <DialogTitle className="sr-only">Cari halaman</DialogTitle>
+        <DialogTitle className="sr-only">Pencarian</DialogTitle>
         <div className="flex items-center gap-2 border-b px-3">
           <Search className="size-4 text-muted-foreground" />
           <input
@@ -92,7 +105,7 @@ export function CommandPalette() {
               setActive(0)
             }}
             onKeyDown={onKeyDown}
-            placeholder="Cari halaman atau aksi…"
+            placeholder="Cari market, opportunity, auction, halaman…"
             className="h-12 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             role="combobox"
             aria-expanded
@@ -104,7 +117,7 @@ export function CommandPalette() {
           {results.length === 0 && <li className="px-3 py-8 text-center text-sm text-muted-foreground">Tidak ada hasil</li>}
           {results.map((c, i) => (
             <li
-              key={`${c.group}-${c.label}`}
+              key={`${i}-${c.group}-${c.label}`}
               id={`palette-${i}`}
               role="option"
               aria-selected={i === active}

@@ -1,70 +1,60 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { useLogin } from './hooks'
+import { useLogin, useSetMe } from './hooks'
 import { safeReturnTo } from '@/lib/utils'
+import { AuthHeading, Field, FormError, GoogleButton, MOCKS, OrDivider } from './ui'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Tag } from '@/components/Tag'
 import { DEMO_ACCOUNTS } from '@/mocks/db'
 
-const MOCKS = import.meta.env.VITE_USE_MOCKS !== 'false'
-
-// ponytail: email/password only for F0. Google OAuth, register, verify and reset arrive in F1 (PRD §7).
 export function LoginPage() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const login = useLogin()
+  const setMe = useSetMe()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
   function submit(e: FormEvent) {
     e.preventDefault()
-    login.mutate({ email, password }, { onSuccess: () => navigate(safeReturnTo(params.get('returnTo')), { replace: true }) })
+    login.mutate(
+      { email, password },
+      {
+        onSuccess: (user) => {
+          setMe(user)
+          navigate(user.onboarded ? safeReturnTo(params.get('returnTo')) : '/onboarding', { replace: true })
+        },
+      },
+    )
   }
 
   return (
-    <div>
-      <h1 className="text-2xl font-semibold tracking-tight">Masuk</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
+    <div className="flex flex-col gap-6">
+      <AuthHeading title="Masuk">
         Belum punya akun?{' '}
-        <Link to={`/register?${params}`} className="font-medium text-primary hover:underline">
-          Daftar gratis
-        </Link>
-      </p>
-
-      <form onSubmit={submit} className="mt-8 flex flex-col gap-4">
-        <label className="flex flex-col gap-1.5 text-sm font-medium">
-          Email
-          <Input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="h-10" />
-        </label>
-        <label className="flex flex-col gap-1.5 text-sm font-medium">
-          <span className="flex justify-between">
-            Password
-            <Link to="/forgot-password" className="font-normal text-muted-foreground hover:text-foreground">
-              Lupa password?
-            </Link>
-          </span>
-          <Input
-            type="password"
-            autoComplete="current-password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="h-10"
-          />
-        </label>
-        {login.isError && (
-          <p role="alert" className="rounded-lg px-3 py-2 text-sm" style={{ background: 'var(--tag-red-bg)', color: 'var(--tag-red-fg)' }}>
-            {login.error.message}
-          </p>
-        )}
-        <Button type="submit" size="lg" className="mt-2 h-10" disabled={login.isPending}>
+        <Link to={`/register?${params}`} className="font-medium text-primary hover:underline">Daftar gratis</Link>
+      </AuthHeading>
+      <GoogleButton />
+      <OrDivider />
+      <form onSubmit={submit} className="flex flex-col gap-4">
+        <Field label="Email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+        <Field
+          label="Password"
+          type="password"
+          autoComplete="current-password"
+          required
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          aside={<Link to="/forgot-password" className="font-normal text-muted-foreground hover:text-foreground">Lupa password?</Link>}
+        />
+        <FormError error={login.error} />
+        <Button type="submit" className="mt-1 h-10" disabled={login.isPending}>
           {login.isPending ? 'Memproses…' : 'Masuk'}
         </Button>
       </form>
 
       {MOCKS && (
-        <div className="mt-10 rounded-xl border border-dashed p-4">
+        <div className="rounded-xl border border-dashed p-4">
           <p className="text-xs font-medium text-muted-foreground">Akun demo (mock) · klik untuk mengisi</p>
           <ul className="mt-2 flex flex-col">
             {DEMO_ACCOUNTS.map((a) => (

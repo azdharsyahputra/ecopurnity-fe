@@ -46,7 +46,7 @@ export function StatTile({
         <Skeleton className="mt-3 h-8 w-24" />
       ) : (
         <div className="mt-2 flex items-baseline gap-2">
-          <span key={flash} className={cn('num -mx-1 rounded px-1 text-2xl font-semibold tracking-tight', flash > 0 && 'animate-live-flash')}>
+          <span key={flash} className={cn('num -mx-1 rounded px-1 text-xl font-semibold tracking-tight whitespace-nowrap sm:text-2xl', flash > 0 && 'animate-live-flash')}>
             {value}
           </span>
           {delta !== undefined && (

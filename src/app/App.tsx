@@ -7,6 +7,7 @@ import { CommandPalette } from '@/components/CommandPalette'
 import { FullPageLoader } from '@/components/States'
 import { AuthGateDialog } from '@/features/auth/AuthGate'
 import { LoginPage } from '@/features/auth/LoginPage'
+import { ForgotPasswordPage, GoogleCallbackPage, RegisterPage, ResetPasswordPage, VerifyEmailPage } from '@/features/auth/AuthPages'
 import { LandingPage } from '@/features/public/LandingPage'
 import { PublicLayout } from './layouts/PublicLayout'
 import { AuthLayout } from './layouts/AuthLayout'
@@ -17,6 +18,18 @@ import { NotFound, Placeholder } from './Placeholder'
 
 const UiShowcase = lazy(() => import('@/features/showcase/UiShowcase').then((m) => ({ default: m.UiShowcase })))
 const LegacyRoutes = lazy(() => import('@/legacy/LegacyRoutes'))
+// Public economy pages pull in recharts; keep them out of the landing bundle.
+const named = <K extends string>(load: () => Promise<Record<K, React.ComponentType>>, key: K) => lazy(() => load().then((m) => ({ default: m[key] })))
+const economy = () => import('@/features/economy/pages')
+const ExplorerPage = named(economy, 'ExplorerPage')
+const OpportunitiesPage = named(economy, 'OpportunitiesPage')
+const OpportunityDetailPage = named(economy, 'OpportunityDetailPage')
+const MarketsPage = named(economy, 'MarketsPage')
+const MarketDetailPage = named(economy, 'MarketDetailPage')
+const AuctionsPage = named(economy, 'AuctionsPage')
+const AuctionRoomPage = named(economy, 'AuctionRoomPage')
+const SearchPage = named(() => import('@/features/search/SearchPage'), 'SearchPage')
+const OnboardingPage = named(() => import('@/features/auth/OnboardingPage'), 'OnboardingPage')
 
 const [personal, org, marketOps, governance] = ROUTE_WORKSPACES
 
@@ -28,23 +41,10 @@ function workspaceRoutes(ws: Workspace) {
   })
 }
 
-const PUBLIC_PAGES: [string, string][] = [
-  ['explore', 'Economic Explorer'],
-  ['opportunities', 'Opportunities'],
-  ['opportunities/:id', 'Opportunity'],
-  ['markets', 'Markets'],
-  ['markets/:id', 'Market'],
-  ['auctions', 'Auctions'],
-  ['auctions/:id', 'Auction room'],
-  ['search', 'Pencarian'],
+// ponytail: public profiles are P1 in the PRD route map; placeholders until the profile feature lands.
+const PROFILE_PAGES: [string, string][] = [
   ['b/:slug', 'Profil bisnis'],
   ['u/:username', 'Profil participant'],
-]
-
-const AUTH_PAGES: [string, string][] = [
-  ['register', 'Daftar'],
-  ['forgot-password', 'Lupa password'],
-  ['reset-password', 'Reset password'],
 ]
 
 /** Router-aware singletons. */
@@ -69,8 +69,16 @@ export default function App() {
             <Route element={<Shell />}>
               <Route element={<PublicLayout />}>
                 <Route index element={<LandingPage />} />
-                {PUBLIC_PAGES.map(([path, title]) => (
-                  <Route key={path} path={path} element={<div className="px-4 py-10"><Placeholder title={title} phase="F1" /></div>} />
+                <Route path="explore" element={<ExplorerPage />} />
+                <Route path="opportunities" element={<OpportunitiesPage />} />
+                <Route path="opportunities/:id" element={<OpportunityDetailPage />} />
+                <Route path="markets" element={<MarketsPage />} />
+                <Route path="markets/:id" element={<MarketDetailPage />} />
+                <Route path="auctions" element={<AuctionsPage />} />
+                <Route path="auctions/:id" element={<AuctionRoomPage />} />
+                <Route path="search" element={<SearchPage />} />
+                {PROFILE_PAGES.map(([path, title]) => (
+                  <Route key={path} path={path} element={<div className="px-4 py-10"><Placeholder title={title} phase="F2" /></div>} />
                 ))}
                 <Route path="ui" element={<UiShowcase />} />
               </Route>
@@ -78,15 +86,16 @@ export default function App() {
               <Route element={<AuthLayout />}>
                 <Route element={<GuestOnly />}>
                   <Route path="login" element={<LoginPage />} />
-                  {AUTH_PAGES.map(([path, title]) => (
-                    <Route key={path} path={path} element={<Placeholder title={title} phase="F1" />} />
-                  ))}
+                  <Route path="register" element={<RegisterPage />} />
+                  <Route path="forgot-password" element={<ForgotPasswordPage />} />
+                  <Route path="reset-password" element={<ResetPasswordPage />} />
                 </Route>
-                <Route path="verify-email" element={<Placeholder title="Verifikasi email" phase="F1" />} />
+                <Route path="verify-email" element={<VerifyEmailPage />} />
+                <Route path="auth/google/callback" element={<GoogleCallbackPage />} />
               </Route>
 
               <Route element={<RequireAuth />}>
-                <Route path="onboarding" element={<div className="p-10"><Placeholder title="Onboarding" phase="F1" /></div>} />
+                <Route path="onboarding" element={<OnboardingPage />} />
                 <Route element={<AppLayout />}>
                   <Route path="app">{workspaceRoutes(personal)}</Route>
                   <Route path="org/:orgId" element={<RequireOrg />}>{workspaceRoutes(org)}</Route>
