@@ -220,7 +220,7 @@ export function applyOnboarding(userId: string, input: OnboardingInput) {
   savePersonal()
 }
 
-/** Stores an in-app notification and pushes it on `user:{id}:notifications` (PRD §12.2). */
+/** Stores an in-app notification and pushes it on `user:{id}` (PRD §12.2). */
 export function notify(userId: string, n: Omit<AppNotification, 'id' | 'at' | 'read'>) {
   const p = personal(userId)
   if (!p.prefs[n.type].inApp) return
@@ -228,7 +228,7 @@ export function notify(userId: string, n: Omit<AppNotification, 'id' | 'at' | 'r
   p.notifications.unshift(full)
   p.notifications.length = Math.min(p.notifications.length, 100)
   savePersonal()
-  publish({ channel: `user:${userId}:notifications`, type: 'notification.created', payload: full, ts: full.at })
+  publish({ channel: `user:${userId}`, type: 'notification.created', payload: full, ts: full.at })
 }
 
 export const allPersonal = () => Object.entries(store)
