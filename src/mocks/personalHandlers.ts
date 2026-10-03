@@ -12,6 +12,7 @@ import { db } from './db'
 import { economy, toAuction, toOpportunity } from './economy'
 import { allPersonal, completeness, newId, notify, personal, savePersonal, type PersonalData } from './personal'
 import { audit } from './audit'
+import { ops, saveMm } from './mm'
 
 const api = (path: string) => `/api/v1${path}`
 const fail = (status: number, code: string, message: string, fields?: Record<string, string>) =>
@@ -133,6 +134,11 @@ export function createTransaction(userId: string, t: Omit<TransactionDetail, 'id
 const ACTION_NOTE: Record<TransactionAction, string> = {
   issue_invoice: 'Invoice diterbitkan', pay: 'Dana masuk escrow', ship: 'Barang dikirim', upload_proof: 'Bukti pengiriman diunggah',
   confirm_receipt: 'Diterima pembeli, dana dilepas', cancel: 'Dibatalkan', dispute: 'Dispute diajukan',
+}
+
+/** The user's membership state in a market's participant list, if the market maker tracks it. */
+function approvalOf(marketId: string) {
+  return ops(marketId).participants.find((x) => x.userId === db.sessionUserId)?.status
 }
 
 const actorName = (userId: string) => db.users.find((u) => u.id === userId)?.name ?? 'Pengguna'
@@ -298,12 +304,25 @@ export const personalHandlers = [
   http.get(api('/me/markets'), authed(({ p }) => {
     const list: MyMarket[] = economy.markets.map(({ description: _d, rules: _r, priceHistory: _h, activity: _a, auctions: _u, ...m }) => ({
       ...m, joined: !!p.markets[m.id]?.joined, watchPriceIdr: p.markets[m.id]?.watchPriceIdr,
+      approval: p.markets[m.id]?.joined ? approvalOf(m.id) : undefined,
       myListings: p.listings.filter((l) => l.listing.marketId === m.id).length,
     }))
     return HttpResponse.json(list)
   })),
-  http.post(api('/me/markets/:id/join'), authed(({ p, params }) => {
-    p.markets[String(params.id)] = { ...p.markets[String(params.id)], joined: true }
+  http.post(api('/me/markets/:id/join'), authed(({ p, params, userId }) => {
+    const id = String(params.id)
+    if (!economy.markets.some((m) => m.id === id)) return fail(404, 'not_found', 'Market tidak ditemukan')
+    p.markets[id] = { ...p.markets[id], joined: true }
+    // Joining lands in the market maker's participant queue (auto-approved when the market allows it).
+    const o = ops(id)
+    if (!o.participants.some((x) => x.userId === userId)) {
+      const user = db.users.find((u) => u.id === userId)!
+      o.participants.unshift({
+        id: newId('mp'), userId, name: user.name, kind: 'person', verified: user.emailVerified, role: 'buyer',
+        status: o.settings.approval === 'manual' ? 'pending' : 'active', reputation: userId.startsWith('usr-new-') ? 80 : 94, joinedAt: now(),
+      })
+      saveMm()
+    }
     savePersonal()
     return new HttpResponse(null, { status: 204 })
   })),
