@@ -54,6 +54,9 @@ function matches(url: URL, item: { categoryId: CategoryId; region: string; statu
 }
 
 export const handlers = [
+  // Payment gateway webhook (Midtrans → API). The mock gateway settles by itself (src/mocks/payments.ts): nothing to do.
+  http.post(api('/payments/midtrans/notification'), () => HttpResponse.json({ received: true })),
+
   // ── Auth (PRD §7) ──
   http.get(api('/auth/me'), async () => {
     await delay(150)
