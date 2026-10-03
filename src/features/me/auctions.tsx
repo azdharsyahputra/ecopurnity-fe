@@ -84,6 +84,7 @@ function BidStatusLine({ bid }: { bid: MyBid }) {
       <StatusBadge entity="bid" status={bid.status} />
       <span className="num font-medium">{formatIdr(bid.priceIdr)}</span>
       {bid.rank !== undefined && <span className="text-muted-foreground">· peringkat {bid.rank}</span>}
+      {bid.capacity && <span className="text-muted-foreground">· kapasitas {formatQty(bid.capacity)}</span>}
       <span className="ml-auto text-xs text-muted-foreground">{formatRelative(bid.updatedAt)}</span>
     </div>
   )
@@ -95,6 +96,7 @@ export function ParticipantBidBox({ a }: { a: AuctionDetail }) {
   const navigate = useNavigate()
   const [qualifying, setQualifying] = useState(false)
   const [price, setPrice] = useState('')
+  const [qty, setQty] = useState<string | null>(null) // null: the stated capacity so far, else the whole lot
   const unit = a.lot.quantity.unit
 
   if (me.isPending) return <Skeleton className="h-32" />
@@ -104,7 +106,7 @@ export function ParticipantBidBox({ a }: { a: AuctionDetail }) {
   if (owner)
     return (
       <div className="text-sm">
-        <p className="text-muted-foreground">Kamu pembuat auction ini.</p>
+        <p className="text-muted-foreground">{evaluateHref?.startsWith('/org/') ? 'Auction ini milik organisasimu; evaluasi semua lot dari workspace bisnis.' : 'Kamu pembuat auction ini.'}</p>
         <Button className="mt-3 h-10 w-full" render={<Link to={evaluateHref ?? `/app/auctions/${a.id}/evaluate`} />}><Scale /> Bandingkan penawaran</Button>
       </div>
     )
@@ -146,7 +148,15 @@ export function ParticipantBidBox({ a }: { a: AuctionDetail }) {
   const limit = bidLimit({ ...a, currentPriceIdr: a.visibility === 'full' ? a.currentPriceIdr : undefined })
   const value = Number(price || limit)
   const error = price ? validateBid({ ...a, currentPriceIdr: a.visibility === 'full' ? a.currentPriceIdr : undefined }, value) : null
-  const total = value * a.lot.quantity.value
+  // Reverse/sealed: suppliers state how much of the lot they can deliver (only the buyer and the bidder see it).
+  const withCapacity = lowerWins(a.type)
+  const lotQty = a.lot.quantity.value
+  const capText = qty ?? String(bid?.capacity?.value ?? lotQty)
+  const capacity = Number(capText)
+  const capError = withCapacity && !(capacity > 0 && capacity <= lotQty) ? `Kapasitas harus lebih dari 0 dan maksimal ${formatQty(a.lot.quantity)}` : null
+  const covered = withCapacity && !capError ? capacity : lotQty
+  const total = value * covered
+  const withdrawRule = a.rules.find((r) => r.label === 'Penarikan bid')?.value
 
   return (
     <div className="flex flex-col gap-3">
@@ -161,19 +171,30 @@ export function ParticipantBidBox({ a }: { a: AuctionDetail }) {
         error={error ?? fieldError(action.error, 'price')}
         hint={a.type === 'sealed' ? 'Sealed: hanya bid terakhirmu yang dihitung, dibuka saat penutupan.' : `${lowerWins(a.type) ? 'Maksimal' : 'Minimal'} ${formatIdr(limit)}`}
       />
+      {withCapacity && (
+        <Field
+          label={`Kapasitas (${unit})`}
+          type="number"
+          inputMode="decimal"
+          value={capText}
+          onChange={(e) => setQty(e.target.value)}
+          error={capError ?? fieldError(action.error, 'quantity')}
+          hint={`Berapa yang sanggup kamu penuhi dari ${formatQty(a.lot.quantity)}. Hanya terlihat oleh pembeli.`}
+        />
+      )}
       <ConfirmDialog
-        trigger={<Button className="h-10 w-full" disabled={!!error}>{bid ? 'Update bid' : 'Kirim bid'}</Button>}
+        trigger={<Button className="h-10 w-full" disabled={!!error || !!capError}>{bid ? 'Update bid' : 'Kirim bid'}</Button>}
         title={`Kirim bid ${formatIdr(value)}/${unit}?`}
         description="Bid mengikat sampai auction ditutup."
         impact={
           <ul className="list-disc space-y-1 pl-4">
-            <li>Nilai total: <b>{formatIdr(total)}</b> untuk {formatQty(a.lot.quantity)}</li>
-            <li>Bid terdepan tidak bisa ditarik; bid lain bisa ditarik sampai 30 menit sebelum tutup</li>
-            <li>Bid di 2 menit terakhir memperpanjang auction 5 menit (maks. 3 kali)</li>
+            <li>Nilai total: <b>{formatIdr(total)}</b> untuk {formatQty({ value: covered, unit })}{covered < lotQty ? ` dari ${formatQty(a.lot.quantity)}` : ''}</li>
+            <li>{withdrawRule ? `Penarikan bid: ${withdrawRule}` : 'Bid terdepan tidak bisa ditarik; bid lain bisa ditarik sampai 30 menit sebelum tutup'}</li>
+            {a.extension.windowMinutes > 0 && <li>Bid di {a.extension.windowMinutes} menit terakhir memperpanjang auction {a.extension.extendMinutes} menit (maks. 3 kali)</li>}
           </ul>
         }
         confirmLabel="Kirim bid"
-        onConfirm={() => action.mutateAsync({ type: 'bid', priceIdr: value }).then(() => { setPrice(''); toast({ title: 'Bid terkirim', body: `${formatIdr(value)}/${unit}`, tone: 'green' }) })}
+        onConfirm={() => action.mutateAsync({ type: 'bid', priceIdr: value, quantity: withCapacity ? capacity : undefined }).then(() => { setPrice(''); setQty(null); toast({ title: 'Bid terkirim', body: `${formatIdr(value)}/${unit}`, tone: 'green' }) })}
       />
       <FormError error={action.error} />
       {bid?.canWithdraw && (

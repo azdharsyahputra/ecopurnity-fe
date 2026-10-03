@@ -3,8 +3,8 @@ import type { AllocationLine, AuctionDetail, CategoryId, TransactionDetail } fro
 import type { TradeActionInput } from '@/domain/trade'
 import { CATEGORIES } from '@/domain/catalog'
 import {
-  approvalState, approverUserIds, auctionValue, can, canApprove, deniedReason, higherWins, inventoryFromCsv, orgAuctionStatus, pipelineCounts, procurementActions,
-  requiredApprovers, scoreOf, statusAfterApproval, txDeniedReason, type Action, type Approval, type ApprovalRule, type InventoryItem, type LotOffer, type Module,
+  approvalBy, approvalState, approverUserIds, auctionValue, can, canApprove, deniedReason, higherWins, inventoryFromCsv, orgAuctionStatus, pipelineCounts, procurementActions,
+  requiredApprovers, scoreOf, signingRoles, statusAfterApproval, txDeniedReason, type Action, type Approval, type ApprovalRule, type InventoryItem, type LotOffer, type Module,
   type OrgAnalytics, type OrgAuction, type OrgAuctionEvaluation, type OrgAuctionInput, type OrgAuctionView, type OrgOverview, type OrgProfile,
   type OrgSettings, type OrgSupplier, type ProcurementAction, type ProcurementInput, type ProcurementRequest, type SupplierAction,
   type SupplierDetail, type WaitingItem,
@@ -13,8 +13,10 @@ import { formatIdr } from '@/domain/format'
 import { db } from './db'
 import { consumeUpload } from './kyc'
 import { economy } from './economy'
-import { allPersonal, notify } from './personal'
-import { SUPPLIERS, allOrgs, lotAuction, makeTx, newId, org, orgAudit, orgUserIds, pools, saveOrg, supplierById, type HistoryRow, type OrgData, type StoredPool } from './org'
+import { allPersonal, notify, personal } from './personal'
+import {
+  SUPPLIERS, activeRoles, allOrgs, lotAuction, makeTx, newId, org, orgAudit, orgUserIds, pools, saveOrg, settingsView, supplierById, type HistoryRow, type OrgData, type StoredPool,
+} from './org'
 import { applyAction, botNotice, botStep, ensureF6, type TradeSink } from './trade'
 import { cancelPayment, createPayment, currentPayment, PAY_VIA_GATEWAY } from './payments'
 import type { PaymentInput } from '@/domain/payment'
@@ -26,6 +28,7 @@ const hash = (s: string) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >
 
 interface Ctx {
   userId: string
+  name: string
   orgId: string
   o: OrgData
   role: string
@@ -49,7 +52,7 @@ const orgAuthed = (fn: (ctx: Ctx) => Response | Promise<Response>) =>
     const o = org(orgId)
     const role = membership.role
     const roleLabel = o.settings.roles.find((r) => r.id === role)?.label ?? role
-    return fn({ userId: user.id, orgId, o, role, roleLabel, actor: `${user.name} (${roleLabel})`, allowed: (m, a) => can(o.settings.permissions, role, m, a), params, request })
+    return fn({ userId: user.id, name: user.name, orgId, o, role, roleLabel, actor: `${user.name} (${roleLabel})`, allowed: (m, a) => can(o.settings.permissions, role, m, a), params, request })
   }
 
 const deny = (c: Ctx, m: Module, a: Action) => fail(403, 'forbidden', deniedReason(c.roleLabel, m, a))
@@ -94,11 +97,11 @@ function lotOffers(a: AuctionDetail, categoryId: CategoryId, higher: boolean): L
   const better = (x: number, y: number) => (higher ? x > y : x < y)
   const list = SUPPLIERS.filter((s) => s.categories.includes(categoryId))
   const dir = SUPPLIERS.length && list.length >= 3 ? list : SUPPLIERS
-  const best = new Map<string, { priceIdr: number; at: string }>()
+  const best = new Map<string, { priceIdr: number; at: string; userId?: string }>()
   if (a.bids.length) {
     for (const b of a.bids) {
       const prev = best.get(b.bidder)
-      if (!prev || better(b.priceIdr, prev.priceIdr)) best.set(b.bidder, { priceIdr: b.priceIdr, at: b.at })
+      if (!prev || better(b.priceIdr, prev.priceIdr)) best.set(b.bidder, { priceIdr: b.priceIdr, at: b.at, userId: economy.bidOwners.get(b.id) })
     }
   } else {
     // Hidden bids (sealed / rank only) aren't kept by the mock; the owner sees a plausible ladder behind the best price.
@@ -113,7 +116,8 @@ function lotOffers(a: AuctionDetail, categoryId: CategoryId, higher: boolean): L
     const offer: LotOffer = {
       id: `${a.id}-${bidder}`, supplierId: s.id, priceIdr: b.priceIdr, submittedAt: b.at,
       supplier: { name: s.name, kind: 'business', verified: s.verified, reputation: scoreOf(card) },
-      capacity: { value: Math.round(a.lot.quantity.value * (0.35 + (hash(bidder + a.id) % 50) / 100)), unit: a.lot.quantity.unit },
+      // Platform bidders' stated capacity (whole lot by default); bots get a plausible share.
+      capacity: { value: b.userId ? personal(b.userId).bids[a.id]?.quantity ?? a.lot.quantity.value : Math.round(a.lot.quantity.value * (0.35 + (hash(bidder + a.id) % 50) / 100)), unit: a.lot.quantity.unit },
       quality: card.quality, delivery: card.delivery, reliability: card.reliability,
     }
     const prev = bySupplier.get(s.id)
@@ -153,9 +157,13 @@ function askApprovers(c: Ctx, kind: 'procurement' | 'auction', target: Approvabl
 }
 
 function decide(c: Ctx, kind: 'procurement' | 'auction', target: Approvable & { id: string; code: string }, decision: 'approved' | 'rejected', note?: string) {
-  if (!canApprove(c.role, target.requiredApprovers, target.approvals)) return fail(403, 'forbidden', `Approval ini tidak menunggu peran ${c.roleLabel}`)
+  // The owner also signs required roles nobody holds (deadlock rule); a rejection counts once.
+  const roles = signingRoles(c.role, target.requiredApprovers, target.approvals, activeRoles(c.o))
+  if (!roles.length) return fail(403, 'forbidden', `Approval ini tidak menunggu peran ${c.roleLabel}`)
   if (decision === 'rejected' && !note?.trim()) return fail(422, 'validation', 'Tulis alasan penolakan', { note: 'Alasan wajib diisi saat menolak' })
-  target.approvals.push({ role: c.role, by: c.actor, at: now(), decision, note: note?.trim() || undefined })
+  for (const role of decision === 'rejected' ? roles.slice(0, 1) : roles) {
+    target.approvals.push({ role, by: approvalBy(c.name, c.roleLabel, roleLabelOf(c.o, role), role !== c.role), at: now(), decision, note: note?.trim() || undefined })
+  }
   settle(c.o, kind, target)
   orgAudit(c.o, { actor: c.actor, action: `${decision === 'approved' ? 'Approve' : 'Tolak'} ${kind}`, entity: { type: kind, id: target.id, label: target.code }, reason: decision === 'rejected' ? note : undefined })
   return null
@@ -305,17 +313,18 @@ const ACTIVE_PROCUREMENT = ['pending_approval', 'approved', 'published', 'in_auc
 // ── Handlers ─────────────────────────────────────────────────────
 
 export const orgHandlers = [
-  http.get(api(''), orgAuthed(({ o }) => HttpResponse.json(o.settings))),
+  http.get(api(''), orgAuthed(({ o }) => HttpResponse.json(settingsView(o)))),
 
   // Overview (PRD §9.1)
   http.get(api('/overview'), orgAuthed(({ o, role }) => {
+    const active = activeRoles(o)
     const month = new Date().toISOString().slice(0, 7)
     const thisMonth = purchases(o).filter((h) => h.month === month)
     const views = o.auctions.map(toView)
     const waiting: WaitingItem[] = [
-      ...o.procurements.filter((r) => r.status === 'pending_approval' && canApprove(role, r.requiredApprovers, r.approvals))
+      ...o.procurements.filter((r) => r.status === 'pending_approval' && canApprove(role, r.requiredApprovers, r.approvals, active))
         .map((r) => ({ kind: 'procurement' as const, id: r.id, code: r.code, title: r.need, valueIdr: r.budgetIdr, href: `procurement/${r.id}` })),
-      ...o.auctions.filter((a) => a.status === 'pending_approval' && canApprove(role, a.requiredApprovers, a.approvals))
+      ...o.auctions.filter((a) => a.status === 'pending_approval' && canApprove(role, a.requiredApprovers, a.approvals, active))
         .map((a) => ({ kind: 'auction' as const, id: a.id, code: a.code, title: a.title, valueIdr: a.valueIdr, href: `auctions?review=${a.id}` })),
     ]
     const overview: OrgOverview = {
@@ -378,7 +387,7 @@ export const orgHandlers = [
   })),
 
   // Team (PRD §9.2)
-  http.get(api('/team'), orgAuthed(({ o }) => HttpResponse.json({ ...o.settings, members: o.members.map(({ userId: _u, ...m }) => m) }))),
+  http.get(api('/team'), orgAuthed(({ o }) => HttpResponse.json({ ...settingsView(o), members: o.members.map(({ userId: _u, ...m }) => m) }))),
   http.post(api('/team/invite'), orgAuthed(async (c) => {
     if (!c.allowed('team', 'manage')) return deny(c, 'team', 'manage')
     const { email, role, department } = await body<{ email: string; role: string; department: string }>(c.request)
@@ -440,7 +449,7 @@ export const orgHandlers = [
     ]
     Object.assign(s, next)
     orgAudit(c.o, { actor: c.actor, action: 'Ubah pengaturan tim', entity: { type: 'rule', id: c.orgId, label: s.profile.name }, changes })
-    return HttpResponse.json(s)
+    return HttpResponse.json(settingsView(c.o))
   })),
 
   // Inventory (PRD §9.3)
@@ -510,7 +519,7 @@ export const orgHandlers = [
     const r = c.o.procurements.find((x) => x.id === c.params.id)
     if (!r) return fail(404, 'not_found', 'Procurement tidak ditemukan')
     const { action, note, quantity, optIn } = await body<{ action: ProcurementAction; note?: string; quantity?: number; optIn?: boolean }>(c.request)
-    if (!procurementActions(r, c.role, c.o.settings.permissions).includes(action)) return fail(409, 'invalid_action', 'Aksi ini tidak tersedia untuk status atau peranmu sekarang')
+    if (!procurementActions(r, c.role, c.o.settings.permissions, activeRoles(c.o)).includes(action)) return fail(409, 'invalid_action', 'Aksi ini tidak tersedia untuk status atau peranmu sekarang')
     const before = r.status
     if (action === 'approve' || action === 'reject') {
       const err = decide(c, 'procurement', r, action === 'approve' ? 'approved' : 'rejected', note)
@@ -664,6 +673,17 @@ export const orgHandlers = [
     const { lines, reason } = await body<{ lines: AllocationLine[][]; reason: string }>(c.request)
     if (!reason?.trim()) return fail(422, 'validation', 'Tulis alasan award', { reason: 'Alasan award wajib diisi (tercatat di audit trail)' })
     if (lines.length !== oa.lots.length || lines.some((l) => !l.length || l.some((x) => !(x.quantity > 0)))) return fail(422, 'validation', 'Setiap lot harus punya pemenang')
+    // An allocation may not exceed the offer's capacity (stated with the bid).
+    const over: Record<string, string> = {}
+    lines.forEach((lot, i) => {
+      const a = economy.auctions.find((x) => x.id === oa.lots[i].auctionId)
+      const offers = a ? lotOffers(a, oa.categoryId, higherWins(oa.type)) : []
+      lot.forEach((l, j) => {
+        const o = offers.find((x) => x.id === l.offerId)
+        if (o && l.quantity > o.capacity.value) over[`lines.${i}.${j}`] = 'Melebihi kapasitas penawaran'
+      })
+    })
+    if (Object.keys(over).length) return fail(422, 'validation', 'Periksa kembali alokasi pemenang', over)
     oa.award = { lines, reason: reason.trim(), at: now(), by: c.actor }
     for (const a of lots) a.status = 'awarded'
     const p = c.o.procurements.find((r) => r.id === oa.procurementId)

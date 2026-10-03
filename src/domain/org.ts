@@ -106,16 +106,30 @@ export function approvalState(required: string[], approvals: Approval[]) {
   return { pending, rejected, approved: !rejected && pending.length === 0 }
 }
 
-export const canApprove = (role: string, required: string[], approvals: Approval[]) => {
-  const s = approvalState(required, approvals)
-  return !s.rejected && s.pending.includes(role)
-}
-
-/** Users to ask for a sign-off: holders of a role that is still pending, except whoever just acted. */
-export function approverUserIds(required: string[], approvals: Approval[], members: { userId: string; role: string }[], actorId?: string): string[] {
+/**
+ * Still-pending required roles that `role` signs now, its own first. Deadlock rule: the owner also signs every pending
+ * role no active member holds (`activeRoles`, OrgSettings.activeRoles), so "above Rp 50 jt: Finance + Owner" still
+ * completes in an org without Finance. `activeRoles` undefined = every role staffed.
+ */
+export function signingRoles(role: string, required: string[], approvals: Approval[], activeRoles?: string[]): string[] {
   const s = approvalState(required, approvals)
   if (s.rejected) return []
-  return [...new Set(members.filter((m) => m.userId !== actorId && s.pending.includes(m.role)).map((m) => m.userId))]
+  const own = s.pending.includes(role) ? [role] : []
+  const orphans = role === 'owner' && activeRoles ? s.pending.filter((r) => r !== role && !activeRoles.includes(r)) : []
+  return [...own, ...orphans]
+}
+
+export const canApprove = (role: string, required: string[], approvals: Approval[], activeRoles?: string[]) =>
+  signingRoles(role, required, approvals, activeRoles).length > 0
+
+/** Approval `by` label: "Name (Role)", or "Name · Owner (atas nama Finance)" when an owner signs for a role nobody holds. */
+export const approvalBy = (name: string, actorRoleLabel: string, signedRoleLabel: string, onBehalf: boolean) =>
+  onBehalf ? `${name} · ${actorRoleLabel} (atas nama ${signedRoleLabel})` : `${name} (${actorRoleLabel})`
+
+/** Users to ask for a sign-off: members who sign a still-pending role (owners for roles nobody holds), except whoever just acted. */
+export function approverUserIds(required: string[], approvals: Approval[], members: { userId: string; role: string }[], actorId?: string): string[] {
+  const active = members.map((m) => m.role)
+  return [...new Set(members.filter((m) => m.userId !== actorId && canApprove(m.role, required, approvals, active)).map((m) => m.userId))]
 }
 
 // ── Procurement (PRD §9.4) ───────────────────────────────────────
@@ -200,11 +214,11 @@ export function pipelineCounts(statuses: ProcurementStatus[]): Record<PipelineSt
 /** Actions a role can take on a request now; the mock API accepts exactly these. */
 export type ProcurementAction = 'submit' | 'approve' | 'reject' | 'publish' | 'cancel' | 'collective'
 
-export function procurementActions(r: Pick<ProcurementRequest, 'status' | 'requiredApprovers' | 'approvals'>, role: string, perms?: Permissions): ProcurementAction[] {
+export function procurementActions(r: Pick<ProcurementRequest, 'status' | 'requiredApprovers' | 'approvals'>, role: string, perms?: Permissions, activeRoles?: string[]): ProcurementAction[] {
   const out: ProcurementAction[] = []
   const manage = can(perms, role, 'procurement', 'manage') || can(perms, role, 'procurement', 'create')
   if (r.status === 'draft' && manage) out.push('submit')
-  if (r.status === 'pending_approval' && canApprove(role, r.requiredApprovers, r.approvals)) out.push('approve', 'reject')
+  if (r.status === 'pending_approval' && canApprove(role, r.requiredApprovers, r.approvals, activeRoles)) out.push('approve', 'reject')
   if (r.status === 'approved' && manage) out.push('publish')
   if ((r.status === 'approved' || r.status === 'published') && can(perms, role, 'collective', 'create')) out.push('collective')
   if (['draft', 'pending_approval', 'approved', 'published'].includes(r.status) && manage) out.push('cancel')
@@ -317,7 +331,8 @@ const SELLING_AWARD_RULES: Record<AwardRule, { label: string; hint: string }> = 
 /** Label and hint of a rule, worded for selling (highest wins) when `higher`. */
 export const awardRuleInfo = (rule: AwardRule, higher = false) => (higher ? SELLING_AWARD_RULES : AWARD_RULES)[rule]
 
-const line = (o: LotOffer, quantity: number): AllocationLine => ({ offerId: o.id, supplier: o.supplier.name, quantity, priceIdr: o.priceIdr })
+/** One award line, never above the offer's capacity (the API refuses more: "Melebihi kapasitas penawaran"). */
+const line = (o: LotOffer, quantity: number): AllocationLine => ({ offerId: o.id, supplier: o.supplier.name, quantity: Math.min(quantity, o.capacity.value), priceIdr: o.priceIdr })
 
 /**
  * Award lines per lot under a rule. Bundled falls back to empty lots when no supplier bid on every lot.
@@ -642,6 +657,8 @@ export interface OrgSettings {
   permissions: Permissions
   departments: string[]
   approvalRules: ApprovalRule[]
+  /** Role ids held by at least one active member (input of the approval deadlock rule, `signingRoles`). */
+  activeRoles: string[]
 }
 
 export interface TeamData extends OrgSettings {
