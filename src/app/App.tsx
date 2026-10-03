@@ -60,6 +60,14 @@ const A = {
   auction: named(adm, 'AdminAuctionDetailPage'), disputes: named(adm, 'DisputesPage'), dispute: named(adm, 'DisputeCasePage'),
   fraud: named(adm, 'FraudPage'), alert: named(adm, 'FraudAlertPage'), audit: named(adm, 'AuditTrailPage'),
 }
+const orgPages = () => import('@/features/org/pages')
+const O = {
+  overview: named(orgPages, 'OverviewPage'), profile: named(orgPages, 'ProfilePage'), team: named(orgPages, 'TeamPage'), inventory: named(orgPages, 'InventoryPage'),
+  procurement: named(orgPages, 'ProcurementListPage'), procurementForm: named(orgPages, 'ProcurementFormPage'), procurementDetail: named(orgPages, 'ProcurementDetailPage'),
+  collective: named(orgPages, 'CollectivePage'), auctions: named(orgPages, 'OrgAuctionsPage'), createAuction: named(orgPages, 'CreateOrgAuctionPage'),
+  evaluate: named(orgPages, 'OrgEvaluatePage'), suppliers: named(orgPages, 'SuppliersPage'), supplier: named(orgPages, 'SupplierDetailPage'),
+  transactions: named(orgPages, 'OrgTransactionsPage'), transaction: named(orgPages, 'OrgTransactionDetailPage'), analytics: named(orgPages, 'AnalyticsPage'),
+}
 
 const [personal, org, marketOps, governance] = ROUTE_WORKSPACES
 
@@ -141,7 +149,18 @@ export default function App() {
                     <Route path="auctions/:id/evaluate" element={<P.evaluate />} />
                     <Route path="transactions/:id" element={<P.transaction />} />
                   </Route>
-                  <Route path="org/:orgId" element={<RequireOrg />}>{workspaceRoutes(org)}</Route>
+                  <Route path="org/:orgId" element={<RequireOrg />}>
+                    {workspaceRoutes(org, {
+                      '': O.overview, procurement: O.procurement, collective: O.collective, auctions: O.auctions, suppliers: O.suppliers,
+                      inventory: O.inventory, transactions: O.transactions, analytics: O.analytics, team: O.team, profile: O.profile,
+                    })}
+                    <Route path="procurement/new" element={<O.procurementForm />} />
+                    <Route path="procurement/:id" element={<O.procurementDetail />} />
+                    <Route path="auctions/new" element={<O.createAuction />} />
+                    <Route path="auctions/:id/evaluate" element={<O.evaluate />} />
+                    <Route path="suppliers/:id" element={<O.supplier />} />
+                    <Route path="transactions/:tid" element={<O.transaction />} />
+                  </Route>
                   <Route path="mm" element={<RequireCapability cap="market_maker" />}>
                     {workspaceRoutes(marketOps, { '': M.operations, opportunities: M.pipeline, 'markets/new': M.createMarket, analytics: M.analytics })}
                     <Route path="markets/:id" element={<M.market />} />

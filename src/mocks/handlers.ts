@@ -9,6 +9,7 @@ import { personalHandlers } from './personalHandlers'
 import { mmHandlers } from './mmHandlers'
 import { adminHandlers } from './adminHandlers'
 import { profileHandlers } from './profileHandlers'
+import { orgHandlers } from './orgHandlers'
 
 const api = (path: string) => `/api/v1${path}`
 
@@ -259,6 +260,7 @@ export const handlers = [
   ...mmHandlers,
   ...adminHandlers,
   ...profileHandlers,
+  ...orgHandlers,
   ...personalHandlers,
   ...legacyHandlers,
 ]
