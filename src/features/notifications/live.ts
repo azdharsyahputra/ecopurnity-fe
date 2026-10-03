@@ -1,4 +1,4 @@
-import { useQueryClient } from '@tanstack/react-query'
+import { useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { Award, BellRing, CreditCard, Gavel, Sparkles, Store, Timer, TrendingDown, Truck, type LucideIcon } from 'lucide-react'
 import { useChannel } from '@/lib/realtime'
 import { toast } from '@/stores/toast'
@@ -23,13 +23,39 @@ export const NOTIFICATION_META: Record<NotificationType, [LucideIcon, string]> =
   reputation_update: [Award, 'Update reputasi'],
 }
 
-/** Pushes `user:{id}:notifications` into a toast and refreshes the workspace data it touches. */
+/** Handles `user:{id}`: notifications become toasts; bid and trade changes refresh what they touch. */
 export function useLiveNotifications(userId: string | undefined) {
   const qc = useQueryClient()
-  useChannel<AppNotification>(`user:${userId ?? 'none'}:notifications`, ({ payload: n }) => {
-    qc.invalidateQueries({ queryKey: ['me'] })
-    // Role changes (market maker approval) arrive as notifications; refresh the account so the switcher follows.
-    qc.invalidateQueries({ queryKey: ['auth', 'me'] })
-    toast({ title: n.title, body: n.body, href: n.href, tone: NOTIFICATION_TONE[n.type] })
+  useChannel<unknown>(userId ? `user:${userId}` : undefined, ({ type, payload }) => {
+    switch (type) {
+      case 'notification.created': {
+        const n = payload as AppNotification
+        qc.invalidateQueries({ queryKey: ['me'] })
+        // Role changes (market maker approval) arrive as notifications; refresh the account so the switcher follows.
+        qc.invalidateQueries({ queryKey: ['auth', 'me'] })
+        toast({ title: n.title, body: n.body, href: n.href, tone: NOTIFICATION_TONE[n.type] })
+        return
+      }
+      case 'bid.status':
+        qc.invalidateQueries({ queryKey: ['me', 'auction', (payload as { auctionId: string }).auctionId] })
+        qc.invalidateQueries({ queryKey: ['me', 'auctions'] })
+        return
+      case 'trade.updated':
+        qc.invalidateQueries({ queryKey: ['me', 'transactions'] })
+        qc.invalidateQueries({ queryKey: ['org'] })
+    }
   })
+}
+
+/** What to refetch when a channel's frames may have been missed (see lib/realtime). */
+export function resyncQueries(qc: QueryClient, channel: string) {
+  const [kind, id] = channel.split(':')
+  const keys: Record<string, unknown[][]> = {
+    auth: [['auth', 'me']],
+    public: [['public']],
+    user: [['me'], ['org']],
+    auction: [['auctions', 'detail', id], ['me', 'auction', id]],
+    conversation: [['me', 'conversations', id]],
+  }
+  for (const queryKey of keys[kind] ?? []) qc.invalidateQueries({ queryKey })
 }

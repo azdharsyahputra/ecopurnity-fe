@@ -68,7 +68,7 @@ const defaultPrefs = (): NotificationPrefs =>
 
 export function completeness(i: Identity) {
   const checks = [
-    !!i.profile.bio, !!i.profile.location, i.profile.verification.email, i.profile.verification.phone,
+    !!i.profile.bio, !!i.profile.location, i.profile.verification.email,
     i.profile.verification.identity === 'verified', i.items.some((x) => x.kind === 'skill' || x.kind === 'capacity'),
     i.items.some((x) => x.kind === 'asset' || x.kind === 'resource'), i.preferences.categories.length > 0, i.availability.days.length > 0,
   ]
@@ -111,7 +111,7 @@ function seed(userId: string): PersonalData {
     identity: {
       profile: {
         name: user?.name ?? '', username: user?.username ?? '', location: user?.location ?? '', bio: '',
-        verification: { email: !!user?.emailVerified, phone: false, identity: 'none' },
+        verification: { email: !!user?.emailVerified, identity: 'none' },
       },
       items: [],
       availability: { days: [0, 1, 2, 3, 4], from: '08:00', to: '17:00' },
@@ -127,7 +127,7 @@ function seed(userId: string): PersonalData {
   if (!demo) return base
 
   base.identity.profile.bio = 'Pelaku usaha di jaringan Ecopurnity. Terbuka untuk pengadaan kolektif dan kerja sama pasokan rutin.'
-  base.identity.profile.verification = { email: true, phone: true, identity: 'verified' }
+  base.identity.profile.verification = { email: true, identity: 'verified' }
   base.identity.items = [
     { id: newId('cap'), kind: 'skill', name: 'Pengolahan pasca panen kopi', detail: 'Mahir', categoryId: 'agri' },
     { id: newId('cap'), kind: 'skill', name: 'Manajemen gudang', detail: 'Menengah', categoryId: 'logistics' },
@@ -220,7 +220,7 @@ export function applyOnboarding(userId: string, input: OnboardingInput) {
   savePersonal()
 }
 
-/** Stores an in-app notification and pushes it on `user:{id}:notifications` (PRD §12.2). */
+/** Stores an in-app notification and pushes it on `user:{id}` (PRD §12.2). */
 export function notify(userId: string, n: Omit<AppNotification, 'id' | 'at' | 'read'>) {
   const p = personal(userId)
   if (!p.prefs[n.type].inApp) return
@@ -228,7 +228,7 @@ export function notify(userId: string, n: Omit<AppNotification, 'id' | 'at' | 'r
   p.notifications.unshift(full)
   p.notifications.length = Math.min(p.notifications.length, 100)
   savePersonal()
-  publish({ channel: `user:${userId}:notifications`, type: 'notification.created', payload: full, ts: full.at })
+  publish({ channel: `user:${userId}`, type: 'notification.created', payload: full, ts: full.at })
 }
 
 export const allPersonal = () => Object.entries(store)

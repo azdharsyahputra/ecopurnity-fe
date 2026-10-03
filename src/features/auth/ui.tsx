@@ -67,20 +67,23 @@ export function OrDivider() {
 export function MockOutbox({ email, kind }: { email?: string; kind: 'verify' | 'reset' }) {
   const outbox = useQuery({
     queryKey: ['mock-outbox', email ?? 'me', kind],
-    queryFn: () => api<{ verifyToken: string | null; resetToken: string | null }>(`/_mock/outbox${email ? `?email=${encodeURIComponent(email)}` : ''}`),
+    queryFn: () => api<{ verifyCode: string | null; resetToken: string | null }>(`/_mock/outbox${email ? `?email=${encodeURIComponent(email)}` : ''}`),
     enabled: MOCKS,
     refetchInterval: 2_000,
   })
-  const token = kind === 'verify' ? outbox.data?.verifyToken : outbox.data?.resetToken
-  if (!MOCKS || !token) return null
-  const to = kind === 'verify' ? `/verify-email?token=${token}` : `/reset-password?token=${token}`
+  const value = kind === 'verify' ? outbox.data?.verifyCode : outbox.data?.resetToken
+  if (!MOCKS || !value) return null
   return (
     <div className="rounded-xl border border-dashed p-4 text-sm">
       <p className="flex items-center gap-2 font-medium"><MailOpen className="size-4" /> Kotak surat (mock)</p>
-      <p className="mt-1 text-muted-foreground">Email yang dikirim backend akan berisi link ini.</p>
-      <Link to={to} className="mt-2 inline-block font-medium text-primary hover:underline">
-        Buka link {kind === 'verify' ? 'verifikasi' : 'reset password'}
-      </Link>
+      {kind === 'verify' ? (
+        <p className="mt-1 text-muted-foreground">Email dari backend berisi kode <b className="num text-foreground tracking-widest">{value}</b></p>
+      ) : (
+        <>
+          <p className="mt-1 text-muted-foreground">Email yang dikirim backend akan berisi link ini.</p>
+          <Link to={`/reset-password?token=${value}`} className="mt-2 inline-block font-medium text-primary hover:underline">Buka link reset password</Link>
+        </>
+      )}
     </div>
   )
 }

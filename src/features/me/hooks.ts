@@ -162,6 +162,8 @@ export const useTransaction = (id: string) =>
 /** Where personal trade actions go (shared trade UI, F6). */
 export const personalTradeScope: TradeScope = {
   actionUrl: (id) => `/me/transactions/${id}/actions`,
+  paymentsUrl: (id) => `/me/transactions/${id}/payments`,
+  tradeKey: (id) => ['me', 'transactions', 'detail', id],
   onSuccess: (qc, t) => {
     qc.setQueryData(['me', 'transactions', 'detail', t.id], t)
     qc.invalidateQueries({ queryKey: ['me', 'transactions'] })
@@ -199,7 +201,8 @@ export interface Finance {
   availableIdr: number
   withdrawnIdr: number
   bank?: { bank: string; accountNo: string; holder: string }
-  withdrawals: { id: string; amountIdr: number; at: string; status: 'processing' | 'paid' }[]
+  /** Newest first. An admin transfers each by hand: `paid` carries the transfer reference, `rejected` the reason (money back in the balance). */
+  withdrawals: { id: string; amountIdr: number; at: string; status: 'processing' | 'paid' | 'rejected'; transferRef?: string; paidAt?: string; reason?: string }[]
   entries: { id: string; at: string; label: string; amountIdr: number; kind: 'escrow' | 'payout' | 'refund' | 'payment' | 'withdrawal' | 'fee' }[]
 }
 
@@ -220,17 +223,16 @@ export interface Kyc {
   limitIdr: number
   next?: string
   verification: Identity['profile']['verification']
-  otpPending: boolean
 }
 
 export const useKyc = () => useQuery({ queryKey: ['me', 'kyc'], queryFn: () => api<Kyc>('/me/kyc') })
 
-export type KycAction = { type: 'phone'; phone: string } | { type: 'otp'; code: string } | { type: 'identity'; nik: string; fullName: string; ktpFile?: string; selfieFile?: string }
+export type KycAction = { type: 'identity'; nik: string; fullName: string; ktpUploadId: string; selfieUploadId: string }
 
 export function useKycAction() {
   const invalidate = useInvalidate()
   return useMutation({
-    mutationFn: ({ type, ...body }: KycAction) => api<Kyc>({ phone: '/me/kyc/phone', otp: '/me/kyc/phone/verify', identity: '/me/kyc/identity' }[type], json('POST', body)),
+    mutationFn: ({ type, ...body }: KycAction) => api<Kyc>({ identity: '/me/kyc/identity' }[type], json('POST', body)),
     onSuccess: () => invalidate(['me', 'kyc'], ['me', 'identity']),
   })
 }

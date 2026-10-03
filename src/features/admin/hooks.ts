@@ -1,9 +1,9 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { api } from '@/lib/api'
+import { api, qs } from '@/lib/api'
 import type { AuditEntry } from '@/domain/types'
 import type {
-  AdminAuction, AdminAuctionDetail, AdminMarket, AdminOverview, AdminUser, AdminUserDetail, DisputeCase, DisputeSummary, FraudAlert,
-  VerificationRequest,
+  AdminAuction, AdminAuctionDetail, AdminMarket, AdminOverview, AdminUser, AdminUserDetail, AdminWithdrawal, AdminWithdrawalDetail, DisputeCase,
+  DisputeSummary, FraudAlert, VerificationRequest, WithdrawalStatus,
 } from './types'
 
 // Governance data (PRD §11). Every key starts with 'admin' so one action refreshes the whole workspace.
@@ -13,7 +13,7 @@ export const useAdminOverview = () => useQuery({ queryKey: ['admin', 'overview']
 export const useAdminUsers = (q: string, status: string) =>
   useQuery({
     queryKey: ['admin', 'users', q, status],
-    queryFn: () => api<AdminUser[]>(`/admin/users?${new URLSearchParams({ q, status })}`),
+    queryFn: () => api<AdminUser[]>(`/admin/users${qs({ q, status })}`),
     placeholderData: keepPreviousData,
   })
 export const useAdminUser = (id: string) => useQuery({ queryKey: ['admin', 'users', 'detail', id], queryFn: () => api<AdminUserDetail>(`/admin/users/${id}`) })
@@ -35,6 +35,21 @@ export const useDispute = (id: string) => useQuery({ queryKey: ['admin', 'disput
 export const useAlerts = () => useQuery({ queryKey: ['admin', 'alerts'], queryFn: () => api<FraudAlert[]>('/admin/alerts') })
 export const useAlert = (id: string) =>
   useQuery({ queryKey: ['admin', 'alerts', id], queryFn: () => api<FraudAlert & { audit: AuditEntry[] }>(`/admin/alerts/${id}`) })
+
+export const useAdminWithdrawals = (status: WithdrawalStatus) =>
+  useQuery({
+    queryKey: ['admin', 'withdrawals', status],
+    queryFn: () => api<AdminWithdrawal[]>(`/admin/withdrawals${qs({ status })}`),
+    placeholderData: keepPreviousData,
+  })
+/** Every fetch of a processing withdrawal decrypts the account number and is audited: fetch once per visit. */
+export const useAdminWithdrawal = (id: string) =>
+  useQuery({
+    queryKey: ['admin', 'withdrawals', 'detail', id],
+    queryFn: () => api<AdminWithdrawalDetail>(`/admin/withdrawals/${id}`),
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+  })
 
 export const useAuditTrail = () => useQuery({ queryKey: ['admin', 'audit'], queryFn: () => api<AuditEntry[]>('/admin/audit') })
 
