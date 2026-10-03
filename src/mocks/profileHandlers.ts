@@ -190,7 +190,7 @@ export const profileHandlers = [
       const e = extra!
       const profile: PublicProfile = {
         name: e.name, username: e.username, location: e.location, bio: e.bio, joinedAt: e.joinedAt, status,
-        verification: { email: true, phone: false, identity: admin.users[id]?.verified ? 'verified' : 'none' },
+        verification: { email: true, identity: admin.users[id]?.verified ? 'verified' : 'none' },
         reputation: { score, counts }, supply: [], markets: [], orgs: [], activity: [],
       }
       return HttpResponse.json(profile)
