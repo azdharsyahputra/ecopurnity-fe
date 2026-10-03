@@ -453,6 +453,9 @@ export interface Transaction {
   updatedAt: string
   dueAt: string
   auctionId?: string
+  terms?: PaymentTerms
+  /** The same trade as seen by the other party, when they are a platform account. */
+  peer?: { userId: string; txId: string }
 }
 
 export interface TransactionDetail extends Transaction {
@@ -460,7 +463,47 @@ export interface TransactionDetail extends Transaction {
   documents: { id: string; kind: 'order' | 'agreement' | 'invoice' | 'proof'; name: string; at: string }[]
   payment: { status: 'unpaid' | 'escrow' | 'released' | 'refunded'; paidAt?: string }
   delivery: { address: string; eta?: string; proof?: string }
-  dispute?: { status: DisputeStatus; reason: string; openedAt: string }
+  dispute?: {
+    status: DisputeStatus
+    reason: string
+    openedAt: string
+    /** Evidence from either party (F6); the opening reason is the first entry. */
+    evidence?: { id: string; by: 'buyer' | 'supplier'; name: string; text: string; file?: string; at: string }[]
+  }
+  // ── F6 settlement fields; optional so records from before F6 still read ──
+  agreement?: { buyerAcceptedAt?: string; supplierAcceptedAt?: string }
+  /** Market maker commission rate for trades formed inside a market (0 otherwise). */
+  makerFeeRate?: number
+  invoice?: { number: string; issuedAt: string; dueAt: string }
+  shipments?: Shipment[]
+  qc?: { outcome: 'accepted' | 'partial' | 'rejected'; acceptedQty: number; note?: string; at: string }
+  reviews?: Partial<Record<'buyer' | 'supplier', Review>>
+  /** Part of an aggregated (collective) settlement. */
+  group?: { id: string; label: string; share: number }
+}
+
+export type PaymentTerms = 'escrow' | 'net14' | 'net30'
+
+export interface Shipment {
+  id: string
+  quantity: number
+  dropPoint: string
+  carrier: string
+  scheduledAt: string
+  status: 'scheduled' | 'in_transit' | 'delivered'
+  deliveredAt?: string
+  proof?: string
+}
+
+export interface Review {
+  /** 1–5 */
+  rating: number
+  quality: number
+  timeliness: number
+  communication: number
+  text: string
+  by: string
+  at: string
 }
 
 // ── Notifications (PRD §8.11) ────────────────────────────────────

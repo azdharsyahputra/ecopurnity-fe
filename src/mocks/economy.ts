@@ -230,6 +230,14 @@ export const economy = {
   ),
   /** auctionId → userId for auctions created by participants (buyer flow). */
   owners: new Map<string, string>(),
+  /** bidId → userId for bids placed by platform accounts; bidder names stay masked for everyone. */
+  bidOwners: new Map<string, string>(),
+}
+
+/** Stable masked bidder name for a platform account in one auction. */
+export function bidderLabel(a: { id: string; type: string }, userId: string) {
+  const n = 11 + ([...`${a.id}:${userId}`].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % 80)
+  return `${a.type === 'reverse' || a.type === 'sealed' ? 'Supplier' : 'Bidder'} ${n}`
 }
 
 export function marketDetail(id: string): MarketDetail | undefined {
