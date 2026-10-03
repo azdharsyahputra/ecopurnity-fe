@@ -92,6 +92,10 @@ export function ReputationPage() {
                 <h2 className="font-medium">Rincian</h2>
                 <ul className="divide-y">
                   {RATES.map(([k, label, hint, good]) => <RateRow key={k} label={label} hint={hint} value={r.breakdown[k] as number | null} good={good} />)}
+                  <li className="flex justify-between gap-3 py-3 text-sm">
+                    <span><span className="block font-medium">Rating mitra</span><span className="text-xs text-muted-foreground">Dari ulasan setelah transaksi selesai</span></span>
+                    <span className="num font-semibold">{r.breakdown.ratingAvg === null ? '–' : `${formatNumber(r.breakdown.ratingAvg)} ★ · ${r.breakdown.ratingCount} ulasan`}</span>
+                  </li>
                   <li className="flex justify-between gap-3 py-3 text-sm"><span className="font-medium">Transaction volume</span><span className="num font-semibold">{formatIdr(r.breakdown.volumeIdr, { compact: true })}</span></li>
                   <li className="flex justify-between gap-3 py-3 text-sm">
                     <span><span className="block font-medium">Response time</span><span className="text-xs text-muted-foreground">Agreement ke langkah berikutnya</span></span>

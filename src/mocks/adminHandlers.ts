@@ -246,7 +246,7 @@ export const adminHandlers = [
     const oldest = (isos: string[]) => isos.sort()[0]
     const overview: AdminOverview = {
       queues: {
-        users: users().filter((u) => u.reportCount > 0 && u.status === 'active').length,
+        users: users().filter((u) => (u.reportCount > 0 && u.status === 'active') || admin.appeals?.[u.id]?.status === 'pending').length,
         verification: pending.length,
         markets: adminMarkets().filter((m) => m.status !== 'suspended' && m.flags.some((f) => !m.reviewedAt || f.at > m.reviewedAt)).length,
         auctions: economy.auctions.filter((a) => ACTIVE_AUCTION.includes(a.status) && adminAuction(a).findings.length > 0).length,
@@ -275,7 +275,7 @@ export const adminHandlers = [
     if (!u) return fail(404, 'not_found', 'Pengguna tidak ditemukan')
     const dbUser = db.users.find((x) => x.id === u.id)
     const detail: AdminUserDetail = {
-      ...u, reports: admin.reports[u.id] ?? [], orgs: dbUser?.orgs.map((o) => o.orgName) ?? [],
+      ...u, appeal: admin.appeals?.[u.id], reports: admin.reports[u.id] ?? [], orgs: dbUser?.orgs.map((o) => o.orgName) ?? [],
       history: dbUser ? personal(u.id).transactions.map(({ timeline: _t, documents: _d, payment: _p, delivery: _v, dispute: _x, ...t }) => t) : [],
       audit: auditLog({ type: 'user', id: u.id }),
     }
@@ -292,7 +292,15 @@ export const adminHandlers = [
       admin.users[u.id] = { ...(admin.users[u.id] ?? { status: u.status }), verified: true }
       saveAdmin()
       audit({ actor, action: 'Verifikasi identitas', entity: { type: 'user', id: u.id, label: u.name }, reason, changes: [{ field: 'verified', before: 'tidak', after: 'ya' }] })
+    } else if (action === 'deny_appeal') {
+      const ap = admin.appeals?.[u.id]
+      if (ap?.status !== 'pending') return fail(409, 'no_appeal', 'Tidak ada banding yang menunggu')
+      Object.assign(ap, { status: 'denied', decision: { at: now(), by: actor, note: reason!.trim() } })
+      saveAdmin()
+      audit({ actor, action: 'Tolak banding suspend', entity: { type: 'user', id: u.id, label: u.name }, reason, changes: [{ field: 'banding', before: 'pending', after: 'ditolak' }] })
     } else {
+      const ap = admin.appeals?.[u.id]
+      if (action === 'restore' && ap?.status === 'pending') Object.assign(ap, { status: 'granted', decision: { at: now(), by: actor, note: reason!.trim() } })
       const to: AccountStatus = action === 'suspend' ? 'suspended' : action === 'restrict' ? 'restricted' : 'active'
       if (u.status === to) return fail(409, 'no_change', 'Status akun sudah seperti itu')
       setUserStatus(u, to, actor, reason!)

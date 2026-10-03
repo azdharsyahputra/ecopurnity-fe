@@ -2,7 +2,8 @@ import { delay, http, HttpResponse } from 'msw'
 import type { CategoryId, ExplorerRange, OnboardingInput, Page, SearchType } from '@/domain/types'
 import { db, saveUsers, toUser, type MockUser } from './db'
 import { aggregates, economy, explorerOverview, marketDetail, search, toAuction, toOpportunity } from './economy'
-import { admin } from './admin'
+import { admin, saveAdmin } from './admin'
+import { audit } from './audit'
 import { applyOnboarding } from './personal'
 import { personalHandlers } from './personalHandlers'
 import { rfqHandlers } from './rfq'
@@ -18,7 +19,7 @@ const api = (path: string) => `/api/v1${path}`
 const fail = (status: number, code: string, message: string, fields?: Record<string, string>) =>
   HttpResponse.json({ error: { code, message, fields } }, { status })
 
-const SUSPENDED = 'Akun ini disuspend oleh tim governance. Hubungi dukungan untuk banding.'
+const SUSPENDED = 'Akun ini disuspend oleh tim governance.'
 
 const noContent = () => new HttpResponse(null, { status: 204 })
 
@@ -59,9 +60,28 @@ export const handlers = [
     const user = db.users.find((u) => u.email === email.trim().toLowerCase() && u.password === password)
     // Same message for unknown email and wrong password.
     if (!user) return fail(401, 'invalid_credentials', 'Email atau password salah')
-    if (admin.users[user.id]?.status === 'suspended') return fail(403, 'account_suspended', SUSPENDED)
+    if (admin.users[user.id]?.status === 'suspended') {
+      const ap = admin.appeals?.[user.id]
+      const note = ap?.status === 'pending' ? ' Bandingmu sedang ditinjau.' : ap?.status === 'denied' ? ` Banding ditolak: ${ap.decision?.note}` : ''
+      return fail(403, ap ? 'account_suspended_appealed' : 'account_suspended', `${SUSPENDED}${note}`)
+    }
     db.setSession(user.id)
     return HttpResponse.json(toUser(user))
+  }),
+
+  // Suspension appeal (PRD F6): suspended accounts can't sign in, so the appeal re-checks the credentials.
+  http.post(api('/auth/appeal'), async ({ request }) => {
+    await delay(400)
+    const { email = '', password, reason } = (await request.json()) as { email?: string; password?: string; reason?: string }
+    const user = db.users.find((u) => u.email === email.trim().toLowerCase() && u.password === password)
+    if (!user) return fail(401, 'invalid_credentials', 'Email atau password salah')
+    if (admin.users[user.id]?.status !== 'suspended') return fail(409, 'not_suspended', 'Akun ini tidak disuspend')
+    if (admin.appeals?.[user.id]) return fail(409, 'already_appealed', 'Banding sudah pernah diajukan')
+    if (!reason || reason.trim().length < 20) return fail(422, 'validation', 'Jelaskan bandingmu', { reason: 'Minimal 20 karakter' })
+    ;(admin.appeals ??= {})[user.id] = { reason: reason.trim(), at: new Date().toISOString(), status: 'pending' }
+    saveAdmin()
+    audit({ actor: user.name, action: 'Ajukan banding suspend', entity: { type: 'user', id: user.id, label: user.name }, reason: reason.trim() })
+    return HttpResponse.json({ ok: true })
   }),
 
   http.post(api('/auth/register'), async ({ request }) => {

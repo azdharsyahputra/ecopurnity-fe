@@ -33,13 +33,21 @@ export interface UserReport {
 }
 
 export interface AdminUserDetail extends AdminUser {
+  appeal?: Appeal
   reports: UserReport[]
   history: Transaction[]
   orgs: string[]
   audit: AuditEntry[]
 }
 
-export type UserAction = 'verify' | 'suspend' | 'restrict' | 'restore'
+export type UserAction = 'verify' | 'suspend' | 'restrict' | 'restore' | 'deny_appeal'
+
+export interface Appeal {
+  reason: string
+  at: string
+  status: 'pending' | 'granted' | 'denied'
+  decision?: { at: string; by: string; note: string }
+}
 
 // ── Business verification ──
 
