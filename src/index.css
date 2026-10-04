@@ -159,6 +159,12 @@
   }
 }
 
+@layer components {
+  .participant-workspace .rounded-xl.border.bg-card {
+    @apply rounded-2xl shadow-sm shadow-foreground/[0.025];
+  }
+}
+
 @utility no-scrollbar {
   scrollbar-width: none;
 }
