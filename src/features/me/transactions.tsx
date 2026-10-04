@@ -24,6 +24,7 @@ export function TransactionsPage() {
         description="Agreement, invoice, pembayaran, pengiriman, dan penerimaan barang, dari dua sisi transaksi."
         icon={ReceiptText}
         tone="purple"
+        featured
         actions={<Segmented label="Peran" value={role} options={[['', 'Semua'], ['buyer', 'Sebagai pembeli'], ['supplier', 'Sebagai supplier']]} onChange={setRole} />}
       />
       <AsyncView
@@ -80,6 +81,7 @@ export function TransactionDetailPage() {
               }
               icon={ReceiptText}
               tone="purple"
+              featured
             />
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
               <div className="flex min-w-0 flex-col gap-6">
