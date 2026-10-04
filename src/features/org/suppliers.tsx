@@ -89,7 +89,7 @@ export function SuppliersPage() {
   const relation = (params.get('relation') ?? '') as '' | SupplierRelation
   return (
     <>
-      <PageHeader title="Suppliers" description="Temukan, shortlist, undang, verifikasi, dan nilai supplier. Scorecard dihitung dari transaksi." icon={Truck} tone="blue" />
+      <PageHeader title="Suppliers" description="Temukan, shortlist, undang, verifikasi, dan nilai supplier. Scorecard dihitung dari transaksi." icon={Truck} tone="blue" featured />
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center" role="search">
         <label className="relative sm:w-64">
           <span className="sr-only">Cari supplier</span>
@@ -156,6 +156,7 @@ export function SupplierDetailPage() {
               description={<span className="flex flex-wrap items-center gap-1.5"><RelationBadge relation={s.relation} />{s.verified && <Tag tone="teal">Terverifikasi platform</Tag>}<span className="inline-flex items-center gap-1"><MapPin className="size-3.5" />{s.region}</span><Stars value={s.rating} /></span>}
               icon={Truck}
               tone="blue"
+              featured
               actions={<RelationActions s={s} />}
             />
             <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
