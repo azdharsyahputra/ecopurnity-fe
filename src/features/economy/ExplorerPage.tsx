@@ -10,7 +10,7 @@ import { AuctionCard, CardGrid, CategoryTag, MarketCard, OpportunityCard } from 
 import { usePublicActivity } from '@/features/public/hooks'
 import { PageHeader } from '@/components/PageHeader'
 import { StatTile } from '@/components/StatTile'
-import { AsyncView } from '@/components/States'
+import { AsyncView, EmptyState } from '@/components/States'
 import { ActivityFeed } from '@/components/ActivityFeed'
 import { ChartCard, ChartTooltip } from '@/components/Chart'
 import { SERIES, axis, grid } from '@/components/chart-tokens'
@@ -124,7 +124,7 @@ function Overview({ data, refetching }: { data: ExplorerOverview; refetching: bo
 
       <section className="rounded-xl border bg-card px-4 pt-4 md:px-5 lg:col-span-2">
         <h2 className="font-medium">Timeline aktivitas ekonomi</h2>
-        <AsyncView query={activity} skeleton={<Skeleton className="my-4 h-40" />}>
+      <AsyncView query={activity} skeleton={<Skeleton className="my-4 h-40" />}>
           {(events) => <ActivityFeed events={events} />}
         </AsyncView>
       </section>
@@ -265,7 +265,7 @@ export function ExplorerPage() {
         <div className="mt-4">
           <h2 className="sr-only">{TAB_LABEL[tab]}</h2>
           {tab === 'overview' && (
-            <AsyncView query={overview} skeleton={<Skeleton className="h-80 rounded-xl" />}>
+            <AsyncView query={overview} skeleton={<Skeleton className="h-80 rounded-xl" />} isEmpty={(d) => !d.volume.length && !d.priceIndex.length && !d.demandSupply.length} empty={<EmptyState icon={ChartNoAxesCombined} tone="teal" title="Belum ada data ekonomi untuk periode ini" description="Pilih rentang waktu atau kategori lain. Grafik akan terisi ketika tersedia transaksi dan listing publik." />}>
               {(data) => <Overview data={data} refetching={overview.isPlaceholderData} />}
             </AsyncView>
           )}
