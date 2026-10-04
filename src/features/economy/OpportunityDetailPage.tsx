@@ -40,7 +40,7 @@ function Content({ o }: { o: OpportunityDetail }) {
   const unit = o.demand.unit
   return (
     <>
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <header className="flex flex-col gap-4 rounded-2xl border bg-linear-to-br from-card to-muted/60 p-5 shadow-sm shadow-foreground/[0.025] sm:p-7 lg:flex-row lg:items-end lg:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-sm font-medium text-muted-foreground">{o.code}</span>
@@ -67,7 +67,7 @@ function Content({ o }: { o: OpportunityDetail }) {
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="flex min-w-0 flex-col gap-6">
-          <section className="rounded-xl border bg-card p-4 md:p-5">
+          <section className="rounded-2xl border bg-card p-5 shadow-sm shadow-foreground/[0.025] md:p-6">
             <h2 className="font-medium">Demand vs supply</h2>
             <GapMeter demand={o.demand} supply={o.supply} className="mt-3" />
           </section>
@@ -99,14 +99,14 @@ function Content({ o }: { o: OpportunityDetail }) {
             </ResponsiveContainer>
           </ChartCard>
 
-          <section className="rounded-xl border bg-card p-4 md:p-5">
+          <section className="rounded-2xl border bg-card p-5 shadow-sm shadow-foreground/[0.025] md:p-6">
             <h2 className="font-medium">Tentang opportunity ini</h2>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{o.description}</p>
             <h3 className="mt-5 text-sm font-medium">Kontribusi yang dibutuhkan</h3>
             <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{o.requiredContribution}</p>
           </section>
 
-          <section className="rounded-xl border bg-card p-4 md:p-5">
+          <section className="rounded-2xl border bg-card p-5 shadow-sm shadow-foreground/[0.025] md:p-6">
             <div className="flex items-baseline justify-between">
               <h2 className="font-medium">Peserta</h2>
               <span className="text-sm text-muted-foreground">{formatNumber(o.participants)} total</span>
@@ -125,7 +125,7 @@ function Content({ o }: { o: OpportunityDetail }) {
         </div>
 
         <aside className="flex flex-col gap-6">
-          <section className="rounded-xl border bg-card p-4 md:p-5">
+          <section className="rounded-2xl border bg-card p-5 shadow-sm shadow-foreground/[0.025] md:p-6">
             <div className="flex items-center gap-2">
               <IconChip icon={Sparkles} tone="lime" size="sm" />
               <h2 className="font-medium">Mekanisme yang disarankan</h2>
