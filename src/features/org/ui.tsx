@@ -39,12 +39,12 @@ export function GuardedLink({ to, reason, variant, children }: { to: string; rea
 
 export function Section({ title, actions, className, children }: { title: string; actions?: ReactNode; className?: string; children: ReactNode }) {
   return (
-    <section className={cn('rounded-xl border bg-card p-4 md:p-5', className)}>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-medium">{title}</h2>
+    <section className={cn('rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:p-5', className)}>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
+        <h2 className="font-semibold tracking-tight">{title}</h2>
         {actions}
       </div>
-      <div className="mt-3">{children}</div>
+      <div className="mt-4">{children}</div>
     </section>
   )
 }
