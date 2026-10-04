@@ -9,8 +9,8 @@ import type { TradeScope } from '@/features/trade/hooks'
 import type { KycLevel } from '@/domain/kyc'
 import type { Contract, ContractAction, ContractEvery } from '@/domain/contract'
 
-// Personal workspace data (PRD §8). Every key starts with 'me' so a sign-out or a live event can
-// invalidate the whole workspace at once.
+
+
 
 const json = (method: string, body?: unknown) => ({ method, json: body })
 
@@ -21,7 +21,7 @@ function useInvalidate() {
 
 export const useDashboard = () => useQuery({ queryKey: ['me', 'dashboard'], queryFn: () => api<DashboardSummary>('/me/dashboard') })
 
-// ── Identity ──
+
 export const useIdentity = () => useQuery({ queryKey: ['me', 'identity'], queryFn: () => api<Identity>('/me/identity') })
 
 export function useSaveIdentity() {
@@ -35,7 +35,7 @@ export function useSaveIdentity() {
   })
 }
 
-// ── Listings ──
+
 export const useListings = (kind: 'supply' | 'demand') =>
   useQuery({ queryKey: ['me', 'listings', kind], queryFn: () => api<Listing[]>(`/me/listings?kind=${kind}`) })
 
@@ -59,7 +59,7 @@ export function useListingAction(id: string) {
   })
 }
 
-// ── Opportunities ──
+
 export const usePersonalOpportunities = (tab: string) =>
   useQuery({ queryKey: ['me', 'opportunities', tab], queryFn: () => api<PersonalOpportunity[]>(`/me/opportunities?tab=${tab}`) })
 
@@ -80,7 +80,7 @@ export function useOpportunityAction() {
   })
 }
 
-// ── Markets ──
+
 export const useMyMarkets = () => useQuery({ queryKey: ['me', 'markets'], queryFn: () => api<MyMarket[]>('/me/markets') })
 
 export function useMarketAction() {
@@ -92,7 +92,7 @@ export function useMarketAction() {
   })
 }
 
-// ── Auctions ──
+
 export const useMyAuctions = () =>
   useQuery({
     queryKey: ['me', 'auctions'],
@@ -100,7 +100,7 @@ export const useMyAuctions = () =>
     refetchInterval: 10_000,
   })
 
-/** Qualification, own bid, and ownership for one auction room. */
+
 export const useAuctionMe = (id: string, enabled: boolean) =>
   useQuery({
     queryKey: ['me', 'auction', id],
@@ -152,14 +152,14 @@ export function useAward(id: string) {
   })
 }
 
-// ── Transactions ──
+
 export const useTransactions = (role?: string) =>
   useQuery({ queryKey: ['me', 'transactions', role ?? 'all'], queryFn: () => api<Transaction[]>(`/me/transactions${role ? `?role=${role}` : ''}`) })
 
 export const useTransaction = (id: string) =>
   useQuery({ queryKey: ['me', 'transactions', 'detail', id], queryFn: () => api<TransactionDetail>(`/me/transactions/${id}`) })
 
-/** Where personal trade actions go (shared trade UI, F6). */
+
 export const personalTradeScope: TradeScope = {
   actionUrl: (id) => `/me/transactions/${id}/actions`,
   paymentsUrl: (id) => `/me/transactions/${id}/payments`,
@@ -171,7 +171,7 @@ export const personalTradeScope: TradeScope = {
   },
 }
 
-// ── Notifications ──
+
 export const useNotifications = (enabled = true) =>
   useQuery({ queryKey: ['me', 'notifications'], queryFn: () => api<AppNotification[]>('/me/notifications'), enabled })
 
@@ -194,14 +194,14 @@ export function useSaveNotificationPrefs() {
   })
 }
 
-// ── Finance (PRD F6) ──
+
 export interface Finance {
   escrowHeldIdr: number
   receivableIdr: number
   availableIdr: number
   withdrawnIdr: number
   bank?: { bank: string; accountNo: string; holder: string }
-  /** Newest first. An admin transfers each by hand: `paid` carries the transfer reference, `rejected` the reason (money back in the balance). */
+
   withdrawals: { id: string; amountIdr: number; at: string; status: 'processing' | 'paid' | 'rejected'; transferRef?: string; paidAt?: string; reason?: string }[]
   entries: { id: string; at: string; label: string; amountIdr: number; kind: 'escrow' | 'payout' | 'refund' | 'payment' | 'withdrawal' | 'fee' }[]
 }

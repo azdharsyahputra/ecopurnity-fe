@@ -6,8 +6,8 @@ import type { BidStatus, QualificationStatus } from '@/domain/status'
 import { publish } from '@/lib/realtime'
 import { db } from './db'
 
-// Per-user mock data for the personal workspace (PRD §8). Persisted so flows survive reloads.
-// ponytail: one JSON blob in localStorage; fine for a handful of demo users.
+
+
 
 export interface StoredListing {
   listing: Listing
@@ -16,7 +16,7 @@ export interface StoredListing {
 
 export interface StoredBid {
   priceIdr: number
-  /** Stated capacity (reverse/sealed), lot unit; undefined = the whole lot. */
+
   quantity?: number
   status: BidStatus
   submittedAt: string
@@ -30,7 +30,7 @@ export interface PersonalData {
   markets: Record<string, { joined: boolean; watchPriceIdr?: number }>
   qualifications: Record<string, QualificationStatus>
   bids: Record<string, StoredBid>
-  /** Auctions this user created as a buyer; re-injected into the economy on load. */
+
   ownedAuctions: AuctionDetail[]
   transactions: TransactionDetail[]
   notifications: AppNotification[]
@@ -44,7 +44,7 @@ const legacyAttachment = (fileName: string): ListingAttachment => ({
 const store: Record<string, PersonalData> = (() => {
   try {
     const saved = JSON.parse(localStorage.getItem(KEY) ?? '{}') as Record<string, PersonalData>
-    // Saved before uploads: attachments were file names; keep them as legacy entries without a file (like the API).
+
     for (const p of Object.values(saved))
       for (const s of p.listings ?? []) s.listing.attachments = (s.listing.attachments as (string | ListingAttachment)[]).map((a) => (typeof a === 'string' ? legacyAttachment(a) : a))
     return saved
@@ -112,7 +112,7 @@ function txn(
   }
 }
 
-/** Demo accounts get a lived-in workspace; new accounts start from their onboarding answers. */
+
 function seed(userId: string): PersonalData {
   const user = db.users.find((u) => u.id === userId)
   const demo = !userId.startsWith('usr-new-')
@@ -203,7 +203,7 @@ export function personal(userId: string): PersonalData {
   return p
 }
 
-/** Turns onboarding answers into a starting identity + first listing. */
+
 export function applyOnboarding(userId: string, input: OnboardingInput) {
   const p = personal(userId)
   p.identity.profile.location = input.location
@@ -229,7 +229,7 @@ export function applyOnboarding(userId: string, input: OnboardingInput) {
   savePersonal()
 }
 
-/** Stores an in-app notification and pushes it on `user:{id}` (PRD §12.2). */
+
 export function notify(userId: string, n: Omit<AppNotification, 'id' | 'at' | 'read'>) {
   const p = personal(userId)
   if (!p.prefs[n.type].inApp) return

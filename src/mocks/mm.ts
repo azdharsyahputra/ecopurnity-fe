@@ -7,28 +7,28 @@ import { db } from './db'
 import { economy } from './economy'
 import { allPersonal, notify } from './personal'
 
-// Market Maker store (PRD §10). Persisted like personal.ts; seeded markets keep their F4 state as patches.
-// ponytail: one JSON blob in localStorage, same ceiling as the personal store.
+
+
 
 export interface MarketOps {
   participants: MmParticipant[]
   disputes: MmDispute[]
   ruleVersions: RuleVersion[]
-  /** Synthetic rounds that ran before this demo started (recorded, read-only). */
+
   pastRounds: number
   settings: { approval: 'auto' | 'manual'; supplierVerification: SupplierVerification }
   opportunityId?: string
 }
 
 interface Store {
-  /** userId → extra market ids this maker operates (on top of org-name matches). */
+
   operated: Record<string, string[]>
   createdMarkets: MarketDetail[]
   rounds: AuctionDetail[]
   pipeline: Record<string, { stage: PipelineStage; reason?: string; marketId?: string }>
   ops: Record<string, MarketOps>
   patches: Record<string, { status: MarketStatus; buyers: number; suppliers: number; rules: LabeledValue[] }>
-  /** userId → recent operations events, newest first. */
+
   events: Record<string, ActivityEvent[]>
 }
 
@@ -46,7 +46,7 @@ export const mm: Store = (() => {
   }
 })()
 
-/** Snapshot operated markets' live fields so seeded markets come back paused/closed/etc. after a reload. */
+
 export function saveMm() {
   for (const id of Object.keys(mm.ops)) {
     const m = economy.markets.find((x) => x.id === id)
@@ -65,7 +65,7 @@ export const hash = (s: string) => [...s].reduce((h, c) => (h * 31 + c.charCodeA
 let seq = 0
 export const mmId = (prefix: string) => `${prefix}-${Date.now().toString(36)}${(seq++).toString(36)}`
 
-// ── Who operates what ────────────────────────────────────────────
+
 
 export const isMaker = (userId: string) => !!db.users.find((u) => u.id === userId)?.capabilities.includes('market_maker')
 
@@ -79,14 +79,14 @@ export function actor(userId: string) {
   return `${db.users.find((u) => u.id === userId)?.name ?? 'Market maker'} (Market Maker)`
 }
 
-// ── Per-market operations state ──────────────────────────────────
+
 
 const BUSINESSES = ['CV Sumber Pangan', 'PT Rasa Nusantara', 'Kedai Kopi Senja', 'UD Makmur Jaya', 'PT Kemas Prima', 'Koperasi Mitra Tani', 'Toko Berkah', 'PT Logistik Andalan', 'CV Tani Lestari', 'PT Agro Priangan']
 const PEOPLE = ['Bagus Santoso', 'Dewi Lestari', 'Andi Pratama', 'Siti Rahma', 'Yoga Aditya']
 const STATUS_CYCLE: MmParticipant['status'][] = ['active', 'active', 'pending', 'active', 'pending', 'active', 'suspended', 'active', 'active', 'pending']
 const DISPUTES = ['Kualitas barang tidak sesuai spesifikasi', 'Keterlambatan pengiriman', 'Selisih kuantitas saat serah terima']
 
-/** Demo accounts that appear as participants, so approvals and suspensions reach a real inbox. */
+
 const DEMO_PARTICIPANTS: Record<string, Omit<MmParticipant, 'id' | 'joinedAt'>> = {
   'mkt-kopi-garut': { name: 'Rina Wulandari', kind: 'person', verified: true, role: 'supplier', status: 'active', reputation: 94, userId: 'usr-rina' },
   'mkt-karton-jkt': { name: 'PT Solusi Kemasan Nusantara', kind: 'business', verified: false, role: 'supplier', status: 'pending', reputation: 88, userId: 'usr-ajar' },
@@ -121,7 +121,7 @@ function seedOps(m: MarketDetail): MarketOps {
   }
 }
 
-/** Rounds of a market that have started (scheduled/qualification haven't). */
+
 export const startedRounds = (marketId: string) =>
   economy.auctions.filter((a) => a.marketId === marketId && !['scheduled', 'qualification', 'cancelled'].includes(a.status))
 
@@ -137,16 +137,16 @@ export function ops(marketId: string): MarketOps {
   return mm.ops[marketId]
 }
 
-// ── Side effects shared by handlers ──────────────────────────────
 
-/** Platform accounts in this market: listed participants plus anyone who joined it from their personal workspace. */
+
+
 export function notifyMarket(marketId: string, n: Omit<AppNotification, 'id' | 'at' | 'read'>, onlyActive = true) {
   const ids = new Set(ops(marketId).participants.filter((p) => p.userId && (!onlyActive || p.status === 'active')).map((p) => p.userId!))
   for (const [userId, p] of allPersonal()) if (p.markets[marketId]?.joined) ids.add(userId)
   for (const id of ids) if (db.users.some((u) => u.id === id)) notify(id, n)
 }
 
-/** Operations feed item for this maker (`mm.activity` on `user:{userId}`), optionally mirrored to the public activity feed. */
+
 export function emitEvent(userId: string, e: Omit<ActivityEvent, 'id' | 'at'>, isPublic = false) {
   const full: ActivityEvent = { ...e, id: mmId('mme'), at: now() }
   const list = (mm.events[userId] ??= [])
@@ -160,7 +160,7 @@ export function emitEvent(userId: string, e: Omit<ActivityEvent, 'id' | 'at'>, i
   }
 }
 
-// ── Restore persisted state into the shared economy ──────────────
+
 
 for (const m of mm.createdMarkets) if (!economy.markets.some((x) => x.id === m.id)) economy.markets.unshift(m)
 for (const a of mm.rounds) {
@@ -180,5 +180,5 @@ for (const [id, p] of Object.entries(mm.pipeline)) {
   const m = p.marketId && economy.markets.find((x) => x.id === p.marketId)
   if (m && !o.markets.some((x) => x.id === m.id)) o.markets.push(m)
 }
-// Seeded makers' markets get their rules versioned (and mirrored to the public rule list) up front.
+
 for (const u of db.users) if (u.capabilities.includes('market_maker')) operatedIds(u.id).forEach(ops)

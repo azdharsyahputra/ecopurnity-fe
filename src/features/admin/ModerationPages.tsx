@@ -40,7 +40,7 @@ function FindingsTag({ a }: { a: AdminAuction }) {
   return <Tag tone={SEVERITY[worst][1]}>{a.findings.length} temuan</Tag>
 }
 
-// ── Markets ──────────────────────────────────────────────────────
+
 
 export function AdminMarketsPage() {
   const query = useAdminMarkets()
@@ -181,7 +181,7 @@ export function AdminMarketDetailPage() {
   )
 }
 
-// ── Auctions ─────────────────────────────────────────────────────
+
 
 export function AdminAuctionsPage() {
   const query = useAdminAuctions()

@@ -17,7 +17,7 @@ interface ToastState {
 
 let next = 0
 
-// ponytail: tiny store instead of a toast library; stacks up to 3 and auto-dismisses after 6 s.
+
 export const useToasts = create<ToastState>((set, get) => ({
   toasts: [],
   push: (t) => {

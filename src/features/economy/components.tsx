@@ -18,7 +18,7 @@ export function CategoryTag({ id }: { id: CategoryId }) {
   return <Tag tone={CATEGORIES[id].tone}>{CATEGORIES[id].label}</Tag>
 }
 
-/** Supply against demand: the bar is demand, the fill is how much supply covers. */
+
 export function GapMeter({ demand, supply, className }: { demand: Quantity; supply: Quantity; className?: string }) {
   const coverage = Math.min(1, supply.value / demand.value)
   const gap = demand.value - supply.value
@@ -132,7 +132,7 @@ export function AuctionCard({ a }: { a: Auction }) {
   )
 }
 
-/** Catalog card; the call to action is passed in because it needs the session. */
+
 export function ListingCard({ l, action }: { l: PublicListing; action: React.ReactNode }) {
   const supply = l.kind === 'supply'
   const thumb = thumbnailOf(l.attachments)
@@ -202,7 +202,7 @@ export function FilterBar({
 }: {
   placeholder: string
   statuses?: [value: string, label: string][]
-  /** Accessible name and "all" option of the status select, for lists that filter something else there. */
+
   statusLabel?: [label: string, all: string]
   showRegion?: boolean
 }) {

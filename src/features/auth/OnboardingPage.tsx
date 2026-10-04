@@ -42,7 +42,7 @@ function readGoal(): OnboardingGoal[] {
   }
 }
 
-/** Draft survives reloads per user (PRD §7: progress is saved). */
+
 function useDraft(userId: string) {
   const key = `ecp-onboarding-${userId}`
   const [draft, setDraft] = useState<Draft>(() => {

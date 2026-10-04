@@ -11,5 +11,5 @@ export const SEARCH_META: Record<SearchType, [LucideIcon, Tone]> = {
   auction: [Gavel, 'orange'],
 }
 
-/** Display order of result groups (PRD §6.6). */
+
 export const SEARCH_ORDER: SearchType[] = ['product', 'service', 'business', 'market', 'opportunity', 'auction']

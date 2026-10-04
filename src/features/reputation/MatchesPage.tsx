@@ -89,7 +89,7 @@ function MatchCard({ m, onDismiss }: { m: Match; onDismiss: () => void }) {
   )
 }
 
-/** Optional reason feeds the recommender; the dialog is `?dismiss=<matchId>`. */
+
 function DismissDialog({ m, onClose }: { m: Match; onClose: () => void }) {
   const act = useMatchAction()
   const [reason, setReason] = useState('')

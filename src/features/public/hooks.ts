@@ -6,14 +6,14 @@ import type { ActivityEvent, PublicStats } from '@/domain/types'
 const STATS = ['public', 'stats'] as const
 const activityKey = (limit: number) => ['public', 'activity', limit] as const
 
-/** Live network stats: fetched once, then patched from `public:stats` (PRD §12.2). */
+
 export function usePublicStats() {
   const qc = useQueryClient()
   useChannel<PublicStats>('public:stats', (m) => qc.setQueryData(STATS, m.payload))
   return useQuery({ queryKey: STATS, queryFn: () => api<PublicStats>('/public/stats') })
 }
 
-/** Public activity feed, newest first; new events are prepended from `public:activity`. */
+
 export function usePublicActivity(limit = 20) {
   const qc = useQueryClient()
   useChannel<ActivityEvent>('public:activity', (m) =>

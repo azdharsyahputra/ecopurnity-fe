@@ -22,7 +22,7 @@ const monthLabel = (m: string) => new Intl.DateTimeFormat('id-ID', { month: 'sho
 function Actions({ o, className }: { o: OpportunityDetail; className?: string }) {
   const gate = useAuthGate()
   const navigate = useNavigate()
-  // ponytail: logged-in join/follow flows land in F2 (PRD §8.5); route there with the intent.
+
   return (
     <div className={className}>
       <Button variant="outline" size="lg" className="h-10" onClick={() => gate('mengikuti opportunity ini', () => navigate(`/app/opportunities?follow=${o.id}`))}>

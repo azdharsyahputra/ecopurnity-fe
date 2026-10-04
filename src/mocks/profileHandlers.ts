@@ -10,7 +10,7 @@ import { notify, personal, savePersonal } from './personal'
 import { admin } from './admin'
 import { botReply, createConversation } from './rfq'
 
-// Smart Matching, reputation and public profiles (PRD §8.6, §8.10).
+
 
 const api = (path: string) => `/api/v1${path}`
 const fail = (status: number, code: string, message: string, fields?: Record<string, string>) =>
@@ -18,14 +18,14 @@ const fail = (status: number, code: string, message: string, fields?: Record<str
 const hash = (s: string) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7)
 const ago = (days: number) => new Date(Date.now() - days * 864e5).toISOString()
 
-// ── Reputation input ─────────────────────────────────────────────
+
 
 const PAST_PARTNERS = ['Kedai Kopi Senja', 'PT Rasa Nusantara', 'Koperasi Mitra Tani', 'UD Makmur Jaya', 'CV Sumber Pangan']
 
-/**
- * Demo accounts get a year of finished transactions behind their live ones so the trend has shape.
- * ponytail: deterministic per key; real history arrives with the BE.
- */
+
+
+
+
 function pastTransactions(key: string): ReputationTx[] {
   if (key.startsWith('usr-new-')) return []
   const h = hash(key)
@@ -46,13 +46,13 @@ function pastTransactions(key: string): ReputationTx[] {
 
 const isDbUser = (id: string) => db.users.some((u) => u.id === id)
 
-/** Live transactions (demo + workspace users) plus the seeded past year. Shared with the admin user list. */
+
 export function reputationTxs(userId: string): ReputationTx[] {
   const joined = admin.accounts.find((a) => a.id === userId)?.joinedAt ?? ''
   return [...(isDbUser(userId) ? personal(userId).transactions : []), ...pastTransactions(userId).filter((t) => t.createdAt >= joined)]
 }
 
-// ── Smart Matching ───────────────────────────────────────────────
+
 
 const MATCH_KEY = 'ecp-mock-matches'
 const matchStore: Record<string, Record<string, { state: MatchState; reason?: string; conversationId?: string }>> = (() => {
@@ -101,7 +101,7 @@ function matchesFor(userId: string): Match[] {
     })
     out.push(...candidates.sort((a, b) => b.score - a.score).slice(0, 2))
   }
-  // Keep the inbox varied: at most two "haves" per opportunity.
+
   const perOpp = new Map<string, number>()
   return out
     .sort((a, b) => b.score - a.score || a.distanceKm - b.distanceKm)
@@ -112,7 +112,7 @@ function matchesFor(userId: string): Match[] {
     })
 }
 
-// ── Public profiles ──────────────────────────────────────────────
+
 
 function businesses() {
   const list = new Map<string, { name: string; verified: boolean; region?: string }>()
@@ -152,7 +152,7 @@ export const profileHandlers = [
     const next: Record<MatchAction, MatchState> = { connect: 'connected', save: 'saved', dismiss: 'dismissed', reset: 'new' }
     if (!next[action]) return fail(422, 'validation', 'Aksi tidak dikenal')
     let conversationId = matchStore[userId]?.[m.id]?.conversationId
-    // Connecting follows the opportunity and opens a conversation with whoever coordinates it (PRD F6).
+
     if (action === 'connect') {
       const p = personal(userId)
       if (!p.opportunities[m.need.opportunityId]) p.opportunities[m.need.opportunityId] = { relation: 'following' }
@@ -205,7 +205,7 @@ export const profileHandlers = [
       supply: supply.map((l) => ({ id: l.id, item: l.item, categoryId: l.categoryId, quantity: l.quantity, priceIdr: l.priceIdr })),
       markets: economy.markets.filter((m) => p.markets[m.id]?.joined).map(({ id: mid, code, name, categoryId, region }) => ({ id: mid, code, name, categoryId, region })),
       orgs: user.orgs.map((o) => ({ name: o.orgName, slug: slugify(o.orgName) })),
-      // Public activity only: finished transactions (counterparty hidden) and offered supply.
+
       activity: [
         ...p.transactions.filter((t) => t.status === 'completed').map((t) => ({ id: t.id, title: `Menyelesaikan transaksi ${t.title}`, at: t.updatedAt })),
         ...supply.map((l) => ({ id: l.id, title: `Menawarkan ${l.item}`, at: l.createdAt })),

@@ -107,7 +107,7 @@ export function RegisterPage() {
 
 function ResendButton() {
   const resend = useResendVerification()
-  const [cooldown, setCooldown] = useState(60) // a code was just sent with the registration
+  const [cooldown, setCooldown] = useState(60)
   useEffect(() => {
     if (cooldown <= 0) return
     const t = setTimeout(() => setCooldown((c) => c - 1), 1000)
@@ -170,7 +170,7 @@ export function VerifyEmailPage() {
         onChange={(e) => {
           const v = e.target.value.replace(/\D/g, '').slice(0, 6)
           setCode(v)
-          if (v.length === 6) submit(v) // paste or the last digit submits right away
+          if (v.length === 6) submit(v)
         }}
         error={fieldError(verify.error, 'code')}
         className="h-12 text-center font-mono text-2xl tracking-[0.5em]"
@@ -257,7 +257,7 @@ export function ResetPasswordPage() {
   )
 }
 
-/** OAuth redirect target: exchanges the provider code for a session. */
+
 export function GoogleCallbackPage() {
   const [params] = useSearchParams()
   const navigate = useNavigate()

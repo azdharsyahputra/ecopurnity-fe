@@ -19,8 +19,8 @@ import { Field, FormError, Segmented, SelectField, TextareaField } from '@/compo
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
-// F6 trade UI shared by the personal and business workspaces: action panel with its dialogs, and the
-// progress / agreement / invoice / shipments / dispute / reviews / documents sections.
+
+
 
 const IMPACT: Partial<Record<TradeAction, (t: TransactionDetail) => string>> = {
   accept_agreement: (t) => `Kamu menyetujui ${formatQty(t.quantity)} × ${formatIdr(t.unitPriceIdr)} dengan termin ${TERMS[t.terms ?? 'escrow'].label}. Agreement mengikat setelah kedua pihak setuju.`,
@@ -28,7 +28,7 @@ const IMPACT: Partial<Record<TradeAction, (t: TransactionDetail) => string>> = {
   cancel: () => 'Transaksi dibatalkan untuk kedua pihak. Dana escrow (jika ada) dikembalikan. Tercatat di riwayat reputasi.',
 }
 
-/** Dialogs open from the URL (?do=ship|proof|qc|dispute|evidence|review) so they can be deep-linked from notifications. */
+
 function useDialog() {
   const [params, setParams] = useSearchParams()
   const open = params.get('do')
@@ -74,7 +74,7 @@ function ShipDialog({ t, scope, onClose }: { t: TransactionDetail; scope: TradeS
 
 const useUpload = (purpose: UploadPurpose) => useMutation({ mutationFn: (f: File) => uploadFile(f, purpose) })
 
-/** File input that uploads on pick (`up.data` is the upload id); shows progress, the upload error or `error` (e.g. the action's uploadId). */
+
 function FilePick({ up, label, hint, error }: { up: UseMutationResult<string, Error, File>; label: string; hint: string; error?: string }) {
   const message = up.error ? uploadErrorMessage(up.error) : error
   return (
@@ -103,7 +103,7 @@ function FilePick({ up, label, hint, error }: { up: UseMutationResult<string, Er
 
 const IMAGE_NAME = /\.(jpe?g|png|webp)$/i
 
-/** An attached file: with a presigned `url` a link (and, with `preview`, an image thumbnail); without one just its name. */
+
 export function Attachment({ name, url, preview, className }: { name: string; url?: string; preview?: boolean; className?: string }) {
   const label = (
     <span className="inline-flex min-w-0 items-center gap-1.5">
@@ -243,10 +243,10 @@ function ReviewDialog({ t, scope, onClose }: { t: TransactionDetail; scope: Trad
 
 const DIALOG_FOR: Partial<Record<TradeAction, string>> = { ship: 'ship', upload_proof: 'proof', confirm_receipt: 'qc', dispute: 'dispute', add_evidence: 'evidence', review: 'review' }
 
-/**
- * The signed-in side's next steps on a trade. `deny` returns why the viewer's role may not take a step (org trades);
- * `children` renders after the actions (e.g. "Pesan lagi").
- */
+
+
+
+
 export function ActionPanel({ t, scope, deny, children }: { t: TransactionDetail; scope: TradeScope; deny?: (a: TradeAction) => string | undefined; children?: ReactNode }) {
   const act = useTradeAction(scope, t.id)
   const [dialog, setDialog] = useDialog()
@@ -301,7 +301,7 @@ function MoneyRow({ label, value, strong, muted }: { label: string; value: strin
   )
 }
 
-/** Left column of a trade detail page. */
+
 export function TradeSections({ t, actions, counterparty }: { t: TransactionDetail; actions?: ReactNode; counterparty?: ReactNode }) {
   const terms = t.terms ?? 'escrow'
   const b = breakdown(t.totalIdr, t.makerFeeRate ?? 0)

@@ -2,16 +2,16 @@ import type { CategoryId } from '@/domain/types'
 import { toCsv } from '@/domain/org'
 import { SERIES } from '@/components/chart-tokens'
 
-/** Color follows the category, never its rank (dataviz) — same mapping as the Explorer. */
+
 export const CATEGORY_SERIES: Record<CategoryId, string> = {
   agri: SERIES[0], food: SERIES[1], packaging: SERIES[2], logistics: SERIES[3], energy: SERIES[4], it: SERIES[4], manufacturing: SERIES[4],
 }
 
 const monthFmt = new Intl.DateTimeFormat('id-ID', { month: 'short', year: '2-digit', timeZone: 'UTC' })
-/** '2026-10' → 'Okt 26' */
+
 export const monthLabel = (m: string) => monthFmt.format(new Date(`${m}-01T00:00:00Z`))
 
-/** Client-side CSV download (exports what the user already sees). */
+
 export function downloadCsv(fileName: string, rows: (string | number)[][]) {
   const url = URL.createObjectURL(new Blob(['﻿', toCsv(rows)], { type: 'text/csv;charset=utf-8' }))
   const a = Object.assign(document.createElement('a'), { href: url, download: fileName })

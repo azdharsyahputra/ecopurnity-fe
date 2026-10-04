@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { formatCountdown, formatIdr, formatPercent, formatQty, formatRelative, initials } from './format'
 import { STATUS, statusMeta } from './status'
 
-// Intl may emit non-breaking spaces; compare on normal spaces.
+
 const n = (s: string) => s.replace(/\u00a0|\u202f/g, ' ')
 
 describe('format', () => {

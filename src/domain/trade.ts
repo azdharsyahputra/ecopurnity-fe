@@ -1,9 +1,9 @@
 import type { TransactionStatus } from './status'
 import type { Review, TransactionDetail } from './types'
 
-// Two-sided trade settlement (PRD F6): payment terms, agreement by both parties, staged shipments,
-// receipt QC, disputes with evidence from both sides, reviews, and the money breakdown.
-// The mock API and the UI both use these rules; the BE must enforce the same table.
+
+
+
 
 export type PaymentTerms = 'escrow' | 'net14' | 'net30'
 export type Role = 'buyer' | 'supplier'
@@ -34,14 +34,14 @@ export interface TradeState {
   status: TransactionStatus
   terms: PaymentTerms
   agreement: Record<Role, boolean>
-  /** Quantity not yet put on a shipment. */
+
   unscheduledQty: number
-  /** Shipments scheduled or in transit (not delivered yet). */
+
   openShipments: number
   reviewed: Record<Role, boolean>
 }
 
-/** Happy-path order for the progress timeline. */
+
 export const timelineFor = (terms: PaymentTerms): TransactionStatus[] =>
   terms === 'escrow'
     ? ['agreement', 'invoiced', 'paid', 'fulfilling', 'delivered', 'completed']
@@ -66,7 +66,7 @@ export function tradeActions(s: TradeState, role: Role): TradeAction[] {
 
 export type QcOutcome = 'accepted' | 'partial' | 'rejected'
 
-/** Status after an action; `delivered` = every unit has arrived (for upload_proof), `qc` for confirm_receipt. */
+
 export function nextStatus(s: TradeState, action: TradeAction, opts: { allDelivered?: boolean; qc?: QcOutcome } = {}): TransactionStatus {
   const escrow = s.terms === 'escrow'
   switch (action) {
@@ -92,10 +92,10 @@ export function nextStatus(s: TradeState, action: TradeAction, opts: { allDelive
 export const VAT_RATE = 0.11
 export const PLATFORM_FEE = 0.01
 
-/**
- * Money for one invoice: the buyer pays subtotal + PPN; fees come out of the supplier's side.
- * `makerFeeRate` is the market maker's commission (0 for trades outside a market).
- */
+
+
+
+
 export function breakdown(subtotalIdr: number, makerFeeRate = 0) {
   const vatIdr = Math.round(subtotalIdr * VAT_RATE)
   const platformFeeIdr = Math.round(subtotalIdr * PLATFORM_FEE)
@@ -104,19 +104,19 @@ export function breakdown(subtotalIdr: number, makerFeeRate = 0) {
   return { subtotalIdr, vatIdr, buyerPaysIdr, platformFeeIdr, makerFeeIdr, supplierReceivesIdr: buyerPaysIdr - platformFeeIdr - makerFeeIdr }
 }
 
-/** Refund owed to the buyer when QC accepts fewer units than were paid for (escrow only). */
+
 export function partialRefund(unitPriceIdr: number, paidQty: number, acceptedQty: number) {
   const short = Math.max(0, paidQty - acceptedQty)
   return breakdown(short * unitPriceIdr).buyerPaysIdr
 }
 
-/** Body of POST /me/transactions/:id/actions. */
+
 export interface TradeActionInput {
   action: TradeAction
   note?: string
-  /** Verified upload (POST /uploads): `trade_proof` for upload_proof (required), `dispute_evidence` for dispute / add_evidence. */
+
   uploadId?: string
-  /** Legacy bare file name: only the simulated counterparties (demo bot) attach this way; a user's is ignored. */
+
   file?: string
   shipment?: { quantity: number; dropPoint: string; carrier: string; scheduledAt: string }
   shipmentId?: string
@@ -124,7 +124,7 @@ export interface TradeActionInput {
   review?: Omit<Review, 'by' | 'at'>
 }
 
-/** Trade state from a transaction record, defaulting fields that records from before F6 lack. */
+
 export function tradeStateOf(t: TransactionDetail): TradeState {
   const shipments = t.shipments ?? []
   const scheduled = shipments.reduce((sum, x) => sum + x.quantity, 0)

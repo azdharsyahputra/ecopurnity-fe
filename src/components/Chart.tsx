@@ -4,8 +4,8 @@ import { cn } from '@/lib/utils'
 import { Skeleton } from './ui/skeleton'
 import { EmptyState } from './States'
 
-// Shared chart chrome (dataviz skill): validated categorical tokens in fixed order, recessive axes,
-// value-first tooltips with line keys, a legend for ≥ 2 series, and a table view for every chart.
+
+
 
 export interface LegendItem {
   label: string
@@ -28,7 +28,7 @@ interface TooltipRow {
   dataKey?: unknown
 }
 
-/** Values lead, series names follow, keyed by a short line in the series color. */
+
 export function ChartTooltip({
   active,
   payload,
@@ -73,10 +73,10 @@ export function ChartCard({
   title: string
   subtitle?: string
   legend?: LegendItem[]
-  /** Same data as the chart, for screen readers and anyone who prefers numbers. */
+
   table: { columns: string[]; rows: ReactNode[][] }
   loading?: boolean
-  /** Keeps the previous render dimmed instead of flashing a skeleton. */
+
   refetching?: boolean
   height?: number
   className?: string

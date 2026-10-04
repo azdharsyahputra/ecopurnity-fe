@@ -6,7 +6,7 @@ import type { Tone } from '@/domain/status'
 import { IconChip } from './IconChip'
 import { Skeleton } from './ui/skeleton'
 
-/** Key number with optional delta. Flashes once when `value` changes (live data). */
+
 export function StatTile({
   label,
   value,
@@ -21,14 +21,14 @@ export function StatTile({
   value: ReactNode
   icon?: LucideIcon
   tone?: Tone
-  /** Fractional change, e.g. 0.12 = +12%. */
+
   delta?: number
   hint?: string
   loading?: boolean
   className?: string
 }) {
-  // "Previous value in state" pattern: bump a key when value changes so the flash replays.
-  // Values seen while loading don't count, so the first real value doesn't flash.
+
+
   const [prev, setPrev] = useState<ReactNode>(loading ? undefined : value)
   const [flash, setFlash] = useState(0)
   if (!loading && prev !== value) {

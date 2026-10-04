@@ -43,7 +43,7 @@ function GoogleMark() {
   )
 }
 
-/** Sends the user to the OAuth provider; the mock "provider" redirects straight back to our callback. */
+
 export function GoogleButton({ label = 'Lanjut dengan Google' }: { label?: string }) {
   const [params] = useSearchParams()
   const returnTo = params.get('returnTo')
@@ -63,7 +63,7 @@ export function OrDivider() {
   )
 }
 
-/** Mock-only: shows the link a real BE would have emailed, so verify/reset flows can be completed locally. */
+
 export function MockOutbox({ email, kind }: { email?: string; kind: 'verify' | 'reset' }) {
   const outbox = useQuery({
     queryKey: ['mock-outbox', email ?? 'me', kind],

@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
-/** Submit an existing supply/demand listing into a market (PRD §8.7). */
+
 function SubmitDialog({ m, kind, onClose }: { m: MyMarket; kind: 'supply' | 'demand'; onClose: () => void }) {
   const listings = useListings(kind)
   const options = (listings.data ?? []).filter((l) => l.categoryId === m.categoryId && ['available', 'open', 'matched'].includes(l.status))
@@ -71,7 +71,7 @@ export function MyMarketsPage() {
   const action = useMarketAction()
   const [params, setParams] = useSearchParams()
   const [scope, setScope] = useState<'joined' | 'browse'>('joined')
-  // Dialogs are URL state (?supply= / ?demand= / ?watch=<marketId>), so public "Submit" buttons land in them.
+
   const dialog = (['supply', 'demand', 'watch'] as const)
     .map((type) => ({ type, m: query.data?.find((m) => m.id === params.get(type)) }))
     .find((d): d is { type: 'supply' | 'demand' | 'watch'; m: MyMarket } => !!d.m)
@@ -83,7 +83,7 @@ export function MyMarketsPage() {
     if (!joinId) return
     action.mutate({ type: 'join', id: joinId }, { onSuccess: () => toast({ title: 'Bergabung ke market', tone: 'green' }) })
     setParams({}, { replace: true })
-  }, [joinId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [joinId])
 
   return (
     <>

@@ -28,7 +28,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 const ACTION_LABEL: Record<Exclude<SupplierAction, 'rate' | 'block' | 'verify'>, string> = { shortlist: 'Shortlist', invite: 'Undang', unblock: 'Buka blokir' }
 
-/** Quick relation actions for a row or the detail header. */
+
 function RelationActions({ s, compact }: { s: OrgSupplier; compact?: boolean }) {
   const access = useOrgAccess()
   const act = useSupplierAction()
@@ -78,7 +78,7 @@ function RelationActions({ s, compact }: { s: OrgSupplier; compact?: boolean }) 
   )
 }
 
-// ── Discover ─────────────────────────────────────────────────────
+
 
 export function SuppliersPage() {
   const access = useOrgAccess()
@@ -136,7 +136,7 @@ export function SuppliersPage() {
   )
 }
 
-// ── Detail ───────────────────────────────────────────────────────
+
 
 const METRICS = [['price', 'Price'], ['reliability', 'Reliability'], ['quality', 'Quality'], ['delivery', 'Delivery']] as const
 

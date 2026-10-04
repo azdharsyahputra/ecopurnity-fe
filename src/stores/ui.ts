@@ -3,7 +3,7 @@ import { create } from 'zustand'
 export type ThemePref = 'light' | 'dark' | 'system'
 
 const THEME_KEY = 'ecp-theme'
-// Undefined while prerendering (src/entry-server.tsx), where there is no window.
+
 const media = typeof window === 'undefined' ? undefined : window.matchMedia('(prefers-color-scheme: dark)')
 
 function readTheme(): ThemePref {
@@ -22,7 +22,7 @@ function applyTheme(pref: ThemePref) {
 interface UiState {
   theme: ThemePref
   setTheme: (t: ThemePref) => void
-  /** Why the auth gate is open (e.g. "bid di auction ini"); null = closed. */
+
   authGate: string | null
   openAuthGate: (reason: string) => void
   closeAuthGate: () => void
@@ -31,8 +31,8 @@ interface UiState {
 }
 
 export const useUi = create<UiState>((set) => ({
-  // Starts as the prerendered value; the saved theme is set below, so hydration (which reads the
-  // store's initial state as its server snapshot) matches the HTML and the toggle updates right after.
+
+
   theme: 'system',
   setTheme: (theme) => {
     try {

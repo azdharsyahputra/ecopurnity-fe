@@ -27,21 +27,21 @@ describe('market rules', () => {
 
   it('new versions only take effect from the next round', () => {
     let v = [{ version: 1, rules: base, effectiveFromRound: 1, createdAt: '', author: 'a' }]
-    // Before any round runs, v1 is active and nothing is pending.
+
     expect(activeVersion(v, 0).version).toBe(1)
     expect(pendingVersion(v, 0)).toBeUndefined()
 
-    // Edit during round 3: round 3 keeps v1, v2 waits for round 4.
+
     v = addVersion(v, { ...base, radiusKm: 100 }, 3, 'a', 'perluas', 'x')
     expect(v[1]).toMatchObject({ version: 2, effectiveFromRound: 4, reason: 'perluas' })
     expect(activeVersion(v, 3).version).toBe(1)
     expect(pendingVersion(v, 3)?.version).toBe(2)
 
-    // Round 4 starts: v2 governs it, nothing pending.
+
     expect(activeVersion(v, 4).version).toBe(2)
     expect(pendingVersion(v, 4)).toBeUndefined()
 
-    // A second edit before round 4 supersedes v2 for the same next round.
+
     const w = addVersion(v, { ...base, radiusKm: 150 }, 3, 'a')
     expect(activeVersion(w, 4).version).toBe(3)
   })
@@ -77,11 +77,11 @@ describe('market formation', () => {
 describe('defaultRules window', () => {
   const m = { demand: { value: 600, unit: 'kg' }, supply: { value: 800, unit: 'kg' }, region: 'Jawa Barat', mechanism: 'reverse_auction' as const }
   it('runs from today to Friday on a weekday', () => {
-    const r = defaultRules(m, new Date(2026, 9, 1)) // Thursday
+    const r = defaultRules(m, new Date(2026, 9, 1))
     expect([r.windowStart, r.windowEnd]).toEqual(['2026-10-01', '2026-10-02'])
   })
   it('moves to next week on a weekend', () => {
-    const r = defaultRules(m, new Date(2026, 9, 3)) // Saturday
+    const r = defaultRules(m, new Date(2026, 9, 3))
     expect([r.windowStart, r.windowEnd]).toEqual(['2026-10-05', '2026-10-09'])
   })
 })
