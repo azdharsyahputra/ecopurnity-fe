@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowRightLeft, Cpu, Kanban, Store, Users, UsersRound, X } from 'lucide-react'
+import { ArrowLeft, ArrowRightLeft, ChevronRight, Cpu, Kanban, MapPin, Store, Users, UsersRound, X } from 'lucide-react'
 import { PIPELINE_MOVES, PIPELINE_STAGES, type PipelineCard, type PipelineStage } from '@/domain/mm'
 import { MECHANISMS, OPPORTUNITY_KINDS } from '@/domain/catalog'
 import { formatIdr, formatNumber, formatPercent, formatRelative } from '@/domain/format'
@@ -22,9 +22,9 @@ const STAGES = Object.keys(PIPELINE_STAGES) as PipelineStage[]
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0">
-      <dt className="truncate text-xs text-muted-foreground">{label}</dt>
-      <dd className="num truncate text-sm font-semibold">{value}</dd>
+    <div className="min-w-0 rounded-xl border border-border/60 bg-background/70 px-2.5 py-2">
+      <dt className="truncate text-[11px] font-medium text-muted-foreground">{label}</dt>
+      <dd className="num mt-0.5 break-words text-sm font-semibold leading-tight">{value}</dd>
     </div>
   )
 }
@@ -34,32 +34,33 @@ function Card({ o, onDismiss }: { o: PipelineCard; onDismiss: () => void }) {
   const moves = PIPELINE_MOVES[o.stage].filter((s) => s !== 'dismissed')
   const formable = o.stage !== 'market_live' && o.stage !== 'dismissed'
   return (
-    <article className="rounded-xl border bg-card p-3.5" aria-label={o.title}>
-      <div className="flex items-center gap-1.5">
+    <article className="flex min-h-0 flex-1 flex-col rounded-2xl border bg-card p-3.5 shadow-sm shadow-foreground/[0.025] transition-all hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-md sm:p-4" aria-label={o.title}>
+      <div className="flex min-w-0 items-center gap-1.5">
         <Tag tone={OPPORTUNITY_KINDS[o.kind].tone}>{OPPORTUNITY_KINDS[o.kind].label}</Tag>
-        <span className="ml-auto text-xs text-muted-foreground">{o.code}</span>
+        <span className="ml-auto shrink-0 rounded-md bg-muted/60 px-2 py-0.5 font-mono text-[11px] text-muted-foreground">{o.code}</span>
       </div>
-      <h3 className="mt-2 text-sm font-medium leading-snug">
+      <h3 className="mt-3 line-clamp-2 min-h-10 text-sm font-semibold leading-5 tracking-tight">
         <Link to={`/opportunities/${o.id}`} className="hover:underline">{o.title}</Link>
       </h3>
-      <p className="mt-0.5 text-xs text-muted-foreground">{o.region}</p>
+      <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground"><MapPin className="size-3.5 shrink-0" /> <span className="truncate">{o.region}</span></p>
       <dl className="mt-3 grid grid-cols-2 gap-2">
         <Metric label="Potensi demand" value={formatIdr(o.potentialValueIdr, { compact: true })} />
         <Metric label="Peserta" value={formatNumber(o.participants)} />
-        <Metric label="Supply coverage" value={formatPercent(Math.min(1, o.supply.value / o.demand.value))} />
-        <Metric label="Confidence" value={formatPercent(o.confidence)} />
+        <Metric label="Supply coverage" value={formatPercent(o.demand.value > 0 ? Math.min(1, o.supply.value / o.demand.value) : 0)} />
+        <Metric label="Confidence engine" value={formatPercent(o.confidence)} />
       </dl>
-      <div className="mt-3 rounded-lg bg-muted p-2.5 text-xs">
-        <p className="flex items-center gap-1 font-medium"><Cpu className="size-3.5" /> Engine: {MECHANISMS[o.suggestedMechanism].label}</p>
-        <p className="mt-1 text-muted-foreground">{o.mechanismReason}</p>
+      <div className="mt-3 rounded-xl border border-purple-500/15 bg-purple-500/[0.045] p-3 text-xs dark:border-purple-400/15 dark:bg-purple-400/[0.06]">
+        <p className="flex items-center gap-1.5 font-semibold text-purple-800 dark:text-purple-200"><Cpu className="size-3.5 shrink-0" /> Rekomendasi engine</p>
+        <p className="mt-1 font-medium">{MECHANISMS[o.suggestedMechanism].label}</p>
+        <p className="mt-1 line-clamp-3 leading-relaxed text-muted-foreground">{o.mechanismReason}</p>
       </div>
-      {o.dismissReason && <p className="mt-2 text-xs text-muted-foreground">Alasan dismiss: {o.dismissReason}</p>}
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        {formable && <Button size="sm" render={<Link to={`/mm/markets/new?opportunity=${o.id}`} />}><Store /> Form market</Button>}
-        {o.stage === 'market_live' && o.marketId && <Button size="sm" variant="outline" render={<Link to={`/markets/${o.marketId}`} />}>Lihat market</Button>}
+      {o.dismissReason && <p className="mt-2 rounded-lg bg-muted/50 px-2.5 py-2 text-xs leading-relaxed text-muted-foreground"><span className="font-medium text-foreground">Alasan dismiss:</span> {o.dismissReason}</p>}
+      <div className="mt-auto grid grid-cols-2 gap-2 border-t pt-3">
+        {formable && <Button size="sm" className="w-full" render={<Link to={`/mm/markets/new?opportunity=${o.id}`} />}><Store /> Form market</Button>}
+        {o.stage === 'market_live' && o.marketId && <Button size="sm" variant="outline" className="w-full" render={<Link to={`/markets/${o.marketId}`} />}>Lihat market</Button>}
         {moves.length > 0 && (
           <DropdownMenu>
-            <DropdownMenuTrigger render={<Button size="sm" variant="outline" aria-label={`Pindahkan ${o.title}`} disabled={move.isPending} />}>
+            <DropdownMenuTrigger render={<Button size="sm" variant="outline" className="w-full" aria-label={`Pindahkan ${o.title}`} disabled={move.isPending} />}>
               <ArrowRightLeft /> Pindahkan
             </DropdownMenuTrigger>
             <DropdownMenuContent>
@@ -72,7 +73,7 @@ function Card({ o, onDismiss }: { o: PipelineCard; onDismiss: () => void }) {
           </DropdownMenu>
         )}
         {PIPELINE_MOVES[o.stage].includes('dismissed') && (
-          <Button size="sm" variant="ghost" onClick={onDismiss}><X /> Dismiss</Button>
+          <Button size="sm" variant="ghost" className="w-full" onClick={onDismiss}><X /> Dismiss</Button>
         )}
       </div>
       <FormError error={move.error} />
@@ -126,7 +127,7 @@ function PoolRequests() {
           const closed = p.round && !['live', 'extended'].includes(p.round.status)
           const ops = `/mm/markets/${p.marketId}?tab=rounds`
           return (
-            <li key={p.id} className="flex flex-col rounded-xl border bg-card p-3.5">
+            <li key={p.id} className="flex flex-col rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025]">
               <div className="flex flex-wrap items-center gap-1.5">
                 <CategoryTag id={p.categoryId} />
                 {p.status === 'market_requested' && <Tag tone="yellow">Menunggu market</Tag>}
@@ -176,6 +177,8 @@ export function PipelinePage() {
   const query = usePipeline()
   // Dismiss dialog is URL state (?dismiss=<opportunityId>).
   const [dismissId, setDismiss] = useParam('dismiss')
+  const [stageParam, setStage] = useParam('stage')
+  const selectedStage = STAGES.includes(stageParam as PipelineStage) ? stageParam as PipelineStage : null
   const dismissing = query.data?.find((o) => o.id === dismissId)
   return (
     <>
@@ -184,29 +187,62 @@ export function PipelinePage() {
         description="Opportunity dari Market Formation Engine, dari terdeteksi sampai market berjalan."
         icon={Kanban}
         tone="purple"
+        featured
+        actions={selectedStage ? <Button variant="outline" className="h-9" onClick={() => setStage('')}><ArrowLeft /> Semua tahap</Button> : undefined}
       />
       <PoolRequests />
       <AsyncView query={query} skeleton={<Skeleton className="h-96 rounded-xl" />} emptyFallback={false}>
         {(cards) => (
-          <div className="no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 md:-mx-10 md:px-10">
-            {STAGES.map((stage) => {
-              const list = cards.filter((c) => c.stage === stage).sort((a, b) => b.confidence - a.confidence)
-              return (
-                <section key={stage} aria-labelledby={`stage-${stage}`} className="flex w-[17.5rem] shrink-0 snap-start flex-col gap-2 rounded-xl bg-muted/50 p-2">
-                  <h2 id={`stage-${stage}`} className="flex items-center gap-2 px-1.5 py-1 text-sm font-medium">
-                    <Tag tone={PIPELINE_STAGES[stage].tone}>{PIPELINE_STAGES[stage].label}</Tag>
-                    <span className="num text-muted-foreground">{list.length}</span>
+          <>
+          {selectedStage ? (
+            <section aria-labelledby="stage-results">
+              <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <p className="text-sm text-muted-foreground">Opportunity berdasarkan status</p>
+                  <h2 id="stage-results" className="mt-1 flex items-center gap-2 text-xl font-semibold tracking-tight">
+                    <Tag tone={PIPELINE_STAGES[selectedStage].tone}>{PIPELINE_STAGES[selectedStage].label}</Tag>
+                    <span className="text-base font-medium text-muted-foreground">{formatNumber(cards.filter((c) => c.stage === selectedStage).length)} item</span>
                   </h2>
-                  {list.map((o) => <Card key={o.id} o={o} onDismiss={() => setDismiss(o.id)} />)}
-                  {!list.length && (
-                    <p className="flex items-center gap-1.5 rounded-lg border border-dashed px-3 py-6 text-xs text-muted-foreground">
-                      <Users className="size-3.5" /> Kosong
-                    </p>
-                  )}
-                </section>
-              )
-            })}
-          </div>
+                </div>
+              </div>
+              {cards.some((c) => c.stage === selectedStage) ? (
+                <ul className="grid items-stretch gap-3 sm:grid-cols-2 2xl:grid-cols-3">
+                  {cards.filter((c) => c.stage === selectedStage).sort((a, b) => b.confidence - a.confidence).map((o) => (
+                    <li key={o.id} className="flex"><Card o={o} onDismiss={() => setDismiss(o.id)} /></li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="rounded-2xl border border-dashed bg-muted/15 px-5 py-10 text-center text-sm text-muted-foreground">Belum ada opportunity pada tahap {PIPELINE_STAGES[selectedStage].label}.</p>
+              )}
+            </section>
+          ) : (
+            <section aria-labelledby="pipeline-boards">
+              <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+                <div><h2 id="pipeline-boards" className="text-lg font-semibold tracking-tight">Papan opportunity</h2><p className="mt-0.5 text-sm text-muted-foreground">Satu ringkasan terbaru per tahap. Buka daftar untuk melihat semuanya.</p></div>
+                <span className="rounded-full border bg-muted/40 px-3 py-1 text-xs font-medium text-muted-foreground">{formatNumber(cards.length)} opportunity</span>
+              </div>
+              <div className="grid items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {STAGES.map((stage) => {
+                  const list = cards.filter((c) => c.stage === stage).sort((a, b) => b.confidence - a.confidence)
+                  return (
+                    <section key={stage} aria-labelledby={`stage-${stage}`} className="flex min-w-0 flex-col gap-3 rounded-2xl border bg-muted/20 p-3 shadow-sm shadow-foreground/[0.02]">
+                      <header id={`stage-${stage}`} className="flex items-center gap-2 border-b px-1 pb-3">
+                        <Tag tone={PIPELINE_STAGES[stage].tone}>{PIPELINE_STAGES[stage].label}</Tag>
+                        <span className="ml-auto rounded-full border bg-card px-2.5 py-0.5 text-xs font-semibold text-muted-foreground">{formatNumber(list.length)}</span>
+                      </header>
+                      {list[0] ? <Card o={list[0]} onDismiss={() => setDismiss(list[0].id)} /> : (
+                        <p className="flex min-h-32 flex-1 items-center justify-center gap-1.5 rounded-xl border border-dashed bg-card/60 px-3 py-6 text-center text-xs text-muted-foreground"><Users className="size-3.5" />Belum ada opportunity</p>
+                      )}
+                      <Button variant="outline" size="sm" className="w-full justify-between bg-card" disabled={!list.length} onClick={() => setStage(stage)}>
+                        <span>Lihat semua {formatNumber(list.length)}</span><ChevronRight />
+                      </Button>
+                    </section>
+                  )
+                })}
+              </div>
+            </section>
+          )}
+          </>
         )}
       </AsyncView>
       {dismissing && <DismissDialog o={dismissing} onClose={() => setDismiss('')} />}
