@@ -1,6 +1,6 @@
 import { useParams, useSearchParams } from 'react-router-dom'
-import { AlertTriangle, Check, FileCheck2, FileText } from 'lucide-react'
-import { formatDateTime, formatRelative } from '@/domain/format'
+import { AlertTriangle, Check, Clock3, FileCheck2, FileText, ShieldCheck } from 'lucide-react'
+import { formatDateTime, formatNumber, formatRelative } from '@/domain/format'
 import { cn } from '@/lib/utils'
 import { toast } from '@/stores/toast'
 import { useAdminAction, useVerification, useVerifications } from './hooks'
@@ -26,9 +26,26 @@ export function VerificationQueuePage() {
   return (
     <>
       <PageHeader title="Verifikasi bisnis" description={`Antrean dokumen NIB, NPWP, dan akta. Target review ${SLA_HOURS} jam sejak diajukan.`} icon={FileCheck2} tone="orange" />
-      <AsyncView query={query} skeleton={<Skeleton className="h-72 rounded-xl" />} empty={<EmptyState icon={FileCheck2} title="Antrean kosong" description="Pengajuan verifikasi bisnis baru akan muncul di sini." />}>
-        {(rows) => (
-          <DataTable
+      <AsyncView query={query} skeleton={<Skeleton className="h-72 rounded-xl" />} emptyFallback={false}>
+        {(rows) => {
+          const pending = rows.filter((v) => v.status === 'pending')
+          const overdueCount = pending.filter((v) => Date.now() - new Date(v.submittedAt).getTime() > SLA_HOURS * 3_600_000).length
+          return (
+            <div className="grid gap-5">
+              <section aria-label="Ringkasan antrean verifikasi" className="grid gap-3 sm:grid-cols-3">
+                {[
+                  { label: 'Total pengajuan', value: rows.length, note: 'Semua status verifikasi', icon: FileCheck2, tone: 'bg-orange-500/10 text-orange-700 dark:text-orange-300' },
+                  { label: 'Menunggu review', value: pending.length, note: 'Perlu keputusan admin', icon: ShieldCheck, tone: 'bg-blue-500/10 text-blue-700 dark:text-blue-300' },
+                  { label: 'Melewati SLA', value: overdueCount, note: `Target review ${SLA_HOURS} jam`, icon: Clock3, tone: 'bg-red-500/10 text-red-700 dark:text-red-300' },
+                ].map(({ label, value, note, icon: Icon, tone }) => (
+                  <article key={label} className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:p-5">
+                    <div className="flex items-start justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">{label}</p><p className="mt-2 text-2xl font-semibold tracking-tight tabular-nums">{formatNumber(value)}</p><p className="mt-1 text-xs text-muted-foreground">{note}</p></div><span className={`grid size-10 place-items-center rounded-xl ${tone}`}><Icon className="size-5" aria-hidden="true" /></span></div>
+                  </article>
+                ))}
+              </section>
+              <section className="grid gap-3">
+                <div className="flex flex-wrap items-end justify-between gap-2 border-b pb-3"><div><h2 className="text-lg font-semibold tracking-tight">Antrean verifikasi bisnis</h2><p className="mt-1 text-sm text-muted-foreground">Buka pengajuan untuk membandingkan data formulir dengan dokumen pendukung.</p></div><span className="rounded-full border bg-muted/40 px-3 py-1 text-xs font-medium text-muted-foreground">{rows.length} pengajuan</span></div>
+                {rows.length ? <DataTable
             caption="Antrean verifikasi"
             rows={rows}
             rowKey={(v) => v.id}
@@ -47,8 +64,11 @@ export function VerificationQueuePage() {
               },
               { key: 'status', header: 'Status', cell: (v) => <StatusTag v={v} /> },
             ]}
-          />
-        )}
+          /> : <div className="rounded-2xl border border-dashed bg-muted/10 p-5 sm:p-7"><EmptyState icon={FileCheck2} tone="orange" title="Antrean verifikasi kosong" description="Pengajuan bisnis baru akan muncul di sini. Kamu dapat membukanya untuk memeriksa dokumen dan memberi keputusan." /></div>}
+              </section>
+            </div>
+          )
+        }}
       </AsyncView>
     </>
   )
