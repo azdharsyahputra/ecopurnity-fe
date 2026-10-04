@@ -164,10 +164,6 @@ Halaman Ecopurnity dengan data demo (1440 px, tema terang).
 
 ![44b-org-supplier-detail](44b-org-supplier-detail.png)
 
-### 45-org-inventory
-
-![45-org-inventory](45-org-inventory.png)
-
 ### 46-org-transactions
 
 ![46-org-transactions](46-org-transactions.png)
