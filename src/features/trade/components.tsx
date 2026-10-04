@@ -265,13 +265,13 @@ export function ActionPanel({ t, scope, deny, children }: { t: TransactionDetail
         ) : a === 'pay' ? (
           <PayPanel key={a} t={t} scope={scope} />
         ) : DIALOG_FOR[a] ? (
-          <Button key={a} variant={a === 'dispute' ? 'destructive' : a === 'review' || a === 'add_evidence' ? 'outline' : 'default'} className="h-9" onClick={() => setDialog(DIALOG_FOR[a]!)}>
+          <Button key={a} variant={a === 'dispute' ? 'destructive' : a === 'review' || a === 'add_evidence' ? 'outline' : 'default'} className="h-11 w-full justify-center" onClick={() => setDialog(DIALOG_FOR[a]!)}>
             {TRADE_ACTION_LABEL[a]}
           </Button>
         ) : (
           <ConfirmDialog
             key={a}
-            trigger={<Button variant={a === 'cancel' ? 'outline' : 'default'} className="h-9">{TRADE_ACTION_LABEL[a]}</Button>}
+            trigger={<Button variant={a === 'cancel' ? 'outline' : 'default'} className="h-11 w-full">{TRADE_ACTION_LABEL[a]}</Button>}
             title={`${TRADE_ACTION_LABEL[a]}?`}
             impact={IMPACT[a]?.(t)}
             confirmLabel={TRADE_ACTION_LABEL[a]}
@@ -294,23 +294,26 @@ export function ActionPanel({ t, scope, deny, children }: { t: TransactionDetail
 
 function MoneyRow({ label, value, strong, muted }: { label: string; value: string; strong?: boolean; muted?: boolean }) {
   return (
-    <div className={cn('flex justify-between gap-3 py-1 text-sm', strong && 'font-semibold', muted && 'text-muted-foreground')}>
-      <span>{label}</span>
-      <span className="num">{value}</span>
+    <div className={cn('flex items-start justify-between gap-3 py-2 text-sm', strong && 'my-1 rounded-xl bg-primary/[0.06] px-3 font-semibold text-foreground', muted && 'text-muted-foreground')}>
+      <span className="min-w-0 leading-relaxed">{label}</span>
+      <span className="num shrink-0 text-right">{value}</span>
     </div>
   )
 }
 
 /** Left column of a trade detail page. */
-export function TradeSections({ t }: { t: TransactionDetail }) {
+export function TradeSections({ t, actions, counterparty }: { t: TransactionDetail; actions?: ReactNode; counterparty?: ReactNode }) {
   const terms = t.terms ?? 'escrow'
   const b = breakdown(t.totalIdr, t.makerFeeRate ?? 0)
   const state = tradeStateOf(t)
   const evidence = t.dispute?.evidence ?? []
   return (
-    <>
-      <section className="rounded-xl border bg-card p-4 md:p-5">
-        <h2 className="font-medium">Progres</h2>
+    <div className="grid min-w-0 items-stretch gap-4 xl:grid-cols-12">
+      <section className="h-full rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] xl:col-span-6 md:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-2 border-b border-border/70 pb-3">
+          <div><h2 className="font-semibold tracking-tight">Progres transaksi</h2><p className="mt-1 text-xs text-muted-foreground">Tahapan kesepakatan dari persetujuan hingga selesai.</p></div>
+          <StatusBadge entity="transaction" status={t.status} />
+        </div>
         <ol className="mt-4 flex flex-col">
           {timelineFor(terms).map((s, i, all) => {
             const step = t.timeline.find((x) => x.status === s)
@@ -321,9 +324,9 @@ export function TradeSections({ t }: { t: TransactionDetail }) {
                 <span className={cn('relative z-10 grid size-6 shrink-0 place-items-center rounded-full border text-xs', reached ? 'border-primary bg-primary text-primary-foreground' : 'bg-background text-muted-foreground', t.status === s && 'ring-3 ring-primary/30')}>
                   {reached ? <Check className="size-3.5" /> : i + 1}
                 </span>
-                <div className="text-sm">
+                <div className="min-w-0 flex-1 text-sm">
                   <p className={cn('font-medium', !reached && 'text-muted-foreground')}>{statusMeta('transaction', s).label}</p>
-                  <p className="text-xs text-muted-foreground">{step?.at ? `${formatDateTime(step.at)}${step.note ? ` · ${step.note}` : ''}` : 'Menunggu'}</p>
+                  <p className="mt-0.5 break-words text-xs leading-relaxed text-muted-foreground">{step?.at ? `${formatDateTime(step.at)}${step.note ? ` · ${step.note}` : ''}` : 'Menunggu'}</p>
                 </div>
               </li>
             )
@@ -332,9 +335,12 @@ export function TradeSections({ t }: { t: TransactionDetail }) {
         {t.status === 'cancelled' && <p className="mt-4 rounded-lg p-3 text-sm" style={{ background: 'var(--tag-red-bg)', color: 'var(--tag-red-fg)' }}>Transaksi dibatalkan.</p>}
       </section>
 
+      {actions}
+      {counterparty}
+
       {t.status === 'agreement' && (
-        <section className="rounded-xl border bg-card p-4 md:p-5">
-          <h2 className="flex items-center gap-2 font-medium"><Handshake className="size-4 text-muted-foreground" /> Agreement</h2>
+        <section className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] xl:col-span-12 md:p-5">
+          <h2 className="flex items-center gap-2 border-b border-border/70 pb-3 font-semibold tracking-tight"><Handshake className="size-4 text-primary" /> Agreement</h2>
           <p className="mt-1 text-sm text-muted-foreground">Mengikat setelah pembeli dan supplier sama-sama setuju. {TERMS[terms].hint}</p>
           <ul className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
             {(['buyer', 'supplier'] as const).map((r) => (
@@ -347,8 +353,8 @@ export function TradeSections({ t }: { t: TransactionDetail }) {
         </section>
       )}
 
-      <section className="rounded-xl border bg-card p-4 md:p-5">
-        <h2 className="font-medium">Tagihan</h2>
+      <section className="h-full rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] xl:col-span-6 md:p-5">
+        <h2 className="border-b border-border/70 pb-3 font-semibold tracking-tight">Tagihan</h2>
         {t.invoice && <p className="mt-1 text-xs text-muted-foreground">{t.invoice.number} · jatuh tempo {formatDate(t.invoice.dueAt)}</p>}
         <div className="mt-3 divide-y">
           <MoneyRow label={`${formatQty(t.quantity)} × ${formatIdr(t.unitPriceIdr)}`} value={formatIdr(b.subtotalIdr)} />
@@ -365,18 +371,15 @@ export function TradeSections({ t }: { t: TransactionDetail }) {
         {t.qc && t.qc.outcome !== 'accepted' && <p className="mt-3 rounded-lg bg-muted p-2.5 text-xs">QC: {t.qc.outcome === 'partial' ? `diterima ${formatNumber(t.qc.acceptedQty)} ${t.quantity.unit}` : 'ditolak'} · {t.qc.note}</p>}
       </section>
 
-      <section className="rounded-xl border bg-card p-4 md:p-5">
-        <h2 className="flex items-center gap-2 font-medium"><Truck className="size-4 text-muted-foreground" /> Pengiriman</h2>
+      <section className="h-full rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] xl:col-span-6 md:p-5">
+        <h2 className="flex items-center gap-2 border-b border-border/70 pb-3 font-semibold tracking-tight"><Truck className="size-4 text-primary" /> Pengiriman</h2>
         {(t.shipments ?? []).length ? (
-          <ul className="mt-3 divide-y text-sm">
+          <ul className="mt-3 grid gap-2.5 text-sm">
             {t.shipments!.map((s) => (
-              <li key={s.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5">
-                <PackageCheck className="size-4 text-muted-foreground" />
-                <span className="num font-medium">{formatNumber(s.quantity)} {t.quantity.unit}</span>
-                <span className="min-w-0 flex-1 truncate text-muted-foreground">→ {s.dropPoint} · {s.carrier}</span>
-                <Tag tone={s.status === 'delivered' ? 'green' : 'blue'}>{s.status === 'delivered' ? 'Terkirim' : 'Dalam perjalanan'}</Tag>
-                <span className="text-xs text-muted-foreground">{formatDate(s.deliveredAt ?? s.scheduledAt)}</span>
-                {s.proof && <Attachment name={s.proof} url={s.proofUrl} className="basis-full pl-7 text-xs" />}
+              <li key={s.id} className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-2.5 gap-y-2 rounded-xl border bg-muted/15 p-3">
+                <span className="grid size-8 place-items-center rounded-lg bg-primary/10 text-primary"><PackageCheck className="size-4" /></span>
+                <div className="min-w-0"><div className="flex flex-wrap items-center justify-between gap-2"><span className="num font-semibold">{formatNumber(s.quantity)} {t.quantity.unit}</span><Tag tone={s.status === 'delivered' ? 'green' : 'blue'}>{s.status === 'delivered' ? 'Terkirim' : 'Dalam perjalanan'}</Tag></div><p className="mt-1 break-words text-xs leading-relaxed text-muted-foreground">{s.dropPoint} · {s.carrier}</p><p className="mt-1 text-[11px] text-muted-foreground">{formatDate(s.deliveredAt ?? s.scheduledAt)}</p></div>
+                {s.proof && <Attachment name={s.proof} url={s.proofUrl} className="col-start-2 text-xs" />}
               </li>
             ))}
           </ul>
@@ -387,11 +390,11 @@ export function TradeSections({ t }: { t: TransactionDetail }) {
       </section>
 
       {t.dispute && (
-        <section className="rounded-xl border bg-card p-4 md:p-5">
-          <h2 className="flex items-center gap-2 font-medium"><Scale className="size-4 text-muted-foreground" /> Dispute <StatusBadge entity="dispute" status={t.dispute.status} /></h2>
+        <section className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] xl:col-span-12 md:p-5">
+          <h2 className="flex flex-wrap items-center gap-2 border-b border-border/70 pb-3 font-semibold tracking-tight"><Scale className="size-4 text-primary" /> Dispute <StatusBadge entity="dispute" status={t.dispute.status} /></h2>
           <ul className="mt-3 flex flex-col gap-3">
             {(evidence.length ? evidence : [{ id: 'reason', by: t.role, name: 'Kamu', text: t.dispute.reason, at: t.dispute.openedAt }]).map((e) => (
-              <li key={e.id} className={cn('max-w-[90%] rounded-xl p-3 text-sm', e.by === t.role ? 'self-end bg-primary/10' : 'self-start bg-muted')}>
+              <li key={e.id} className={cn('max-w-full rounded-xl border p-3 text-sm sm:max-w-[90%]', e.by === t.role ? 'self-end border-primary/15 bg-primary/[0.06]' : 'self-start bg-muted/50')}>
                 <p className="text-xs text-muted-foreground">{e.name} · {e.by === 'buyer' ? 'pembeli' : 'supplier'} · {formatRelative(e.at)}</p>
                 <p className="mt-1">{e.text}</p>
                 {'file' in e && e.file && <Attachment name={e.file} url={e.url} preview className="mt-2 text-xs" />}
@@ -402,11 +405,11 @@ export function TradeSections({ t }: { t: TransactionDetail }) {
       )}
 
       {Object.values(t.reviews ?? {}).length > 0 && (
-        <section className="rounded-xl border bg-card p-4 md:p-5">
-          <h2 className="font-medium">Ulasan</h2>
-          <ul className="mt-3 flex flex-col gap-3 text-sm">
+        <section className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] xl:col-span-12 md:p-5">
+          <h2 className="border-b border-border/70 pb-3 font-semibold tracking-tight">Ulasan</h2>
+          <ul className="mt-3 grid gap-2.5 text-sm sm:grid-cols-2">
             {(['buyer', 'supplier'] as const).map((r) => t.reviews?.[r] && (
-              <li key={r}>
+              <li key={r} className="rounded-xl border bg-muted/15 p-3">
                 <p className="flex items-center gap-1 font-medium">{t.reviews[r]!.by} <Star className="size-3.5 fill-current" style={{ color: 'var(--tag-yellow-fg)' }} /> {t.reviews[r]!.rating}/5</p>
                 {t.reviews[r]!.text && <p className="text-muted-foreground">{t.reviews[r]!.text}</p>}
               </li>
@@ -415,19 +418,18 @@ export function TradeSections({ t }: { t: TransactionDetail }) {
         </section>
       )}
 
-      <section className="rounded-xl border bg-card p-4 md:p-5">
-        <h2 className="font-medium">Dokumen</h2>
-        <ul className="mt-3 divide-y text-sm">
+      <section className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] xl:col-span-12 md:p-5">
+        <h2 className="border-b border-border/70 pb-3 font-semibold tracking-tight">Dokumen</h2>
+        {t.documents.length ? <ul className="mt-3 grid gap-2 text-sm sm:grid-cols-2 2xl:grid-cols-3">
           {t.documents.map((d) => (
-            <li key={d.id} className="flex items-center gap-3 py-2.5">
-              <FileText className="size-4 text-muted-foreground" />
-              {d.url ? <Attachment name={d.name} url={d.url} className="flex-1" /> : <span className="flex-1 truncate">{d.name}</span>}
+            <li key={d.id} className="flex min-w-0 items-center gap-2.5 rounded-xl border bg-muted/15 p-2.5">
+              <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary"><FileText className="size-4" /></span>
+              <div className="min-w-0 flex-1"><div className="truncate font-medium">{d.url ? <Attachment name={d.name} url={d.url} /> : d.name}</div><p className="mt-0.5 text-[11px] text-muted-foreground">{formatDate(d.at)}</p></div>
               <Tag>{{ order: 'Order', agreement: 'Agreement', invoice: 'Invoice', proof: 'Bukti' }[d.kind]}</Tag>
-              <span className="text-xs text-muted-foreground">{formatDate(d.at)}</span>
             </li>
           ))}
-        </ul>
+        </ul> : <p className="mt-3 rounded-xl border border-dashed bg-muted/15 p-4 text-sm text-muted-foreground">Belum ada dokumen untuk transaksi ini.</p>}
       </section>
-    </>
+    </div>
   )
 }
