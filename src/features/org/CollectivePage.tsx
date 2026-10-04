@@ -209,6 +209,7 @@ export function CollectivePage() {
         description="Gabungkan demand dengan bisnis lain untuk harga skala. Identitas bisnis lain hanya tampil jika mereka mengizinkan."
         icon={UsersRound}
         tone="blue"
+        featured
         actions={<GuardedButton className="h-9" reason={joinDeny} onClick={() => set('dialog', 'create')}><Plus /> Buat pool</GuardedButton>}
       />
       <AsyncView query={query} skeleton={<Skeleton className="h-96 rounded-xl" />} empty={<EmptyState icon={UsersRound} title="Belum ada pool" />}>
