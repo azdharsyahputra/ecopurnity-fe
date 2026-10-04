@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
+const DETAIL_ROUTE_RE = /(?:^|\/)(?:opportunities|markets|auctions|supply|demand|transactions|contracts|rfq|messages|procurement|suppliers|users|verification|disputes|fraud|withdrawals|u|b)\/[^/]+(?:\/(?:edit|evaluate))?$/
 
 function WorkspaceSwitcher({ current, all, onNavigate }: { current: Workspace; all: Workspace[]; onNavigate?: () => void }) {
   const { data: me } = useMe()
@@ -168,6 +169,7 @@ export function AppLayout() {
   const all = workspacesFor(me!)
   const ws = activeWorkspace(pathname, all)
   const page = [...ws.items, ...(ws.footer ?? [])].find((i) => pathname === href(ws, i))
+  const isDetailRoute = DETAIL_ROUTE_RE.test(pathname) && !pathname.endsWith('/new')
 
   return (
     <div className="flex min-h-svh">
@@ -207,7 +209,7 @@ export function AppLayout() {
           </div>
         </header>
         <main className={cn('min-w-0 flex-1', ws.id === 'personal' && 'bg-muted/20')}>
-          <div className={cn('mx-auto min-w-0 w-full max-w-6xl px-3 pt-5 pb-12 sm:px-4 sm:pt-6 sm:pb-16 md:px-10 md:pt-8', ws.id === 'personal' && 'participant-workspace', ws.id === 'admin' && 'admin-workspace')}>
+          <div className={cn('mx-auto min-w-0 w-full max-w-6xl px-3 pt-5 pb-12 sm:px-4 sm:pt-6 sm:pb-16 md:px-10 md:pt-8', ws.id === 'personal' && 'participant-workspace', ws.id === 'admin' && 'admin-workspace', isDetailRoute && 'detail-workspace')}>
             <Suspense fallback={<Skeleton className="h-96 rounded-xl" />}>
               <Outlet />
             </Suspense>
