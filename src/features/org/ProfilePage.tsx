@@ -137,7 +137,7 @@ export function ProfilePage() {
   const readOnly = access.deny('profile', 'manage')
   return (
     <>
-      <PageHeader title="Profil bisnis" description="Identitas, legalitas, dan jam operasional yang dilihat supplier dan pembeli." icon={Building2} tone="blue" />
+      <PageHeader title="Profil bisnis" description="Identitas, legalitas, dan jam operasional yang dilihat supplier dan pembeli." icon={Building2} tone="blue" featured />
       <AsyncView query={query} skeleton={<Skeleton className="h-96 rounded-xl" />}>
         {(s) => (
           <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
