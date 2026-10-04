@@ -75,31 +75,31 @@ function JoinDialog({ o, onClose }: { o: PersonalOpportunity; onClose: () => voi
 function PersonalCard({ o, onJoin }: { o: PersonalOpportunity; onJoin: () => void }) {
   const action = useOpportunityAction()
   return (
-    <article className="flex flex-col rounded-xl border bg-card p-4">
+    <article className="group flex min-w-0 flex-col rounded-2xl border bg-linear-to-br from-card via-card to-lime/5 p-4 shadow-sm shadow-foreground/[0.025] transition-all hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-md hover:shadow-primary/[0.04] sm:p-5">
       <div className="flex flex-wrap items-center gap-1.5">
         <Tag tone={OPPORTUNITY_KINDS[o.kind].tone}>{OPPORTUNITY_KINDS[o.kind].label}</Tag>
         <StatusBadge entity="opportunity" status={o.status} />
         {o.relation === 'joined' && <Tag tone="green">Joined</Tag>}
         {o.relation === 'following' && <Tag tone="blue">Following</Tag>}
       </div>
-      <Link to={`/opportunities/${o.id}`} className="mt-3 font-medium leading-snug hover:underline">{o.title}</Link>
+      <Link to={`/opportunities/${o.id}`} className="mt-3 font-semibold leading-snug decoration-primary/50 underline-offset-4 group-hover:text-primary group-hover:underline">{o.title}</Link>
       <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><MapPin className="size-3" /> {o.region} · {o.distanceKm} km</p>
 
       {o.reasons.length > 0 && (
-        <div className="mt-3 rounded-lg bg-muted p-2.5">
-          <p className="text-xs font-medium">Kenapa cocok</p>
-          <ul className="mt-1 flex flex-col gap-0.5 text-xs text-muted-foreground">
+        <div className="mt-4 rounded-xl border border-primary/10 bg-primary/[0.035] p-3">
+          <p className="flex items-center gap-1.5 text-xs font-semibold"><Sparkles className="size-3.5 text-primary" /> Kenapa cocok</p>
+          <ul className="mt-2 flex flex-col gap-1.5 text-xs leading-relaxed text-muted-foreground">
             {o.reasons.map((r) => <li key={r.label}><span className="font-medium text-foreground">{r.label}:</span> {r.detail}</li>)}
           </ul>
         </div>
       )}
-      <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
-        <div><dt className="text-xs text-muted-foreground">Nilai untukmu</dt><dd className="num font-semibold">{formatIdr(o.personalValueIdr, { compact: true })}/bln</dd></div>
-        <div><dt className="text-xs text-muted-foreground">Peserta</dt><dd className="num font-semibold">{formatNumber(o.participants)}</dd></div>
+      <dl className="mt-4 grid grid-cols-2 gap-2 text-sm">
+        <div className="rounded-xl bg-muted/45 p-3"><dt className="text-[11px] font-medium text-muted-foreground">Nilai untukmu</dt><dd className="num mt-1 font-semibold">{formatIdr(o.personalValueIdr, { compact: true })}/bln</dd></div>
+        <div className="rounded-xl bg-muted/45 p-3"><dt className="text-[11px] font-medium text-muted-foreground">Peserta</dt><dd className="num mt-1 font-semibold">{formatNumber(o.participants)}</dd></div>
       </dl>
       {o.contribution && <p className="mt-2 text-xs text-muted-foreground">Kontribusimu: {formatQty(o.contribution.quantity)} ({o.contribution.kind})</p>}
       <GapMeter demand={o.demand} supply={o.supply} className="mt-3" />
-      <div className="mt-4 flex gap-2">
+      <div className="mt-auto flex flex-wrap gap-2 border-t border-border/70 pt-4">
         {o.relation === 'joined' ? (
           <Button variant="outline" className="h-8" onClick={() => action.mutate({ type: 'leave', id: o.id }, { onSuccess: () => toast({ title: `Keluar dari ${o.title}` }) })}>Leave</Button>
         ) : (
@@ -142,7 +142,7 @@ function OpportunityGraph({ items }: { items: PersonalOpportunity[] }) {
     return { nodes, edges }
   }, [items])
   return (
-    <div className="h-[520px] overflow-hidden rounded-xl border bg-card">
+    <div className="h-[520px] overflow-hidden rounded-2xl border bg-card shadow-sm shadow-foreground/[0.025]">
       <ReactFlow nodes={nodes} edges={edges} fitView proOptions={{ hideAttribution: true }} nodesConnectable={false} onNodeClick={(_, n) => n.id !== 'me' && navigate(`/opportunities/${n.id}`)}>
         <Background color="var(--border)" />
         <Controls showInteractive={false} />
@@ -176,22 +176,33 @@ export function MyOpportunitiesPage() {
         description="Peluang yang cocok dengan kapasitas, lokasi, dan preferensimu, lengkap dengan alasannya."
         icon={Sparkles}
         tone="lime"
+        featured
         actions={
-          <Segmented label="Tampilan" value={view} options={[['list', 'List'], ['graph', 'Graph']]} onChange={(v) => set('view', v)} />
+          <div role="group" aria-label="Tampilan opportunity" className="inline-flex rounded-xl border bg-muted/55 p-1">
+            {([['list', List, 'List'], ['graph', Network, 'Graph']] as const).map(([mode, Icon, label]) => (
+              <button key={mode} type="button" aria-pressed={view === mode} onClick={() => set('view', mode)}
+                className={cn('inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-sm font-medium transition-colors', view === mode ? 'border-primary/35 bg-background text-foreground shadow-sm ring-1 ring-primary/15' : 'border-transparent text-muted-foreground hover:bg-background/70 hover:text-foreground')}>
+                <Icon className="size-4" aria-hidden="true" />{label}
+              </button>
+            ))}
+          </div>
         }
       />
-      <div className="no-scrollbar -mx-4 mb-6 flex gap-1 overflow-x-auto px-4" role="tablist" aria-label="Kelompok opportunity">
+      <div className="no-scrollbar -mx-4 mb-5 overflow-x-auto px-4" role="tablist" aria-label="Kelompok opportunity">
+        <div className="flex w-max gap-1 rounded-2xl border bg-muted/35 p-1.5">
         {TABS.map(([id, label]) => (
           <button
             key={id}
+            type="button"
             role="tab"
             aria-selected={tab === id}
             onClick={() => set('tab', id)}
-            className={cn('shrink-0 rounded-full border px-3 py-1 text-sm', tab === id ? 'border-foreground bg-foreground text-background' : 'text-muted-foreground hover:bg-hover')}
+            className={cn('shrink-0 rounded-xl border border-transparent px-3.5 py-2 text-sm transition-colors', tab === id ? 'border-border/70 bg-card font-semibold text-foreground shadow-sm' : 'text-muted-foreground hover:bg-background/70 hover:text-foreground')}
           >
             {label}
           </button>
         ))}
+        </div>
       </div>
       <AsyncView
         query={query}
@@ -209,9 +220,15 @@ export function MyOpportunitiesPage() {
           view === 'graph' ? (
             <OpportunityGraph items={items} />
           ) : (
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {items.map((o) => <PersonalCard key={o.id} o={o} onJoin={() => set('join', o.id)} />)}
-            </div>
+            <>
+              <div className="mb-4 flex flex-wrap items-end justify-between gap-2 rounded-2xl border bg-card px-4 py-3.5 shadow-sm shadow-foreground/[0.02]">
+                <div><h2 className="font-semibold tracking-tight">{TABS.find(([id]) => id === tab)?.[1] ?? 'Peluang untukmu'}</h2><p className="mt-0.5 text-sm text-muted-foreground">Peluang dicocokkan berdasarkan kapasitas, lokasi, dan preferensimu.</p></div>
+                <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{formatNumber(items.length)} peluang</span>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {items.map((o) => <PersonalCard key={o.id} o={o} onJoin={() => set('join', o.id)} />)}
+              </div>
+            </>
           )
         }
       </AsyncView>
