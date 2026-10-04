@@ -125,7 +125,7 @@ export function MatchesPage() {
         icon={Handshake}
         tone="teal"
       />
-      <AsyncView query={query} skeleton={<div className="grid gap-3 md:grid-cols-2">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-64 rounded-xl" />)}</div>}>
+      <AsyncView query={query} skeleton={<div className="grid gap-3 md:grid-cols-2">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-64 rounded-xl" />)}</div>} emptyFallback={false}>
         {(all) => {
           const rows = all.filter((m) => m.state === tab)
           return (
