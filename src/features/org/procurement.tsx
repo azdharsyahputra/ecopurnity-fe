@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Ban, ClipboardList, Gavel, Plus, Send, UsersRound } from 'lucide-react'
+import { ArrowRight, Ban, Building2, ClipboardList, Gavel, Plus, Send, UsersRound } from 'lucide-react'
 import type { CategoryId } from '@/domain/types'
 import {
   PIPELINE, VISIBILITY, canConvertToAuction, pipelineStage, poolTotals, procurementActions, requiredApprovers, signingRoles, type PipelineStage,
@@ -18,7 +18,6 @@ import { ApprovalTrail, CheckChips, DecisionButtons, FilterPills, GuardedLink, O
 import { CategoryTag } from '@/features/economy/components'
 import { PageHeader } from '@/components/PageHeader'
 import { AsyncView, EmptyState } from '@/components/States'
-import { DataTable } from '@/components/DataTable'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { AuditLog } from '@/components/AuditLog'
 import { Tag } from '@/components/Tag'
@@ -51,22 +50,30 @@ export function ProcurementListPage() {
               <FilterPills<Filter> label="Tahap" value={filter} onChange={(v) => setParams((p) => (v ? p.set('stage', v) : p.delete('stage'), p), { replace: true })}
                 options={[['', 'Semua', rows.length], ...PIPELINE.map(([k, l]) => [k, l, rows.filter((r) => stageOf(r) === k).length] as [Filter, string, number]), ['closed', 'Ditolak/batal', rows.filter((r) => stageOf(r) === 'closed').length]]} />
               {visible.length ? (
-                <DataTable
-                  caption="Procurement"
-                  rows={visible}
-                  rowKey={(r) => r.id}
-                  rowHref={(r) => `${access.base}/procurement/${r.id}`}
-                  initialSort={{ key: 'updated', dir: 'desc' }}
-                  columns={[
-                    { key: 'need', header: 'Kebutuhan', primary: true, cell: (r) => <span>{r.need} <span className="ml-1 text-xs font-normal text-muted-foreground">{r.code}</span></span>, sortValue: (r) => r.need },
-                    { key: 'cat', header: 'Kategori', cell: (r) => <CategoryTag id={r.categoryId} /> },
-                    { key: 'qty', header: 'Kuantitas', align: 'right', cell: (r) => formatQty(r.quantity, { compact: true }), sortValue: (r) => r.quantity.value },
-                    { key: 'budget', header: 'Budget', align: 'right', cell: (r) => formatIdr(r.budgetIdr, { compact: true }), sortValue: (r) => r.budgetIdr },
-                    { key: 'status', header: 'Status', cell: (r) => <ProcurementBadge status={r.status} /> },
-                    { key: 'vis', header: 'Visibilitas', cell: (r) => <Tag>{VISIBILITY[r.visibility].label}</Tag> },
-                    { key: 'updated', header: 'Diperbarui', cell: (r) => <span className="text-muted-foreground">{formatRelative(r.updatedAt)}</span>, sortValue: (r) => r.updatedAt },
-                  ]}
-                />
+                <ul className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-3" aria-label="Daftar procurement">
+                  {visible.map((r) => (
+                    <li key={r.id} className="min-w-0">
+                      <Link to={`${access.base}/procurement/${r.id}`} className="group flex h-full min-h-56 flex-col rounded-2xl border bg-card p-5 shadow-sm shadow-foreground/[0.025] transition duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium tracking-wide text-muted-foreground">{r.code}</p>
+                            <h2 className="mt-1 line-clamp-2 text-base font-semibold leading-snug tracking-tight group-hover:text-primary">{r.need}</h2>
+                          </div>
+                          <ProcurementBadge status={r.status} />
+                        </div>
+                        <div className="mt-3"><CategoryTag id={r.categoryId} /></div>
+                        <dl className="mt-5 grid grid-cols-2 gap-3 border-y py-4">
+                          <div className="min-w-0"><dt className="text-xs text-muted-foreground">Kuantitas</dt><dd className="mt-1 truncate text-sm font-semibold">{formatQty(r.quantity, { compact: true })}</dd></div>
+                          <div className="min-w-0"><dt className="text-xs text-muted-foreground">Budget</dt><dd className="num mt-1 truncate text-sm font-semibold">{formatIdr(r.budgetIdr, { compact: true })}</dd></div>
+                        </dl>
+                        <div className="mt-auto flex items-center justify-between gap-3 pt-4 text-xs text-muted-foreground">
+                          <span className="truncate">{VISIBILITY[r.visibility].label} · Diperbarui {formatRelative(r.updatedAt)}</span>
+                          <ArrowRight className="size-4 shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:text-primary" aria-hidden="true" />
+                        </div>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
               ) : <EmptyState title="Tidak ada procurement di tahap ini" />}
             </>
           )
@@ -276,19 +283,19 @@ export function ProcurementDetailPage() {
               }
             />
             <FormError error={act.error} />
-            <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
-              <div className="flex min-w-0 flex-col gap-6">
+            <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(19rem,22rem)] 2xl:gap-6">
+              <div className="flex min-w-0 flex-col gap-5 2xl:gap-6">
                 <Section title="Detail permintaan">
-                  <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+                  <dl className="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-3">
                     {[
                       ['Kuantitas', formatQty(r.quantity)], ['Budget', formatIdr(r.budgetIdr)], ['Harga acuan', `${formatIdr(Math.round(r.budgetIdr / r.quantity.value))}/${r.quantity.unit}`],
                       ['Deadline', formatDate(r.deadline)], ['Lokasi pengiriman', r.deliveryLocation], ['Dibuat oleh', r.createdBy],
-                    ].map(([k, v]) => <div key={k}><dt className="text-muted-foreground">{k}</dt><dd className="num font-medium">{v}</dd></div>)}
+                    ].map(([k, v]) => <div key={k} className="min-w-0 rounded-xl border bg-muted/20 p-3.5"><dt className="text-xs font-medium text-muted-foreground">{k}</dt><dd className="mt-1.5 break-words font-semibold leading-snug">{v}</dd></div>)}
                   </dl>
-                  {r.spec && <p className="mt-4 text-sm text-muted-foreground">{r.spec}</p>}
+                  {r.spec && <div className="mt-3 rounded-xl border border-dashed bg-muted/10 p-3"><p className="text-xs font-medium text-muted-foreground">Spesifikasi</p><p className="mt-1 text-sm leading-relaxed">{r.spec}</p></div>}
                 </Section>
                 {pool && totals && (
-                  <Section title="Pool collective" actions={<Link to={`${access.base}/collective?pool=${pool.id}`} className="text-sm text-primary hover:underline">Buka pool</Link>}>
+                  <Section title="Pool collective" className="min-w-0" actions={<Link to={`${access.base}/collective?pool=${pool.id}`} className="text-sm text-primary hover:underline">Buka pool</Link>}>
                     <p className="text-sm">{pool.title} · {totals.businesses} bisnis · total <b className="num">{formatQty({ value: totals.total, unit: pool.unit }, { compact: true })}</b></p>
                     <p className="mt-1 text-sm text-muted-foreground">Proyeksi harga {formatIdr(totals.unitPriceIdr)}/{pool.unit} (hemat {Math.round(totals.discount * 100)}% dari {formatIdr(pool.baseUnitPriceIdr)})</p>
                   </Section>
@@ -297,9 +304,9 @@ export function ProcurementDetailPage() {
                   <AuditLog entries={activity} />
                 </Section>
               </div>
-              <aside className="flex flex-col gap-6">
+              <aside className="flex min-w-0 flex-col gap-5 2xl:gap-6 xl:sticky xl:top-4">
                 <Section title="Approval">
-                  <ApprovalTrail required={r.requiredApprovers} approvals={r.approvals} roles={roles} />
+                  <div className="rounded-xl border bg-muted/10 p-3"><ApprovalTrail required={r.requiredApprovers} approvals={r.approvals} roles={roles} /></div>
                   {actions.includes('approve') && (
                     <div className="mt-4 border-t pt-4">
                       <p className="mb-2 text-sm">Menunggu persetujuanmu sebagai <b>{access.roleLabel}</b>.</p>
@@ -316,7 +323,7 @@ export function ProcurementDetailPage() {
                 </Section>
                 {r.visibility === 'invite' && r.invitedSupplierIds.length > 0 && (
                   <Section title="Supplier diundang">
-                    <ul className="text-sm">{r.invitedSupplierIds.map((s) => <li key={s}><Link className="text-primary hover:underline" to={`${access.base}/suppliers/${s}`}>{suppliers.data?.find((x) => x.id === s)?.name ?? s}</Link></li>)}</ul>
+                    <ul className="grid gap-2 text-sm">{r.invitedSupplierIds.map((s) => <li key={s}><Link className="flex min-w-0 items-center gap-2.5 rounded-xl border bg-muted/10 p-3 transition-colors hover:bg-muted/30" to={`${access.base}/suppliers/${s}`}><span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary"><Building2 className="size-4" /></span><span className="min-w-0 flex-1 break-words font-medium">{suppliers.data?.find((x) => x.id === s)?.name ?? s}</span><ArrowRight className="size-4 shrink-0 text-muted-foreground" /></Link></li>)}</ul>
                   </Section>
                 )}
               </aside>
