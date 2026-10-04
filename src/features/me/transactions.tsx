@@ -122,32 +122,33 @@ export function TransactionDetailPage() {
               tone="purple"
               featured
             />
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-              <div className="flex min-w-0 flex-col gap-6">
-                <TradeSections t={t} />
-              </div>
-
-              <aside className="flex flex-col gap-4">
-                <section className="rounded-xl border bg-card p-4">
-                  <h2 className="mb-3 font-medium">Aksi kamu</h2>
+            <TradeSections
+              t={t}
+              actions={
+                <section className="h-full min-w-0 rounded-2xl border border-primary/15 bg-linear-to-br from-card via-card to-primary/[0.045] p-4 shadow-sm shadow-foreground/[0.025] xl:col-span-3 sm:p-5">
+                  <div className="mb-4 border-b border-border/70 pb-3"><p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-primary">Langkah berikutnya</p><h2 className="mt-1 font-semibold tracking-tight">Aksi kamu</h2></div>
                   <ActionPanel t={t} scope={personalTradeScope}>
                     {t.status === 'completed' && (
                       <>
-                        <Button variant="ghost" className="h-9" render={<Link to={`/app/rfq/new?from=${t.id}`} />}><RotateCcw /> Pesan lagi</Button>
-                        <Button variant="ghost" className="h-9" render={<Link to={`/app/contracts?from=${t.id}`} />}><Repeat /> Jadikan kontrak rutin</Button>
+                        <Button variant="outline" className="h-11 w-full justify-center" render={<Link to={`/app/rfq/new?from=${t.id}`} />}><RotateCcw /> Pesan lagi</Button>
+                        <Button variant="ghost" className="h-11 w-full justify-center" render={<Link to={`/app/contracts?from=${t.id}`} />}><Repeat /> Jadikan kontrak rutin</Button>
                       </>
                     )}
                   </ActionPanel>
                 </section>
-                <section className="rounded-xl border bg-card p-4 text-sm">
-                  <h2 className="font-medium">Pihak lain</h2>
-                  <p className="mt-2 flex items-center gap-2"><EntityAvatar name={t.counterparty.name} kind={t.counterparty.kind} verified={t.counterparty.verified} size={28} /> {t.counterparty.name}</p>
+              }
+              counterparty={
+                <section className="h-full min-w-0 rounded-2xl border bg-card p-4 text-sm shadow-sm shadow-foreground/[0.025] xl:col-span-3 sm:p-5">
+                  <h2 className="border-b border-border/70 pb-3 font-semibold tracking-tight">Pihak lain</h2>
+                  <p className="mt-3 flex min-w-0 items-center gap-2"><EntityAvatar name={t.counterparty.name} kind={t.counterparty.kind} verified={t.counterparty.verified} size={32} /> <span className="min-w-0 break-words font-medium">{t.counterparty.name}</span></p>
                   <p className="mt-1 text-xs text-muted-foreground">{t.peer ? 'Akun platform: melihat dan bertindak di transaksi yang sama.' : 'Pihak di luar platform; langkahnya disimulasikan.'}</p>
-                  <p className="mt-3 flex items-center gap-2 text-muted-foreground"><Wallet className="size-4" /> {PAYMENT_LABEL[t.payment.status]}</p>
-                  <p className="mt-1 flex items-center gap-2 text-muted-foreground"><Truck className="size-4" /> {t.delivery.address}</p>
+                  <dl className="mt-4 grid gap-2 border-t border-border/70 pt-3">
+                    <div className="flex items-start gap-2 rounded-lg bg-muted/25 p-2.5"><Wallet className="mt-0.5 size-4 shrink-0 text-primary" /><div className="min-w-0"><dt className="text-[11px] font-medium text-muted-foreground">Pembayaran</dt><dd className="mt-0.5 break-words font-medium text-foreground">{PAYMENT_LABEL[t.payment.status]}</dd></div></div>
+                    <div className="flex items-start gap-2 rounded-lg bg-muted/25 p-2.5"><Truck className="mt-0.5 size-4 shrink-0 text-primary" /><div className="min-w-0"><dt className="text-[11px] font-medium text-muted-foreground">Alamat pengiriman</dt><dd className="mt-0.5 break-words font-medium text-foreground">{t.delivery.address}</dd></div></div>
+                  </dl>
                 </section>
-              </aside>
-            </div>
+              }
+            />
           </>
         )
       }}
