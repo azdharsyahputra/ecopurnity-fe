@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { Table2, ChartSpline } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Skeleton } from './ui/skeleton'
+import { EmptyState } from './States'
 
 // Shared chart chrome (dataviz skill): validated categorical tokens in fixed order, recessive axes,
 // value-first tooltips with line keys, a legend for ≥ 2 series, and a table view for every chart.
@@ -113,6 +114,10 @@ export function ChartCard({
       <div className="mt-4">
         {loading ? (
           <Skeleton style={{ height }} />
+        ) : table.rows.length === 0 ? (
+          <div className="grid place-items-center" style={{ minHeight: height }}>
+            <EmptyState title="Belum ada data untuk grafik ini" description="Grafik akan terisi saat data pada periode ini tersedia." className="w-full border-0 py-6" />
+          </div>
         ) : asTable ? (
           <div className="overflow-auto" style={{ maxHeight: height }}>
             <table className="w-full text-sm">
