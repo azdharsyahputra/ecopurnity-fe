@@ -85,7 +85,7 @@ function Content({ m }: { m: MarketDetail }) {
   const priceRows = m.priceHistory.map((p) => ({ ...p, band: [p.lowIdr, p.highIdr] as [number, number] }))
   return (
     <>
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <header className="flex flex-col gap-4 rounded-2xl border bg-linear-to-br from-card to-muted/60 p-5 shadow-sm shadow-foreground/[0.025] sm:p-7 lg:flex-row lg:items-end lg:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-sm font-medium text-muted-foreground">{m.code}</span>
@@ -150,7 +150,7 @@ function Content({ m }: { m: MarketDetail }) {
             )}
           </section>
 
-          <section className="rounded-xl border bg-card p-4 md:p-5">
+          <section className="rounded-2xl border bg-card p-5 shadow-sm shadow-foreground/[0.025] md:p-6">
             <h2 className="font-medium">Aturan market</h2>
             <p className="mt-1 text-sm text-muted-foreground">Perubahan aturan hanya berlaku untuk round berikutnya dan tercatat di audit trail.</p>
             <div className="mt-3"><RulesList rules={m.rules} /></div>
@@ -158,12 +158,12 @@ function Content({ m }: { m: MarketDetail }) {
         </div>
 
         <aside className="flex flex-col gap-6">
-          <section className="rounded-xl border bg-card p-4 md:p-5">
+          <section className="rounded-2xl border bg-card p-5 shadow-sm shadow-foreground/[0.025] md:p-6">
             <h2 className="font-medium">Tentang market</h2>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{m.description}</p>
             <GapMeter demand={m.demand} supply={m.supply} className="mt-4" />
           </section>
-          <section className="rounded-xl border bg-card px-4 pt-4 md:px-5">
+          <section className="rounded-2xl border bg-card px-5 pt-5 shadow-sm shadow-foreground/[0.025] md:px-6">
             <h2 className="font-medium">Aktivitas terbaru</h2>
             <ActivityFeed events={m.activity} />
           </section>
