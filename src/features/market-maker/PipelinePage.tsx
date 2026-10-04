@@ -186,7 +186,7 @@ export function PipelinePage() {
         tone="purple"
       />
       <PoolRequests />
-      <AsyncView query={query} skeleton={<Skeleton className="h-96 rounded-xl" />}>
+      <AsyncView query={query} skeleton={<Skeleton className="h-96 rounded-xl" />} emptyFallback={false}>
         {(cards) => (
           <div className="no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 md:-mx-10 md:px-10">
             {STAGES.map((stage) => {
