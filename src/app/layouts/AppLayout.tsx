@@ -206,8 +206,8 @@ export function AppLayout() {
             <WorkspaceSwitcher current={ws} all={all} />
           </div>
         </header>
-        <main className={cn('flex-1', ws.id === 'personal' && 'bg-muted/20')}>
-          <div className={cn('mx-auto w-full max-w-6xl px-4 pt-6 pb-16 md:px-10 md:pt-8', ws.id === 'personal' && 'participant-workspace', ws.id === 'admin' && 'admin-workspace')}>
+        <main className={cn('min-w-0 flex-1', ws.id === 'personal' && 'bg-muted/20')}>
+          <div className={cn('mx-auto min-w-0 w-full max-w-6xl px-3 pt-5 pb-12 sm:px-4 sm:pt-6 sm:pb-16 md:px-10 md:pt-8', ws.id === 'personal' && 'participant-workspace', ws.id === 'admin' && 'admin-workspace')}>
             <Suspense fallback={<Skeleton className="h-96 rounded-xl" />}>
               <Outlet />
             </Suspense>
