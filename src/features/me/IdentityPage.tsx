@@ -32,7 +32,7 @@ const TABS = ['profile', 'capacity', 'preferences', 'verification'] as const
 const TAB_LABEL = { profile: 'Profil', capacity: 'Kapasitas', preferences: 'Preferensi', verification: 'Verifikasi' }
 type ItemDraft = { name: string; detail: string; categoryId: CategoryId | '' }
 const blankItem = (): ItemDraft => ({ name: '', detail: '', categoryId: '' })
-const selectClass = 'h-8 rounded-md border border-input bg-background px-1.5 text-sm dark:bg-input/30'
+const selectClass = 'h-9 rounded-lg border border-input bg-background px-2.5 text-sm dark:bg-input/30'
 
 /** Category for Smart Matching; empty = let the engine guess from the name. */
 function CategorySelect({ label, value, onChange, className }: { label: string; value: CategoryId | ''; onChange: (v: CategoryId | '') => void; className?: string }) {
@@ -85,7 +85,8 @@ function IdentityDialog({ onClose }: { onClose: () => void }) {
           <DialogTitle>Verifikasi KTP</DialogTitle>
           <DialogDescription>Ditinjau tim governance, biasanya kurang dari 1 hari kerja. Dokumen disimpan terenkripsi dan hanya dipakai untuk verifikasi.</DialogDescription>
         </DialogHeader>
-        <form className="grid gap-3" onSubmit={submit}>
+        <form className="grid gap-4 rounded-2xl border bg-muted/20 p-4 sm:p-5" onSubmit={submit}>
+          <div className="rounded-xl border border-primary/15 bg-primary/5 p-3 text-sm text-muted-foreground">Siapkan data sesuai KTP. File hanya digunakan untuk proses verifikasi identitas.</div>
           <Field label="NIK" inputMode="numeric" maxLength={16} value={f.nik} onChange={(e) => setF({ ...f, nik: e.target.value.replace(/\D/g, '') })} error={fieldError(act.error, 'nik')} />
           <Field label="Nama lengkap sesuai KTP" value={f.fullName} onChange={(e) => setF({ ...f, fullName: e.target.value })} error={fieldError(act.error, 'fullName')} />
           <Field label="Foto KTP" type="file" accept="image/jpeg,image/png,image/webp" onChange={pick('ktp')}
@@ -117,13 +118,14 @@ function Verification() {
         ] as const
         return (
           <div className="grid max-w-2xl gap-4">
-            <section className="rounded-xl border bg-card p-4">
+            <section className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:p-5">
+              <h2 className="font-semibold">Batas transaksi</h2>
               <p className="text-sm text-muted-foreground">Batas per transaksi saat ini</p>
               <p className="num mt-1 text-2xl font-semibold">{formatIdr(k.limitIdr)}</p>
               <p className="mt-1 text-sm">Level <b>{k.label}</b>{k.next && <span className="text-muted-foreground"> · {k.next}</span>}</p>
               <ol className="mt-3 grid grid-cols-2 gap-1.5" aria-label="Level verifikasi">
                 {([0, 1] as KycLevel[]).map((l) => (
-                  <li key={l} className={cn('rounded-md border px-2 py-1.5 text-xs', l <= k.level ? 'border-primary bg-primary/10 text-foreground' : 'text-muted-foreground')}>
+                  <li key={l} className={cn('rounded-lg border px-3 py-2 text-xs', l <= k.level ? 'border-primary/30 bg-primary/10 text-foreground' : 'bg-muted/30 text-muted-foreground')}>
                     <span className="block font-medium">{KYC_LEVELS[l].label}</span>
                     <span className="num">s.d. {formatIdr(KYC_LEVELS[l].limitIdr, { compact: true })}</span>
                   </li>
@@ -132,7 +134,7 @@ function Verification() {
             </section>
             <ul className="grid gap-3">
               {steps.map(([id, label, ok, detail]) => (
-                <li key={id} className="flex items-center gap-3 rounded-xl border bg-card p-4">
+                <li key={id} className="flex flex-wrap items-center gap-3 rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025]">
                   <IconChip icon={ok ? BadgeCheck : id === 'identity' && v.identity === 'pending' ? Clock : CircleDashed} tone={ok ? 'green' : 'gray'} />
                   <div className="min-w-0 flex-1"><p className="font-medium">{label}</p><p className="text-sm text-muted-foreground">{detail}</p></div>
                   {ok ? <span className="text-sm font-medium" style={{ color: 'var(--tag-green-fg)' }}>Terverifikasi</span>
@@ -162,15 +164,17 @@ function Editor({ initial }: { initial: Identity }) {
   return (
     <>
       <Tabs value={tab} onValueChange={(v) => setParams({ tab: String(v) }, { replace: true })}>
-        <div className="no-scrollbar -mx-4 overflow-x-auto px-4">
-          <TabsList>{TABS.map((t) => <TabsTrigger key={t} value={t} className="px-3">{TAB_LABEL[t]}</TabsTrigger>)}</TabsList>
+        <div className="no-scrollbar -mx-4 overflow-x-auto px-4 pb-1">
+          <TabsList className="h-auto min-w-max rounded-xl border bg-muted/50 p-1">{TABS.map((t) => <TabsTrigger key={t} value={t} className="rounded-lg px-4 py-2">{TAB_LABEL[t]}</TabsTrigger>)}</TabsList>
         </div>
       </Tabs>
 
       <div className="mt-6">
         {tab === 'profile' && (
-          <section className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_16rem]">
-            <div className="grid gap-4 sm:grid-cols-2">
+          <section className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_19rem]">
+            <div className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:p-6">
+              <div className="mb-5"><h2 className="font-semibold tracking-tight">Informasi profil</h2><p className="mt-1 text-sm text-muted-foreground">Atur nama, lokasi, dan ringkasan yang tampil di profil publik.</p></div>
+              <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Nama" value={d.profile.name} onChange={(e) => profile('name', e.target.value)} error={fieldError(save.error, 'name')} />
               <Field label="Username" value={d.profile.username} onChange={(e) => profile('username', e.target.value)} hint={`ecopurnity.id/u/${d.profile.username}`} />
               <label className="flex flex-col gap-1.5 text-sm font-medium sm:col-span-2">
@@ -183,15 +187,16 @@ function Editor({ initial }: { initial: Identity }) {
               <div className="sm:col-span-2">
                 <TextareaField label="Bio" rows={4} value={d.profile.bio} onChange={(e) => profile('bio', e.target.value)} hint="Ceritakan apa yang kamu kerjakan dan cari." />
               </div>
+              </div>
             </div>
-            <aside className="rounded-xl border bg-card p-4 text-sm">
-              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Pratinjau publik</p>
+            <aside className="rounded-2xl border bg-muted/25 p-4 text-sm lg:sticky lg:top-20">
+              <p className="text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">Pratinjau publik</p>
               <div className="mt-3 flex items-center gap-3">
                 <EntityAvatar name={d.profile.name || '?'} verified={d.profile.verification.identity === 'verified'} size={40} />
                 <div className="min-w-0"><p className="truncate font-medium">{d.profile.name}</p><p className="truncate text-muted-foreground">@{d.profile.username} · {d.profile.location || '—'}</p></div>
               </div>
-              <p className="mt-3 text-muted-foreground">{d.profile.bio || 'Belum ada bio.'}</p>
-              <Link to={`/u/${d.profile.username}`} className="mt-3 inline-block text-primary hover:underline">Lihat profil publik</Link>
+              <p className="mt-4 border-t border-border/70 pt-3 leading-relaxed text-muted-foreground">{d.profile.bio || 'Belum ada bio.'}</p>
+              <Link to={`/u/${d.profile.username}`} className="mt-4 inline-flex items-center gap-1 font-medium text-primary hover:underline">Lihat profil publik</Link>
             </aside>
           </section>
         )}
@@ -199,19 +204,20 @@ function Editor({ initial }: { initial: Identity }) {
         {tab === 'capacity' && (
           <div className="grid gap-4 md:grid-cols-2">
             {KINDS.map(([kind, icon, tone, title, ph, phDetail]) => (
-              <section key={kind} className="rounded-xl border bg-card p-4">
-                <h2 className="flex items-center gap-2 font-medium"><IconChip icon={icon} tone={tone} size="sm" /> {title}</h2>
+              <section key={kind} className="min-w-0 rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:p-5">
+                <div className="flex items-center justify-between gap-3"><h2 className="flex items-center gap-2 font-semibold"><IconChip icon={icon} tone={tone} size="sm" /> {title}</h2><span className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground">{d.items.filter((i) => i.kind === kind).length} item</span></div>
                 <ul className="mt-3 divide-y">
+                  {d.items.filter((i) => i.kind === kind).length === 0 && <li className="rounded-xl bg-muted/30 px-3 py-4 text-sm text-muted-foreground">Belum ada {title.toLowerCase()}. Tambahkan detail di bawah agar profilmu lebih informatif.</li>}
                   {d.items.filter((i) => i.kind === kind).map((i) => (
-                    <li key={i.id} className="flex items-center gap-2 py-2 text-sm">
+                    <li key={i.id} className="flex flex-wrap items-center gap-2 py-3 text-sm">
                       <span className="min-w-0 flex-1"><span className="font-medium">{i.name}</span> <span className="text-muted-foreground">· {i.detail}</span></span>
-                      <CategorySelect label={`Kategori ${i.name}`} className="h-7 w-28 text-xs" value={i.categoryId ?? ''} onChange={(v) => setD({ ...d, items: d.items.map((x) => (x.id === i.id ? { ...x, categoryId: v || undefined } : x)) })} />
+                      <CategorySelect label={`Kategori ${i.name}`} className="h-9 min-w-28 text-xs" value={i.categoryId ?? ''} onChange={(v) => setD({ ...d, items: d.items.map((x) => (x.id === i.id ? { ...x, categoryId: v || undefined } : x)) })} />
                       <Button variant="ghost" size="icon-xs" aria-label={`Hapus ${i.name}`} onClick={() => setD({ ...d, items: d.items.filter((x) => x.id !== i.id) })}><Trash2 /></Button>
                     </li>
                   ))}
                 </ul>
                 <form
-                  className="mt-2 flex flex-wrap gap-2"
+                  className="mt-3 grid gap-2 rounded-xl bg-muted/30 p-3 sm:grid-cols-[minmax(0,1fr)_minmax(8rem,0.8fr)]"
                   onSubmit={(e) => {
                     e.preventDefault()
                     const { name, detail, categoryId } = draft[kind]
@@ -220,17 +226,18 @@ function Editor({ initial }: { initial: Identity }) {
                     setDraft({ ...draft, [kind]: blankItem() })
                   }}
                 >
-                  <input aria-label={`${title} baru`} placeholder={ph} value={draft[kind].name} onChange={(e) => setDraft({ ...draft, [kind]: { ...draft[kind], name: e.target.value } })} className="h-8 min-w-0 flex-1 rounded-md border border-input bg-transparent px-2 text-sm" />
-                  <input aria-label={`Detail ${title}`} placeholder={phDetail} value={draft[kind].detail} onChange={(e) => setDraft({ ...draft, [kind]: { ...draft[kind], detail: e.target.value } })} className="h-8 w-32 rounded-md border border-input bg-transparent px-2 text-sm" />
-                  <CategorySelect label={`Kategori ${title} baru`} className="w-32" value={draft[kind].categoryId} onChange={(v) => setDraft({ ...draft, [kind]: { ...draft[kind], categoryId: v } })} />
-                  <Button type="submit" size="icon-sm" variant="outline" aria-label={`Tambah ${title}`}><Plus /></Button>
+                  <input aria-label={`${title} baru`} placeholder={ph} value={draft[kind].name} onChange={(e) => setDraft({ ...draft, [kind]: { ...draft[kind], name: e.target.value } })} className="h-10 min-w-0 rounded-lg border border-input bg-background px-3 text-sm sm:col-span-2" />
+                  <input aria-label={`Detail ${title}`} placeholder={phDetail} value={draft[kind].detail} onChange={(e) => setDraft({ ...draft, [kind]: { ...draft[kind], detail: e.target.value } })} className="h-10 min-w-0 rounded-lg border border-input bg-background px-3 text-sm" />
+                  <div className="flex gap-2"><CategorySelect label={`Kategori ${title} baru`} className="h-10 min-w-0 flex-1" value={draft[kind].categoryId} onChange={(v) => setDraft({ ...draft, [kind]: { ...draft[kind], categoryId: v } })} />
+                  <Button type="submit" className="h-10 shrink-0" variant="outline" aria-label={`Tambah ${title}`}><Plus /> <span className="hidden sm:inline">Tambah</span></Button></div>
                 </form>
               </section>
             ))}
-            <section className="rounded-xl border bg-card p-4 md:col-span-2">
-              <h2 className="flex items-center gap-2 font-medium"><IconChip icon={Clock} tone="teal" size="sm" /> Availability</h2>
-              <div className="mt-3 flex flex-wrap items-center gap-3">
-                <div className="flex gap-1" role="group" aria-label="Hari tersedia">
+            <section className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] md:col-span-2 sm:p-5">
+              <h2 className="flex items-center gap-2 font-semibold"><IconChip icon={Clock} tone="teal" size="sm" /> Availability</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Tentukan hari dan jam yang biasanya kamu siap dihubungi.</p>
+              <div className="mt-4 flex flex-wrap items-center gap-4">
+                <div className="flex flex-wrap gap-1.5" role="group" aria-label="Hari tersedia">
                   {DAYS.map((day, i) => {
                     const on = d.availability.days.includes(i)
                     return (
@@ -248,8 +255,8 @@ function Editor({ initial }: { initial: Identity }) {
 
         {tab === 'preferences' && (
           <div className="grid max-w-2xl gap-6">
-            <div>
-              <p className="text-sm font-medium">Kategori</p>
+            <section className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:p-5">
+              <p className="font-semibold">Kategori</p><p className="mt-1 text-sm text-muted-foreground">Pilih kategori yang sesuai dengan aktivitas dan kebutuhanmu.</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(Object.keys(CATEGORIES) as CategoryId[]).map((c) => {
                   const on = d.preferences.categories.includes(c)
@@ -260,21 +267,22 @@ function Editor({ initial }: { initial: Identity }) {
                   )
                 })}
               </div>
-            </div>
-            <div>
-              <p className="text-sm font-medium">Lokasi preferensi</p>
+            </section>
+            <section className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:p-5">
+              <p className="font-semibold">Lokasi preferensi</p><p className="mt-1 text-sm text-muted-foreground">Pilih wilayah yang dapat dijangkau untuk kegiatan dagang.</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {REGIONS.map((r) => {
                   const on = d.preferences.locations.includes(r)
                   return <button key={r} type="button" aria-pressed={on} onClick={() => prefs({ locations: on ? d.preferences.locations.filter((x) => x !== r) : [...d.preferences.locations, r] })} className={cn('rounded-full border px-3 py-1.5 text-sm', on ? 'border-primary bg-primary/10 font-medium text-foreground' : 'text-muted-foreground hover:bg-hover')}>{r}</button>
                 })}
               </div>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
+            </section>
+            <section className="grid gap-4 rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:grid-cols-2 sm:p-5">
+              <div className="sm:col-span-2"><p className="font-semibold">Rentang harga</p><p className="mt-1 text-sm text-muted-foreground">Batas ini membantu sistem memilih peluang yang relevan.</p></div>
               <Field label="Harga minimum (Rp)" type="number" min={0} value={d.preferences.minPriceIdr ?? ''} onChange={(e) => prefs({ minPriceIdr: e.target.value ? Number(e.target.value) : undefined })} />
               <Field label="Budget maksimum (Rp)" type="number" min={0} value={d.preferences.maxBudgetIdr ?? ''} onChange={(e) => prefs({ maxBudgetIdr: e.target.value ? Number(e.target.value) : undefined })} />
-            </div>
-            <label className="flex flex-col gap-2 text-sm font-medium">
+            </section>
+            <label className="flex flex-col gap-3 rounded-2xl border bg-card p-4 text-sm font-medium shadow-sm shadow-foreground/[0.025] sm:p-5">
               <span className="flex justify-between">Radius pengiriman <span className="num text-muted-foreground">{d.preferences.deliveryRadiusKm} km</span></span>
               <input type="range" min={5} max={300} step={5} value={d.preferences.deliveryRadiusKm} onChange={(e) => prefs({ deliveryRadiusKm: Number(e.target.value) })} className="accent-primary" />
             </label>
@@ -303,6 +311,7 @@ export function IdentityPage() {
         description={query.data ? `Profil ${formatPercent(query.data.completeness)} lengkap. Dipakai engine untuk mencocokkan opportunity dan oleh market untuk kualifikasi.` : undefined}
         icon={IdCard}
         tone="teal"
+        featured
       />
       <AsyncView query={query} skeleton={<Skeleton className="h-80 rounded-xl" />}>
         {(i) => <Editor key={JSON.stringify(i)} initial={i} />}
