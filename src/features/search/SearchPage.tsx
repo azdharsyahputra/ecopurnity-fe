@@ -33,7 +33,8 @@ export function SearchPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 md:px-6">
-      <PageHeader title="Pencarian" icon={Search} tone="gray" />
+      <PageHeader title="Pencarian" icon={Search} tone="gray" featured />
+      <div className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:p-5">
       <label className="relative block">
         <span className="sr-only">Cari</span>
         <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -64,6 +65,7 @@ export function SearchPage() {
           </button>
         ))}
       </div>
+      </div>
 
       <div className="mt-6">
         {q.trim().length < 2 ? (
@@ -75,10 +77,10 @@ export function SearchPage() {
             empty={<EmptyState icon={SearchX} title={`Tidak ada hasil untuk “${q}”`} description="Coba kata lain atau hapus filter tipe." />}
           >
             {(hits) => (
-              <div className="flex flex-col gap-6">
+              <div className="flex flex-col gap-6 rounded-2xl border bg-card p-3 shadow-sm shadow-foreground/[0.025] sm:p-4">
                 {SEARCH_ORDER.filter((t) => hits.some((h) => h.type === t)).map((t) => (
-                  <section key={t}>
-                    <h2 className="mb-1 px-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">{SEARCH_TYPES[t]}</h2>
+                  <section key={t} className="rounded-xl bg-muted/35 p-2">
+                    <h2 className="mb-1 px-2 pt-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">{SEARCH_TYPES[t]}</h2>
                     {hits.filter((h) => h.type === t).map((h) => <SearchHitRow key={h.id} hit={h} />)}
                   </section>
                 ))}
