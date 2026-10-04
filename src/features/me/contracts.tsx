@@ -45,23 +45,26 @@ function NewContractDialog({ txId, onClose }: { txId: string; onClose: () => voi
         <AsyncView query={tx} skeleton={<Skeleton className="h-40" />}>
           {(t) => (
             <form
-              className="grid gap-3"
+              className="grid gap-4"
               onSubmit={(e) => {
                 e.preventDefault()
                 create.mutate({ fromTx: t.id, every: f.every, runs: Number(f.runs), startAt: f.startAt }, { onSuccess: () => { toast({ title: 'Kontrak diusulkan', body: `Menunggu ${t.counterparty.name}`, tone: 'green' }); onClose() } })
               }}
             >
-              <p className="rounded-lg border bg-muted/40 p-3 text-sm">
+              <p className="rounded-xl border bg-muted/35 p-4 text-sm leading-relaxed">
                 {t.title.split(' · ')[0]} · {formatQty(t.quantity)} × {formatIdr(t.unitPriceIdr)} · {TERMS[t.terms ?? 'escrow'].label} · dengan <b>{t.counterparty.name}</b>
               </p>
-              <SelectField label="Frekuensi" value={f.every} onChange={(e) => setF({ ...f, every: e.target.value as ContractEvery })} error={fieldError(create.error, 'every')}>
-                {Object.entries(EVERY).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
-              </SelectField>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Jumlah order" type="number" min={2} max={52} value={f.runs} onChange={(e) => setF({ ...f, runs: e.target.value })} error={fieldError(create.error, 'runs')} />
-                <Field label="Order pertama" type="date" value={f.startAt} onChange={(e) => setF({ ...f, startAt: e.target.value })} error={fieldError(create.error, 'startAt')} />
-              </div>
-              <p className="text-sm text-muted-foreground">Total nilai kontrak ≈ <b className="num text-foreground">{formatIdr(t.totalIdr * (Number(f.runs) || 0), { compact: true })}</b></p>
+              <section className="grid gap-4 rounded-2xl border bg-card p-4 sm:p-5">
+                <div><h3 className="font-semibold">Jadwal pasokan</h3><p className="mt-1 text-sm text-muted-foreground">Atur frekuensi dan durasi order berulang.</p></div>
+                <SelectField label="Frekuensi" value={f.every} onChange={(e) => setF({ ...f, every: e.target.value as ContractEvery })} error={fieldError(create.error, 'every')}>
+                  {Object.entries(EVERY).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+                </SelectField>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Field label="Jumlah order" type="number" min={2} max={52} value={f.runs} onChange={(e) => setF({ ...f, runs: e.target.value })} error={fieldError(create.error, 'runs')} />
+                  <Field label="Order pertama" type="date" value={f.startAt} onChange={(e) => setF({ ...f, startAt: e.target.value })} error={fieldError(create.error, 'startAt')} />
+                </div>
+                <p className="rounded-lg bg-muted/40 px-3 py-2 text-sm text-muted-foreground">Total nilai kontrak ≈ <b className="num text-foreground">{formatIdr(t.totalIdr * (Number(f.runs) || 0), { compact: true })}</b></p>
+              </section>
               <FormError error={create.error} />
               <DialogFooter><Button type="submit" disabled={create.isPending}>Usulkan kontrak</Button></DialogFooter>
             </form>
@@ -78,7 +81,7 @@ export function ContractsPage() {
   const from = params.get('from')
   return (
     <>
-      <PageHeader title="Kontrak rutin" description="Pasokan berulang dengan harga dan termin yang disepakati. Tiap periode, order baru dibuat otomatis sebagai transaksi biasa." icon={Repeat} tone="teal" />
+      <PageHeader title="Kontrak rutin" description="Pasokan berulang dengan harga dan termin yang disepakati. Tiap periode, order baru dibuat otomatis sebagai transaksi biasa." icon={Repeat} tone="teal" featured />
       <AsyncView
         query={query}
         skeleton={<Skeleton className="h-64 rounded-xl" />}
@@ -120,6 +123,7 @@ export function ContractDetailPage() {
             description={<span className="flex flex-wrap items-center gap-1.5">{c.code} <StatusTag s={c.status} /> <Tag>{c.side === 'buyer' ? 'Kamu pembeli' : 'Kamu supplier'}</Tag></span>}
             icon={Repeat}
             tone="teal"
+            featured
             actions={c.actions.map((a) => (
               <ConfirmDialog
                 key={a}
