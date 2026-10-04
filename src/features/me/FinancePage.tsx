@@ -27,7 +27,7 @@ function BankForm({ f }: { f: Finance }) {
   const [b, setB] = useState(f.bank ?? { bank: 'BCA', accountNo: '', holder: '' })
   return (
     <form
-      className="grid gap-4 rounded-2xl border bg-muted/20 p-4 sm:p-5"
+      className="grid content-start gap-4"
       onSubmit={(e) => {
         e.preventDefault()
         act.mutate({ type: 'bank', bank: b }, { onSuccess: () => toast({ title: 'Rekening disimpan', tone: 'green' }) })
@@ -40,7 +40,9 @@ function BankForm({ f }: { f: Finance }) {
       <Field label="Nomor rekening" inputMode="numeric" value={b.accountNo} onChange={(e) => setB({ ...b, accountNo: e.target.value.replace(/\D/g, '') })} error={fieldError(act.error, 'accountNo')} />
       <Field label="Nama pemilik" value={b.holder} onChange={(e) => setB({ ...b, holder: e.target.value })} error={fieldError(act.error, 'holder')} hint="Harus sama dengan nama di identitas terverifikasi" />
       <FormError error={act.error} />
-      <Button type="submit" variant="outline" className="h-9" disabled={act.isPending}>{f.bank ? 'Perbarui rekening' : 'Simpan rekening'}</Button>
+      <Button type="submit" className="h-10 w-full font-semibold shadow-sm transition-all hover:shadow-md focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2" disabled={act.isPending}>
+        {act.isPending ? 'Menyimpan…' : f.bank ? 'Perbarui rekening' : 'Simpan rekening'}
+      </Button>
     </form>
   )
 }
@@ -96,17 +98,30 @@ export function FinancePage() {
       <AsyncView query={query} skeleton={<Skeleton className="h-96 rounded-xl" />}>
         {(f) => (
           <div className="flex flex-col gap-6">
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <StatTile label="Saldo bisa ditarik" icon={Banknote} tone="green" value={formatIdr(f.availableIdr, { compact: true })} hint="hasil penjualan yang sudah selesai" />
               <StatTile label="Piutang" icon={Hourglass} tone="blue" value={formatIdr(f.receivableIdr, { compact: true })} hint="di escrow atau menunggu pembayaran" />
               <StatTile label="Dana kamu di escrow" icon={Lock} tone="purple" value={formatIdr(f.escrowHeldIdr, { compact: true })} hint="sebagai pembeli, belum dilepas" />
               <StatTile label="Sudah ditarik" icon={Landmark} tone="gray" value={formatIdr(f.withdrawnIdr, { compact: true })} />
             </div>
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+            <div className="grid grid-cols-1 gap-6">
+              <aside className="grid content-start gap-4 md:grid-cols-2">
+                <section className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.02] sm:p-5">
+                  <div className="mb-4 border-b pb-3"><h2 className="font-semibold tracking-tight">Tarik dana</h2><p className="mt-1 text-sm text-muted-foreground">Ajukan pencairan ke rekening terdaftar.</p></div>
+                  <Withdraw key={f.availableIdr} f={f} />
+                </section>
+                <section className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.02] sm:p-5">
+                  <div className="mb-4 border-b pb-3"><h2 className="font-semibold tracking-tight">Rekening pencairan</h2><p className="mt-1 text-sm text-muted-foreground">Kelola tujuan transfer saldomu.</p></div>
+                  <BankForm f={f} />
+                </section>
+              </aside>
               <div className="flex min-w-0 flex-col gap-6">
               <Withdrawals f={f} />
-              <section className="min-w-0">
-                <h2 className="mb-3 font-medium">Riwayat</h2>
+              <section className="min-w-0 rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.02] sm:p-5">
+                <div className="mb-4 flex flex-wrap items-end justify-between gap-2 border-b pb-3">
+                  <div><h2 className="font-semibold tracking-tight">Riwayat keuangan</h2><p className="mt-1 text-sm text-muted-foreground">Catatan uang masuk, pembayaran, biaya, dan pencairan.</p></div>
+                  <span className="rounded-full border bg-muted/40 px-3 py-1 text-xs font-medium text-muted-foreground">{f.entries.length} catatan</span>
+                </div>
                 {f.entries.length ? (
                   <DataTable
                     caption="Riwayat keuangan"
@@ -125,16 +140,6 @@ export function FinancePage() {
                 )}
               </section>
               </div>
-              <aside className="flex flex-col gap-4">
-                <section className="rounded-xl border bg-card p-4">
-                  <h2 className="mb-3 font-medium">Tarik dana</h2>
-                  <Withdraw key={f.availableIdr} f={f} />
-                </section>
-                <section className="rounded-xl border bg-card p-4">
-                  <h2 className="mb-3 font-medium">Rekening pencairan</h2>
-                  <BankForm f={f} />
-                </section>
-              </aside>
             </div>
           </div>
         )}
