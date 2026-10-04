@@ -2,9 +2,9 @@ import { useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { Background, Controls, ReactFlow, type Edge, type Node } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { Cpu, Search, ShieldAlert } from 'lucide-react'
+import { Activity, Cpu, Search, ShieldAlert, Siren } from 'lucide-react'
 import type { Tone } from '@/domain/status'
-import { formatDateTime, formatRelative } from '@/domain/format'
+import { formatDateTime, formatNumber, formatRelative } from '@/domain/format'
 import { fieldError } from '@/lib/api'
 import { toast } from '@/stores/toast'
 import { useAdminAction, useAlert, useAlerts } from './hooks'
@@ -38,27 +38,60 @@ export function FraudPage() {
         tone="orange"
         actions={<Segmented label="Tampilkan" value={view} options={[['active', 'Perlu ditangani'], ['done', 'Selesai'], ['all', 'Semua']]} onChange={(v) => setParams((p) => (p.set('status', v), p), { replace: true })} />}
       />
-      <AsyncView query={query} skeleton={<Skeleton className="h-96 rounded-xl" />}>
+      <AsyncView query={query} skeleton={<Skeleton className="h-96 rounded-xl" />} emptyFallback={false}>
         {(all) => {
           const active = (a: FraudAlert) => a.status === 'new' || a.status === 'investigating'
           const rows = all.filter((a) => view === 'all' || (view === 'active') === active(a))
-          return rows.length ? (
-            <DataTable
-              caption="Fraud alert"
-              rows={rows}
-              rowKey={(a) => a.id}
-              rowHref={(a) => `/admin/fraud/${a.id}`}
-              initialSort={{ key: 'score', dir: 'desc' }}
-              columns={[
-                { key: 'title', header: 'Alert', primary: true, cell: (a) => <span>{a.title} <span className="text-xs font-normal text-muted-foreground">{a.code}</span></span> },
-                { key: 'type', header: 'Jenis', cell: (a) => ALERT_TYPE[a.type].label },
-                { key: 'score', header: 'Skor', align: 'right', cell: (a) => (a.source === 'system' ? a.score : 'Manual'), sortValue: (a) => a.score },
-                { key: 'detected', header: 'Terdeteksi', cell: (a) => formatRelative(a.detectedAt), sortValue: (a) => a.detectedAt },
-                { key: 'status', header: 'Status', cell: (a) => <AlertStatusTag status={a.status} /> },
-              ]}
-            />
-          ) : (
-            <EmptyState icon={ShieldAlert} title="Tidak ada alert di sini" description="Alert baru dari engine muncul otomatis." />
+          const investigating = all.filter((a) => a.status === 'investigating').length
+          const escalated = all.filter((a) => a.status === 'escalated').length
+          const highScore = all.filter((a) => a.source === 'system' && a.score >= 80).length
+          return (
+            <>
+              <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:p-5">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground"><span className="grid size-8 place-items-center rounded-xl bg-orange-500/10 text-orange-700 dark:text-orange-300"><ShieldAlert className="size-4" /></span>Alert aktif</div>
+                  <p className="mt-3 text-2xl font-semibold tracking-tight">{formatNumber(all.filter(active).length)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Baru atau sedang diinvestigasi</p>
+                </div>
+                <div className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:p-5">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground"><span className="grid size-8 place-items-center rounded-xl bg-blue-500/10 text-blue-700 dark:text-blue-300"><Search className="size-4" /></span>Investigasi berjalan</div>
+                  <p className="mt-3 text-2xl font-semibold tracking-tight">{formatNumber(investigating)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Kasus yang sedang ditinjau Admin</p>
+                </div>
+                <div className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:p-5">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground"><span className="grid size-8 place-items-center rounded-xl bg-rose-500/10 text-rose-700 dark:text-rose-300"><Siren className="size-4" /></span>Skor sistem ≥ 80</div>
+                  <p className="mt-3 text-2xl font-semibold tracking-tight">{formatNumber(highScore)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Sinyal engine untuk diperiksa</p>
+                </div>
+                <div className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:p-5">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground"><span className="grid size-8 place-items-center rounded-xl bg-purple-500/10 text-purple-700 dark:text-purple-300"><Activity className="size-4" /></span>Dieskalasi</div>
+                  <p className="mt-3 text-2xl font-semibold tracking-tight">{formatNumber(escalated)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Sudah diteruskan ke tindakan</p>
+                </div>
+              </div>
+              <section className="overflow-hidden rounded-2xl border bg-card shadow-sm shadow-foreground/[0.025]">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-4 sm:px-5">
+                  <div><h2 className="font-semibold">Daftar alert</h2><p className="mt-0.5 text-sm text-muted-foreground">Tinjau sinyal dan bukti sebelum mengambil keputusan.</p></div>
+                  <span className="rounded-full border bg-muted/40 px-3 py-1 text-xs font-medium text-muted-foreground">{formatNumber(rows.length)} ditampilkan</span>
+                </div>
+                {rows.length ? (
+                  <DataTable
+                    caption="Fraud alert"
+                    rows={rows}
+                    rowKey={(a) => a.id}
+                    rowHref={(a) => `/admin/fraud/${a.id}`}
+                    initialSort={{ key: 'score', dir: 'desc' }}
+                    columns={[
+                      { key: 'title', header: 'Alert', primary: true, cell: (a) => <span>{a.title} <span className="text-xs font-normal text-muted-foreground">{a.code}</span></span> },
+                      { key: 'type', header: 'Jenis', cell: (a) => ALERT_TYPE[a.type].label },
+                      { key: 'score', header: 'Skor', align: 'right', cell: (a) => (a.source === 'system' ? a.score : 'Manual'), sortValue: (a) => a.score },
+                      { key: 'detected', header: 'Terdeteksi', cell: (a) => formatRelative(a.detectedAt), sortValue: (a) => a.detectedAt },
+                      { key: 'status', header: 'Status', cell: (a) => <AlertStatusTag status={a.status} /> },
+                    ]}
+                  />
+                ) : <EmptyState icon={ShieldAlert} title="Tidak ada alert di tampilan ini" description={all.length ? 'Pilih filter lain untuk melihat status alert yang berbeda.' : 'Alert baru dari engine akan muncul otomatis.'} className="m-4 sm:m-5" />}
+              </section>
+            </>
           )
         }}
       </AsyncView>
