@@ -49,10 +49,10 @@ export function ReputationPage() {
       <AsyncView query={query} skeleton={<Skeleton className="h-96 rounded-xl" />}>
         {(r) => (
           <div className="flex flex-col gap-6">
-            <div className="grid gap-3 lg:grid-cols-[18rem_1fr]">
-              <section className="flex items-center gap-4 rounded-xl border bg-card p-5">
-                <div className="grid size-24 shrink-0 place-items-center rounded-full" style={{ background: `conic-gradient(var(--primary) ${r.score * 3.6}deg, var(--muted) 0)` }}>
-                  <span className="num grid size-20 place-items-center rounded-full bg-card text-3xl font-semibold">{r.score}</span>
+            <div className="grid gap-3 xl:grid-cols-[19rem_minmax(0,1fr)]">
+              <section className="flex min-h-36 items-center gap-4 rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:p-5">
+                <div className="grid size-24 shrink-0 place-items-center rounded-full" role="img" aria-label={`Skor reputasi ${r.score} dari 100`} style={{ background: `conic-gradient(var(--primary) ${r.score * 3.6}deg, var(--muted) 0)` }}>
+                  <span aria-hidden="true" className="num grid size-20 place-items-center rounded-full bg-card text-3xl font-semibold">{r.score}</span>
                 </div>
                 <div>
                   <h2 className="text-sm text-muted-foreground">Skor reputasi</h2>
@@ -60,7 +60,7 @@ export function ReputationPage() {
                   <p className="text-xs text-muted-foreground">dari 100 · tampil di profil publik</p>
                 </div>
               </section>
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
                 <StatTile label="Transaksi" value={formatNumber(r.counts.transactions)} icon={ReceiptText} tone="purple" />
                 <StatTile label="Berhasil" value={formatNumber(r.counts.successful)} icon={CircleCheck} tone="green" />
                 <StatTile label="Dispute" value={formatNumber(r.counts.disputes)} icon={Scale} tone="orange" />
@@ -68,7 +68,8 @@ export function ReputationPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+            <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
+              <div className="min-w-0 rounded-2xl border bg-card p-3 shadow-sm shadow-foreground/[0.025] sm:p-5">
               <ChartCard
                 title="Tren 12 bulan"
                 subtitle="Skor di akhir tiap bulan"
@@ -87,9 +88,10 @@ export function ReputationPage() {
                   </LineChart>
                 </ResponsiveContainer>
               </ChartCard>
+              </div>
 
-              <section className="rounded-xl border bg-card p-4 md:p-5">
-                <h2 className="font-medium">Rincian</h2>
+              <section className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:p-5">
+                <div className="mb-2 border-b pb-3"><h2 className="font-semibold tracking-tight">Rincian reputasi</h2><p className="mt-1 text-sm text-muted-foreground">Indikator yang membentuk kepercayaan mitra.</p></div>
                 <ul className="divide-y">
                   {RATES.map(([k, label, hint, good]) => <RateRow key={k} label={label} hint={hint} value={r.breakdown[k] as number | null} good={good} />)}
                   <li className="flex justify-between gap-3 py-3 text-sm">
@@ -105,8 +107,8 @@ export function ReputationPage() {
               </section>
             </div>
 
-            <section className="rounded-xl border bg-card p-4 md:p-5">
-              <h2 className="font-medium">Riwayat perubahan</h2>
+            <section className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:p-5">
+              <div className="mb-2 flex flex-wrap items-end justify-between gap-2 border-b pb-3"><div><h2 className="font-semibold tracking-tight">Riwayat perubahan</h2><p className="mt-1 text-sm text-muted-foreground">Peristiwa transaksi yang memengaruhi skor reputasimu.</p></div><span className="rounded-full border bg-muted/40 px-3 py-1 text-xs font-medium text-muted-foreground">{r.events.length} peristiwa</span></div>
               {r.events.length ? (
                 <ul className="mt-2 divide-y">
                   {r.events.map((e) => (
