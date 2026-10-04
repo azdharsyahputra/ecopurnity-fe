@@ -2,8 +2,10 @@ import type { ActivityEvent } from '@/domain/types'
 import { formatIdr, formatRelative } from '@/domain/format'
 import { ACTIVITY_META } from './activity'
 import { IconChip } from './IconChip'
+import { EmptyState } from './States'
 
 export function ActivityFeed({ events }: { events: ActivityEvent[] }) {
+  if (!events.length) return <EmptyState title="Belum ada aktivitas" description="Aktivitas terbaru akan muncul di sini saat ada kegiatan di jaringan." className="border-0 py-8" />
   return (
     <ol className="divide-y" aria-live="polite" aria-relevant="additions">
       {events.map((e) => {
