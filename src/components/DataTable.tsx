@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowDown, ArrowUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { EmptyState } from './States'
 
 export interface Column<T> {
   key: string
@@ -49,6 +50,8 @@ export function DataTable<T>({
 
   const toggle = (key: string) =>
     setSort((s) => (s?.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'desc' }))
+
+  if (!rows.length) return <EmptyState title="Belum ada data" description="Data akan tampil di tabel ini setelah tersedia." />
 
   return (
     <>
