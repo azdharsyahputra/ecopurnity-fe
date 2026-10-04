@@ -26,6 +26,7 @@ export function NotificationsPage() {
         title="Notifikasi"
         icon={Bell}
         tone="orange"
+        featured
         actions={
           <>
             <Segmented label="Filter" value={filter} options={[['all', 'Semua'], ['unread', 'Belum dibaca']]} onChange={setFilter} />
@@ -84,7 +85,7 @@ export function SettingsPage() {
   const save = useSaveNotificationPrefs()
   return (
     <>
-      <PageHeader title="Pengaturan" icon={Settings} tone="gray" />
+      <PageHeader title="Pengaturan" icon={Settings} tone="gray" featured />
       <div className="flex flex-col gap-6">
         <section className="rounded-xl border bg-card p-4 md:p-5">
           <h2 className="font-medium">Tampilan</h2>
