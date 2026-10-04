@@ -13,7 +13,7 @@ import { riskTone } from './labels'
 
 export function BackLink({ to, children }: { to: string; children: ReactNode }) {
   return (
-    <Link to={to} className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+    <Link to={to} className="mb-4 inline-flex h-9 items-center gap-1 rounded-lg px-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
       <ArrowLeft className="size-4" /> {children}
     </Link>
   )
@@ -21,9 +21,9 @@ export function BackLink({ to, children }: { to: string; children: ReactNode }) 
 
 export function Panel({ title, action, className, children }: { title: string; action?: ReactNode; className?: string; children: ReactNode }) {
   return (
-    <section className={cn('min-w-0 rounded-xl border bg-card p-4 md:p-5', className)}>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-medium">{title}</h2>
+    <section className={cn('min-w-0 rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:p-5', className)}>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-border/70 pb-3">
+        <h2 className="font-semibold tracking-tight">{title}</h2>
         {action}
       </div>
       {children}
@@ -105,14 +105,14 @@ export function ReasonDialog({
 
   return (
     <>
-      <Button variant={variant ?? (destructive ? 'destructive' : 'outline')} className="h-9" onClick={() => set(true)}>{label}</Button>
+      <Button variant={variant ?? (destructive ? 'destructive' : 'outline')} className="h-9 shadow-sm transition-all hover:shadow" onClick={() => set(true)}>{label}</Button>
       <Dialog open={open} onOpenChange={set}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
             {description && <DialogDescription>{description}</DialogDescription>}
           </DialogHeader>
-          {impact && <div className="rounded-lg bg-muted p-3 text-sm">{impact}</div>}
+          {impact && <div className="rounded-xl border bg-muted/45 p-4 text-sm leading-relaxed">{impact}</div>}
           {extra}
           <TextareaField
             label={reasonOptional ? `${reasonLabel} (opsional)` : reasonLabel}
