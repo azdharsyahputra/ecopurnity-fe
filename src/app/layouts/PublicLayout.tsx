@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
-import { Menu, Search } from 'lucide-react'
+import { ArrowUpRight, Menu, Search } from 'lucide-react'
 import { useMe } from '@/features/auth/hooks'
 import { usePublicActivity } from '@/features/public/hooks'
 import { ACTIVITY_META } from '@/components/activity'
@@ -53,11 +53,11 @@ export function PublicLayout() {
   )
 
   return (
-    <div className="flex min-h-svh flex-col">
-      <header className="sticky top-0 z-30 bg-background/85 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4 md:px-6">
+    <div className="flex min-h-svh flex-col bg-background">
+      <header className="sticky top-0 z-30 border-b border-border/70 bg-background/90 shadow-sm shadow-foreground/[0.025] backdrop-blur-xl">
+        <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 md:px-6">
           <Logo />
-          <nav aria-label="Utama" className="hidden items-center gap-0.5 md:flex">
+          <nav aria-label="Utama" className="hidden items-center gap-1 rounded-full border bg-muted/60 p-1 md:flex">
             {PUBLIC_NAV.map((n) => (
               <NavLink key={n.to} to={n.to} className={linkClass}>
                 {n.label}
@@ -103,6 +103,7 @@ export function PublicLayout() {
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between md:px-6">
           <Logo className="text-foreground" />
           <p suppressHydrationWarning>Find markets that don't exist yet. © {new Date().getFullYear()} Ecopurnity</p>
+          <Link to="/explore" className="inline-flex items-center gap-1 font-medium text-foreground hover:text-primary">Jelajahi jaringan <ArrowUpRight className="size-4" /></Link>
         </div>
       </footer>
     </div>
