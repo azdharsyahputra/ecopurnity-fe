@@ -22,6 +22,7 @@ export function OverviewPage() {
         description={<>Kamu masuk sebagai <b>{access.roleLabel}</b>. Ringkasan pengadaan, auction, supplier, dan transaksi bisnis.</>}
         icon={LayoutDashboard}
         tone="blue"
+        featured
         actions={<GuardedLink to={`${access.base}/procurement/new`} reason={access.deny('procurement', 'create')}><Plus /> Buat procurement</GuardedLink>}
       />
       <AsyncView query={query} skeleton={<Skeleton className="h-96 rounded-xl" />}>
