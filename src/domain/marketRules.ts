@@ -54,10 +54,10 @@ const date = (d: string) => (d ? formatDate(`${d}T00:00:00+07:00`) : '—')
 
 
 export const RULE_FIELDS: { key: keyof MarketRules; label: string; format: (r: MarketRules, unit: string) => string }[] = [
-  { key: 'eligibility', label: 'Eligibility', format: (r) => ELIGIBILITY[r.eligibility] },
+  { key: 'eligibility', label: 'Kelayakan', format: (r) => ELIGIBILITY[r.eligibility] },
   { key: 'visibility', label: 'Visibilitas bid', format: (r) => VISIBILITY[r.visibility] },
   { key: 'minStepPct', label: 'Kenaikan/penurunan minimum', format: (r) => `${String(r.minStepPct).replace('.', ',')}% dari harga pembuka` },
-  { key: 'minQuantity', label: 'Kuantitas minimum', format: (r, u) => `${formatNumber(r.minQuantity)} ${u} per order` },
+  { key: 'minQuantity', label: 'Kuantitas minimum', format: (r, u) => `${formatNumber(r.minQuantity)} ${u} per pesanan` },
   { key: 'maxQuantity', label: 'Kuantitas maksimum', format: (r, u) => `${formatNumber(r.maxQuantity)} ${u} per peserta` },
   { key: 'windowStart', label: 'Jendela mulai', format: (r) => date(r.windowStart) },
   { key: 'windowEnd', label: 'Jendela selesai', format: (r) => date(r.windowEnd) },

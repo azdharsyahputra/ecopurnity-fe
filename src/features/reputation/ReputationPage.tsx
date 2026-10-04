@@ -100,7 +100,7 @@ export function ReputationPage() {
                   </li>
                   <li className="flex justify-between gap-3 py-3 text-sm"><span className="font-medium">Transaction volume</span><span className="num font-semibold">{formatIdr(r.breakdown.volumeIdr, { compact: true })}</span></li>
                   <li className="flex justify-between gap-3 py-3 text-sm">
-                    <span><span className="block font-medium">Response time</span><span className="text-xs text-muted-foreground">Agreement ke langkah berikutnya</span></span>
+                    <span><span className="block font-medium">Waktu respons</span><span className="text-xs text-muted-foreground">Perjanjian ke langkah berikutnya</span></span>
                     <span className="num font-semibold">{r.breakdown.responseHours === null ? '–' : `${formatNumber(r.breakdown.responseHours)} jam`}</span>
                   </li>
                 </ul>

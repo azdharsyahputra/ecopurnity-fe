@@ -68,7 +68,7 @@ function ImportDialog({ onClose }: { onClose: () => void }) {
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Import inventory dari CSV</DialogTitle>
+          <DialogTitle>Impor persediaan dari CSV</DialogTitle>
           <DialogDescription>
             Kolom: {INVENTORY_CSV_HEADER.join(', ')}. Kategori memakai kode ({CATS.join(', ')}).{' '}
             <button type="button" className="text-primary hover:underline" onClick={() => downloadCsv('template-inventory.csv', [INVENTORY_CSV_HEADER, ['KRF-150', 'Kertas kraft liner 150 gsm', 'packaging', 'Gudang utama', 10, 'ton', 5, 7, 'RCT ≥ 1,6 kN/m']])}>Unduh template</button>
@@ -154,7 +154,7 @@ function Body({ inv }: { inv: InventoryData }) {
           options={[['', 'Semua gudang', inv.items.length], ...whs.map((w) => [w, w, inv.items.filter((i) => i.warehouse === w).length] as [string, string, number])]} />
         {rows.length ? (
           <DataTable
-            caption="Inventory"
+            caption="Persediaan"
             rows={rows}
             rowKey={(i) => i.id}
             initialSort={{ key: 'item', dir: 'asc' }}
@@ -227,14 +227,14 @@ export function InventoryPage() {
   return (
     <>
       <PageHeader
-        title="Inventory"
+        title="Persediaan"
         description="Stok per gudang, kapasitas produksi, logistik, dan pasokan rutin."
         icon={Warehouse}
         tone="blue"
         featured
         actions={
           <>
-            <GuardedButton variant="outline" className="h-9" reason={createDeny} onClick={() => open('import')}><FileUp /> Import CSV</GuardedButton>
+            <GuardedButton variant="outline" className="h-9" reason={createDeny} onClick={() => open('import')}><FileUp /> Impor CSV</GuardedButton>
             <GuardedButton variant="outline" className="h-9" reason={access.deny('inventory', 'manage')} onClick={() => open('schedule')}><CalendarClock /> Jadwal rutin</GuardedButton>
             <GuardedButton className="h-9" reason={createDeny} onClick={() => open('add')}><Plus /> Tambah item</GuardedButton>
           </>
@@ -242,7 +242,7 @@ export function InventoryPage() {
       />
       <AsyncView query={query} skeleton={<Skeleton className="h-96 rounded-xl" />}
         isEmpty={(d) => !d.items.length && !d.capacity.length}
-        empty={<EmptyState icon={Factory} tone="blue" title="Inventory masih kosong" description="Tambah item satu per satu atau import dari spreadsheet." action={<Button onClick={() => open('import')} disabled={!!createDeny}><Download /> Import CSV</Button>} />}
+        empty={<EmptyState icon={Factory} tone="blue" title="Persediaan masih kosong" description="Tambahkan item satu per satu atau impor dari spreadsheet." action={<Button onClick={() => open('import')} disabled={!!createDeny}><Download /> Impor CSV</Button>} />}
       >
         {(inv) => <Body inv={inv} />}
       </AsyncView>

@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 
 const KIND: Record<Finance['entries'][number]['kind'], [string, 'blue' | 'green' | 'red' | 'orange' | 'gray' | 'purple']> = {
-  escrow: ['Escrow', 'blue'], payment: ['Pembayaran', 'gray'], payout: ['Pencairan', 'green'], refund: ['Refund', 'purple'], fee: ['Fee', 'orange'], withdrawal: ['Tarik dana', 'gray'],
+  escrow: ['Escrow', 'blue'], payment: ['Pembayaran', 'gray'], payout: ['Pencairan', 'green'], refund: ['Pengembalian dana', 'purple'], fee: ['Biaya', 'orange'], withdrawal: ['Tarik dana', 'gray'],
 }
 const WITHDRAWAL: Record<Finance['withdrawals'][number]['status'], [string, 'yellow' | 'green' | 'red']> = {
   processing: ['Diproses admin', 'yellow'], paid: ['Sudah ditransfer', 'green'], rejected: ['Ditolak', 'red'],

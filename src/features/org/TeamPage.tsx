@@ -86,7 +86,7 @@ function Members({ team, readOnly }: { team: TeamData; readOnly?: string }) {
               <ConfirmDialog
                 trigger={<Button variant="ghost" size="icon-sm" aria-label={`Keluarkan ${m.name}`}><Trash2 /></Button>}
                 title={`Keluarkan ${m.name}?`}
-                impact={<>Akses ke workspace ini dicabut segera. Approval yang menunggu peran <b>{roleLabel(m.role)}</b> tetap menunggu anggota lain dengan peran yang sama.</>}
+                impact={<>Akses ke workspace ini dicabut segera. Persetujuan yang menunggu peran <b>{roleLabel(m.role)}</b> tetap menunggu anggota lain dengan peran yang sama.</>}
                 confirmLabel="Keluarkan"
                 destructive
                 onConfirm={() => act.mutateAsync({ id: m.id, remove: true }).then(() => toast({ title: `${m.name} dikeluarkan`, tone: 'gray' }))}

@@ -51,7 +51,7 @@ export function SystemBadge({ source, score, confidence }: { source: 'system' | 
     <span className="inline-flex flex-wrap items-center gap-1.5">
       <Tag tone="purple"><Cpu className="size-3" /> Rekomendasi sistem</Tag>
       <Tag tone={riskTone(score)}>Skor {score}</Tag>
-      <Tag>Confidence {formatPercent(confidence)}</Tag>
+      <Tag>Tingkat keyakinan {formatPercent(confidence)}</Tag>
     </span>
   )
 }

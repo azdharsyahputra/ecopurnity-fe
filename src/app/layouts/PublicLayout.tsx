@@ -23,7 +23,7 @@ function LiveTicker() {
     <div className="border-b bg-muted/50">
       <div className="mx-auto flex h-9 max-w-6xl items-center gap-2 px-4 text-xs md:px-6" aria-live="polite">
         <span className="inline-flex items-center gap-1.5 rounded-sm bg-lime px-1.5 py-0.5 font-semibold text-lime-foreground">
-          <span className="size-1.5 animate-pulse rounded-full bg-current" /> LIVE
+          <span className="size-1.5 animate-pulse rounded-full bg-current" /> LANGSUNG
         </span>
         <span key={e.id} className="flex min-w-0 items-center gap-1.5 animate-in fade-in slide-in-from-bottom-1">
           <Icon className="size-3.5 shrink-0 text-muted-foreground" />
@@ -102,7 +102,7 @@ export function PublicLayout() {
       <footer className="border-t">
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between md:px-6">
           <Logo className="text-foreground" />
-          <p suppressHydrationWarning>Find markets that don't exist yet. © {new Date().getFullYear()} Ecopurnity</p>
+          <p suppressHydrationWarning>Temukan market yang belum pernah ada. © {new Date().getFullYear()} Ecopurnity</p>
           <Link to="/explore" className="inline-flex items-center gap-1 font-medium text-foreground hover:text-primary">Jelajahi jaringan <ArrowUpRight className="size-4" /></Link>
         </div>
       </footer>

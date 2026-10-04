@@ -280,7 +280,7 @@ function Editor({ initial }: { initial: Identity }) {
             <section className="grid gap-4 rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:grid-cols-2 sm:p-5">
               <div className="sm:col-span-2"><p className="font-semibold">Rentang harga</p><p className="mt-1 text-sm text-muted-foreground">Batas ini membantu sistem memilih peluang yang relevan.</p></div>
               <Field label="Harga minimum (Rp)" type="number" min={0} value={d.preferences.minPriceIdr ?? ''} onChange={(e) => prefs({ minPriceIdr: e.target.value ? Number(e.target.value) : undefined })} />
-              <Field label="Budget maksimum (Rp)" type="number" min={0} value={d.preferences.maxBudgetIdr ?? ''} onChange={(e) => prefs({ maxBudgetIdr: e.target.value ? Number(e.target.value) : undefined })} />
+              <Field label="Anggaran maksimum (Rp)" type="number" min={0} value={d.preferences.maxBudgetIdr ?? ''} onChange={(e) => prefs({ maxBudgetIdr: e.target.value ? Number(e.target.value) : undefined })} />
             </section>
             <label className="flex flex-col gap-3 rounded-2xl border bg-card p-4 text-sm font-medium shadow-sm shadow-foreground/[0.025] sm:p-5">
               <span className="flex justify-between">Radius pengiriman <span className="num text-muted-foreground">{d.preferences.deliveryRadiusKm} km</span></span>

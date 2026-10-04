@@ -34,8 +34,8 @@ export function AnalyticsView({ data, marketId }: { data: MmAnalytics; marketId?
       <section aria-labelledby="an-liq" className="flex flex-col gap-3">
         <div><h2 id="an-liq" className="text-lg font-semibold tracking-tight">Likuiditas</h2><p className="mt-0.5 text-sm text-muted-foreground">Keseimbangan peserta aktif di market.</p></div>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <StatTile label="Buyers" icon={ShoppingCart} tone="blue" value={formatNumber(l.buyers)} />
-          <StatTile label="Suppliers" icon={PackageOpen} tone="teal" value={formatNumber(l.suppliers)} />
+          <StatTile label="Pembeli" icon={ShoppingCart} tone="blue" value={formatNumber(l.buyers)} />
+          <StatTile label="Supplier" icon={PackageOpen} tone="teal" value={formatNumber(l.suppliers)} />
           <StatTile label="Order aktif" icon={ClipboardList} tone="purple" value={formatNumber(l.activeOrders)} />
           <StatTile label="Rasio buyer:supplier" icon={ArrowLeftRight} tone="orange" value={`${l.ratio.toFixed(1).replace('.', ',')} : 1`} />
         </div>
@@ -44,8 +44,8 @@ export function AnalyticsView({ data, marketId }: { data: MmAnalytics; marketId?
             title="Pembeli vs supplier per market"
             subtitle="Peserta aktif"
             height={Math.max(160, data.byMarket.length * 44)}
-            legend={[{ label: 'Buyers', color: C.buyers, shape: 'rect' }, { label: 'Suppliers', color: C.suppliers, shape: 'rect' }]}
-            table={{ columns: ['Market', 'Buyers', 'Suppliers'], rows: data.byMarket.map((m) => [m.name, formatNumber(m.buyers), formatNumber(m.suppliers)]) }}
+            legend={[{ label: 'Pembeli', color: C.buyers, shape: 'rect' }, { label: 'Supplier', color: C.suppliers, shape: 'rect' }]}
+            table={{ columns: ['Market', 'Pembeli', 'Supplier'], rows: data.byMarket.map((m) => [m.name, formatNumber(m.buyers), formatNumber(m.suppliers)]) }}
           >
             <ResponsiveContainer>
               <BarChart data={data.byMarket} layout="vertical" margin={{ top: 0, right: 12, bottom: 0, left: 0 }} barGap={2} barCategoryGap="25%">
@@ -53,8 +53,8 @@ export function AnalyticsView({ data, marketId }: { data: MmAnalytics; marketId?
                 <XAxis type="number" {...axis} />
                 <YAxis type="category" dataKey="name" width={120} tickFormatter={(n: string) => (n.length > 16 ? `${n.slice(0, 15)}…` : n)} {...axis} />
                 <Tooltip cursor={{ fill: 'var(--hover)' }} content={(p) => <ChartTooltip {...p} formatValue={(v) => formatNumber(v)} />} />
-                <Bar dataKey="buyers" name="Buyers" fill={C.buyers} maxBarSize={12} radius={[0, 4, 4, 0]} />
-                <Bar dataKey="suppliers" name="Suppliers" fill={C.suppliers} maxBarSize={12} radius={[0, 4, 4, 0]} />
+                <Bar dataKey="buyers" name="Pembeli" fill={C.buyers} maxBarSize={12} radius={[0, 4, 4, 0]} />
+                <Bar dataKey="suppliers" name="Supplier" fill={C.suppliers} maxBarSize={12} radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -66,12 +66,12 @@ export function AnalyticsView({ data, marketId }: { data: MmAnalytics; marketId?
         {pd && rounds.length ? (
           <ChartCard
             title={`Harga per round · ${pd.name}`}
-            subtitle={`Rp per ${pd.unit}${!marketId && data.priceDiscovery.length > 1 ? '. Pilih market di filter untuk market lain.' : ''} Current hanya untuk round yang sedang live.`}
+            subtitle={`Rp per ${pd.unit}${!marketId && data.priceDiscovery.length > 1 ? '. Pilih market di filter untuk market lain.' : ''} Harga saat ini hanya untuk round yang sedang berlangsung.`}
             legend={[
-              { label: 'Opening', color: C.opening }, { label: 'Current', color: C.current }, { label: 'Median', color: C.median }, { label: 'Clearing', color: C.clearing },
+              { label: 'Pembukaan', color: C.opening }, { label: 'Saat ini', color: C.current }, { label: 'Median', color: C.median }, { label: 'Harga akhir', color: C.clearing },
             ]}
             table={{
-              columns: ['Round', 'Opening', 'Current', 'Median', 'Clearing'],
+              columns: ['Round', 'Pembukaan', 'Saat ini', 'Median', 'Harga akhir'],
               rows: rounds.map((r) => [r.label, formatIdr(r.openingIdr), r.currentIdr ? formatIdr(r.currentIdr) : '—', r.medianIdr ? formatIdr(r.medianIdr) : '—', r.clearingIdr ? formatIdr(r.clearingIdr) : '—']),
             }}
           >
@@ -84,10 +84,10 @@ export function AnalyticsView({ data, marketId }: { data: MmAnalytics; marketId?
                   cursor={{ stroke: 'var(--muted-foreground)', strokeWidth: 1 }}
                   content={(p) => <ChartTooltip {...p} formatLabel={(x) => rounds.find((r) => r.label === x)?.title ?? String(x)} formatValue={(v) => formatIdr(v)} />}
                 />
-                <Line dataKey="openingIdr" name="Opening" stroke={C.opening} strokeWidth={2} dot={false} activeDot={dot} />
-                <Line dataKey="currentIdr" name="Current" stroke={C.current} strokeWidth={2} dot={{ r: 3, fill: C.current }} activeDot={dot} />
+                <Line dataKey="openingIdr" name="Harga pembuka" stroke={C.opening} strokeWidth={2} dot={false} activeDot={dot} />
+                <Line dataKey="currentIdr" name="Harga saat ini" stroke={C.current} strokeWidth={2} dot={{ r: 3, fill: C.current }} activeDot={dot} />
                 <Line dataKey="medianIdr" name="Median" stroke={C.median} strokeWidth={2} dot={false} activeDot={dot} />
-                <Line dataKey="clearingIdr" name="Clearing" stroke={C.clearing} strokeWidth={2} dot={false} activeDot={dot} />
+                <Line dataKey="clearingIdr" name="Harga kesepakatan" stroke={C.clearing} strokeWidth={2} dot={false} activeDot={dot} />
               </LineChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -99,15 +99,15 @@ export function AnalyticsView({ data, marketId }: { data: MmAnalytics; marketId?
       <section aria-labelledby="an-eff" className="flex flex-col gap-3">
         <div><h2 id="an-eff" className="text-lg font-semibold tracking-tight">Efisiensi</h2><p className="mt-0.5 text-sm text-muted-foreground">Demand yang terpenuhi dan pemanfaatan supply.</p></div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <StatTile label="Matched demand" tone="green" value={pct(eff.matched)} />
-          <StatTile label="Unmatched demand" tone="orange" value={pct(eff.unmatched)} />
-          <StatTile label="Supply utilization" tone="teal" value={pct(eff.utilization)} />
+          <StatTile label="Demand terpenuhi" tone="green" value={pct(eff.matched)} />
+          <StatTile label="Demand belum terpenuhi" tone="orange" value={pct(eff.unmatched)} />
+          <StatTile label="Pemanfaatan supply" tone="teal" value={pct(eff.utilization)} />
         </div>
         <ChartCard
           title="Efisiensi per minggu"
           subtitle="Persen; unmatched = 100% − matched"
-          legend={[{ label: 'Matched demand', color: C.matched }, { label: 'Supply utilization', color: C.utilization }]}
-          table={{ columns: ['Minggu', 'Matched', 'Unmatched', 'Utilization'], rows: data.efficiency.map((e) => [week(e.week), pct(e.matched), pct(e.unmatched), pct(e.utilization)]) }}
+          legend={[{ label: 'Demand terpenuhi', color: C.matched }, { label: 'Pemanfaatan supply', color: C.utilization }]}
+          table={{ columns: ['Minggu', 'Terpenuhi', 'Belum terpenuhi', 'Pemanfaatan'], rows: data.efficiency.map((e) => [week(e.week), pct(e.matched), pct(e.unmatched), pct(e.utilization)]) }}
         >
           <ResponsiveContainer>
             <LineChart data={data.efficiency} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
@@ -115,8 +115,8 @@ export function AnalyticsView({ data, marketId }: { data: MmAnalytics; marketId?
               <XAxis dataKey="week" tickFormatter={week} {...axis} minTickGap={24} />
               <YAxis width={44} domain={[0, 1]} tickFormatter={(v) => formatPercent(v)} {...axis} />
               <Tooltip cursor={{ stroke: 'var(--muted-foreground)', strokeWidth: 1 }} content={(p) => <ChartTooltip {...p} formatLabel={(x) => `Minggu ${week(String(x))}`} formatValue={pct} />} />
-              <Line dataKey="matched" name="Matched demand" stroke={C.matched} strokeWidth={2} dot={false} activeDot={dot} />
-              <Line dataKey="utilization" name="Supply utilization" stroke={C.utilization} strokeWidth={2} dot={false} activeDot={dot} />
+              <Line dataKey="matched" name="Demand terpenuhi" stroke={C.matched} strokeWidth={2} dot={false} activeDot={dot} />
+              <Line dataKey="utilization" name="Pemanfaatan supply" stroke={C.utilization} strokeWidth={2} dot={false} activeDot={dot} />
             </LineChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -128,11 +128,11 @@ export function AnalyticsView({ data, marketId }: { data: MmAnalytics; marketId?
           title="Jaringan per minggu"
           subtitle="Jumlah"
           legend={[
-            { label: 'Participants', color: C.participants }, { label: 'Transaksi', color: C.transactions },
+            { label: 'Peserta', color: C.participants }, { label: 'Transaksi', color: C.transactions },
             { label: 'Koneksi', color: C.connections }, { label: 'Interaksi berulang', color: C.repeat },
           ]}
           table={{
-            columns: ['Minggu', 'Participants', 'Transaksi', 'Koneksi', 'Berulang'],
+            columns: ['Minggu', 'Peserta', 'Transaksi', 'Koneksi', 'Berulang'],
             rows: data.growth.map((g) => [week(g.week), formatNumber(g.participants), formatNumber(g.transactions), formatNumber(g.connections), formatNumber(g.repeat)]),
           }}
         >
@@ -142,7 +142,7 @@ export function AnalyticsView({ data, marketId }: { data: MmAnalytics; marketId?
               <XAxis dataKey="week" tickFormatter={week} {...axis} minTickGap={24} />
               <YAxis width={48} tickFormatter={(v) => formatNumber(v, { compact: true })} {...axis} />
               <Tooltip cursor={{ stroke: 'var(--muted-foreground)', strokeWidth: 1 }} content={(p) => <ChartTooltip {...p} formatLabel={(x) => `Minggu ${week(String(x))}`} formatValue={(v) => formatNumber(v)} />} />
-              <Line dataKey="participants" name="Participants" stroke={C.participants} strokeWidth={2} dot={false} activeDot={dot} />
+              <Line dataKey="participants" name="Peserta" stroke={C.participants} strokeWidth={2} dot={false} activeDot={dot} />
               <Line dataKey="transactions" name="Transaksi" stroke={C.transactions} strokeWidth={2} dot={false} activeDot={dot} />
               <Line dataKey="connections" name="Koneksi" stroke={C.connections} strokeWidth={2} dot={false} activeDot={dot} />
               <Line dataKey="repeat" name="Interaksi berulang" stroke={C.repeat} strokeWidth={2} dot={false} activeDot={dot} />
@@ -185,7 +185,7 @@ export function AnalyticsPage() {
           </select>
         </label>
       </div>
-      <AsyncView query={query} skeleton={<Skeleton className="h-96 rounded-xl" />} isEmpty={(d) => !d.byMarket.length} empty={<EmptyState icon={ChartColumn} title="Belum ada market" description="Analytics muncul setelah kamu mengoperasikan market." />}>
+      <AsyncView query={query} skeleton={<Skeleton className="h-96 rounded-xl" />} isEmpty={(d) => !d.byMarket.length} empty={<EmptyState icon={ChartColumn} title="Belum ada market" description="Analitik muncul setelah kamu mengoperasikan market." />}>
         {(d) => <AnalyticsView data={d} marketId={market || undefined} />}
       </AsyncView>
     </>

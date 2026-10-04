@@ -74,7 +74,7 @@ function CreatePoolDialog({ onClose, onCreated }: { onClose: () => void; onCreat
             <Field label="Satuan" value={f.unit} onChange={(e) => set('unit', e.target.value)} />
           </div>
           <Field label="Harga satuan saat ini (Rp)" type="number" min={0} value={f.price} onChange={(e) => set('price', e.target.value)} error={fieldError(create.error, 'baseUnitPriceIdr')} />
-          <Field label="Deadline" type="date" value={f.deadline} onChange={(e) => set('deadline', e.target.value)} />
+          <Field label="Batas waktu" type="date" value={f.deadline} onChange={(e) => set('deadline', e.target.value)} />
         </div>
         <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-0.5 accent-primary" checked={f.optIn} onChange={(e) => set('optIn', e.target.checked)} /> Tampilkan nama bisnis kami ke peserta lain</label>
         <FormError error={create.error} />
@@ -169,10 +169,10 @@ function Aggregation({ pool, marketDeny, onJoin }: { pool: PoolView; marketDeny?
           </p>
         ) : t.ready ? (
           marketDeny || !t.mine ? (
-            <GuardedButton className="h-9" reason={marketDeny ?? 'Gabung pool dulu untuk meminta market'}><Store /> Create Market</GuardedButton>
+            <GuardedButton className="h-9" reason={marketDeny ?? 'Gabung pool dulu untuk meminta market'}><Store /> Buat market</GuardedButton>
           ) : (
             <ConfirmDialog
-              trigger={<Button className="h-9"><Store /> Create Market</Button>}
+              trigger={<Button className="h-9"><Store /> Buat market</Button>}
               title="Minta market maker membentuk market?"
               impact={<>Demand gabungan {qty(t.total)} dari {t.businesses} bisnis dikirim ke market maker. Saat market terbentuk, supplier bersaing di harga sekitar <b>{formatIdr(t.unitPriceIdr)}/{unit}</b>. Pool dikunci selama menunggu.</>}
               confirmLabel="Kirim permintaan"
@@ -184,7 +184,7 @@ function Aggregation({ pool, marketDeny, onJoin }: { pool: PoolView; marketDeny?
         )}
         {t.mine > 0 && pool.status === 'open' && (
           <ConfirmDialog trigger={<Button variant="ghost" className="h-9">Keluar dari pool</Button>} title="Keluar dari pool?" destructive confirmLabel="Keluar"
-            impact={`Demand ${qty(t.mine)} ditarik; proyeksi harga untuk peserta lain naik. Procurement terkait kembali ke status Approved.`}
+            impact={`Demand ${qty(t.mine)} ditarik; proyeksi harga untuk peserta lain naik. Procurement terkait kembali ke status Disetujui.`}
             onConfirm={() => act.mutateAsync({ id: pool.id, type: 'leave' })} />
         )}
       </div>
@@ -250,7 +250,7 @@ export function CollectivePage() {
                           </div>
                           <h3 className="mt-2 font-medium">{p.title}</h3>
                           <p className="mt-0.5 text-xs text-muted-foreground">{p.spec}</p>
-                          <p className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground"><span className="inline-flex items-center gap-1"><MapPin className="size-3" />{p.region}</span><span>Deadline {formatDate(p.deadline)}</span></p>
+                          <p className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground"><span className="inline-flex items-center gap-1"><MapPin className="size-3" />{p.region}</span><span>Batas waktu {formatDate(p.deadline)}</span></p>
                           <dl className="mt-3 grid grid-cols-3 gap-2 text-sm">
                             <div><dt className="text-xs text-muted-foreground">Demand</dt><dd className="num font-semibold">{formatQty({ value: t.total, unit: p.unit }, { compact: true })}</dd></div>
                             <div><dt className="text-xs text-muted-foreground">Bisnis</dt><dd className="num font-semibold">{t.businesses}</dd></div>
@@ -258,7 +258,7 @@ export function CollectivePage() {
                           </dl>
                           <div className="mt-auto flex flex-wrap gap-2 pt-4">
                             <Button variant="outline" size="sm" onClick={() => set('pool', p.id)}>Lihat agregasi</Button>
-                            {p.status === 'open' && <GuardedButton size="sm" reason={joinDeny} onClick={() => set('join', p.id)}>{t.mine ? 'Ubah demand' : 'Join pool'}</GuardedButton>}
+                            {p.status === 'open' && <GuardedButton size="sm" reason={joinDeny} onClick={() => set('join', p.id)}>{t.mine ? 'Ubah demand' : 'Gabung pool'}</GuardedButton>}
                           </div>
                         </li>
                       )

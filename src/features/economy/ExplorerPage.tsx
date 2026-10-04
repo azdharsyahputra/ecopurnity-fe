@@ -21,7 +21,7 @@ import { Button } from '@/components/ui/button'
 const RANGES: [ExplorerRange, string][] = [['7d', '7 hari'], ['30d', '30 hari'], ['90d', '90 hari']]
 const TABS = ['overview', 'opportunities', 'markets', 'auctions', 'demand', 'supply'] as const
 const TAB_LABEL: Record<(typeof TABS)[number], string> = {
-  overview: 'Overview', opportunities: 'Opportunities', markets: 'Markets', auctions: 'Auctions', demand: 'Demand', supply: 'Supply',
+  overview: 'Ringkasan', opportunities: 'Opportunities', markets: 'Markets', auctions: 'Auctions', demand: 'Demand', supply: 'Supply',
 }
 
 
@@ -218,7 +218,7 @@ export function ExplorerPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 md:px-6">
       <PageHeader
-        title="Economic Explorer"
+        title="Penjelajah Ekonomi"
         description="Lihat ekonomi yang sedang bergerak: opportunity, market, auction, demand, dan supply publik."
         icon={ChartNoAxesCombined}
         tone="teal"

@@ -31,9 +31,9 @@ function Actions({ m, className }: { m: MarketDetail; className?: string }) {
   const go = (intent: string) => () => navigate(`/app/markets?${intent}=${m.id}`)
   return (
     <div className={className}>
-      <Button variant="outline" className="h-9" onClick={() => gate('mengirim demand ke market ini', go('demand'))}>Submit demand</Button>
-      <Button variant="outline" className="h-9" onClick={() => gate('mengirim supply ke market ini', go('supply'))}>Submit supply</Button>
-      <Button className="h-9 px-4" onClick={() => gate('bergabung ke market ini', go('join'))}>Join market</Button>
+      <Button variant="outline" className="h-9" onClick={() => gate('mengirim demand ke market ini', go('demand'))}>Kirim demand</Button>
+      <Button variant="outline" className="h-9" onClick={() => gate('mengirim supply ke market ini', go('supply'))}>Kirim supply</Button>
+      <Button className="h-9 px-4" onClick={() => gate('bergabung ke market ini', go('join'))}>Gabung market</Button>
     </div>
   )
 }
@@ -146,7 +146,7 @@ function Content({ m }: { m: MarketDetail }) {
             {m.auctions.length ? (
               <CardGrid className="lg:grid-cols-2">{m.auctions.map((a) => <AuctionCard key={a.id} a={a} />)}</CardGrid>
             ) : (
-              <EmptyState title="Belum ada auction" description="Market maker akan membuka round berikutnya. Join market untuk dapat notifikasi." />
+              <EmptyState title="Belum ada auction" description="Market maker akan membuka round berikutnya. Bergabunglah ke market untuk menerima notifikasi." />
             )}
           </section>
 

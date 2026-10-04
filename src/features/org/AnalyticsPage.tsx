@@ -40,8 +40,8 @@ function Charts({ d, refetching }: { d: OrgAnalytics; refetching: boolean }) {
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatTile label="Total spend" icon={Wallet} tone="purple" value={compactIdr(spend)} />
-        <StatTile label="Hemat vs budget" icon={PiggyBank} tone="green" value={compactIdr(vsBudget)} hint={spend ? `${formatPercent(vsBudget / (spend + vsBudget), 1)} dari budget` : undefined} />
+        <StatTile label="Total belanja" icon={Wallet} tone="purple" value={compactIdr(spend)} />
+        <StatTile label="Hemat dari anggaran" icon={PiggyBank} tone="green" value={compactIdr(vsBudget)} hint={spend ? `${formatPercent(vsBudget / (spend + vsBudget), 1)} dari anggaran` : undefined} />
         <StatTile label="Hemat vs harga pasar" icon={TrendingDown} tone="teal" value={compactIdr(vsMarket)} hint={spend ? `${formatPercent(vsMarket / (spend + vsMarket), 1)} di bawah pasar` : undefined} />
         <StatTile label="Rata-rata turun di auction" icon={Gavel} tone="orange" value={formatPercent(avgDrop, 1)} hint="harga pembuka → clearing" />
       </div>
@@ -49,7 +49,7 @@ function Charts({ d, refetching }: { d: OrgAnalytics; refetching: boolean }) {
       <div className="grid gap-4 lg:grid-cols-2">
         <ChartCard
           className="lg:col-span-2"
-          title="Spend per kategori"
+          title="Belanja per kategori"
           subtitle="Rupiah per bulan"
           refetching={refetching}
           legend={d.categories.map((c) => ({ label: CATEGORIES[c].label, color: CATEGORY_SERIES[c], shape: 'rect' }))}
@@ -70,8 +70,8 @@ function Charts({ d, refetching }: { d: OrgAnalytics; refetching: boolean }) {
           title="Penghematan"
           subtitle="Dibayar vs budget vs harga pasar, Rupiah per bulan"
           refetching={refetching}
-          legend={[{ label: 'Dibayar', color: SERIES[0] }, { label: 'Budget', color: SERIES[1] }, { label: 'Harga pasar', color: SERIES[2] }]}
-          table={{ columns: ['Bulan', 'Dibayar', 'Budget', 'Pasar'], rows: d.savings.map((s) => [monthLabel(s.month), formatIdr(s.spendIdr), formatIdr(s.budgetIdr), formatIdr(s.marketIdr)]) }}
+          legend={[{ label: 'Dibayar', color: SERIES[0] }, { label: 'Anggaran', color: SERIES[1] }, { label: 'Harga pasar', color: SERIES[2] }]}
+          table={{ columns: ['Bulan', 'Dibayar', 'Anggaran', 'Pasar'], rows: d.savings.map((s) => [monthLabel(s.month), formatIdr(s.spendIdr), formatIdr(s.budgetIdr), formatIdr(s.marketIdr)]) }}
         >
           <ResponsiveContainer>
             <LineChart data={d.savings} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
@@ -80,7 +80,7 @@ function Charts({ d, refetching }: { d: OrgAnalytics; refetching: boolean }) {
               <YAxis width={56} tickFormatter={(v) => formatNumber(v, { compact: true })} {...axis} />
               <Tooltip cursor={cursorLine} content={(p) => <ChartTooltip {...p} formatLabel={(l) => monthLabel(String(l))} formatValue={compactIdr} />} />
               <Line dataKey="spendIdr" name="Dibayar" stroke={SERIES[0]} strokeWidth={2} dot={false} activeDot={dot} />
-              <Line dataKey="budgetIdr" name="Budget" stroke={SERIES[1]} strokeWidth={2} dot={false} activeDot={dot} />
+              <Line dataKey="budgetIdr" name="Anggaran" stroke={SERIES[1]} strokeWidth={2} dot={false} activeDot={dot} />
               <Line dataKey="marketIdr" name="Harga pasar" stroke={SERIES[2]} strokeWidth={2} dot={false} activeDot={dot} />
             </LineChart>
           </ResponsiveContainer>
@@ -127,7 +127,7 @@ function Charts({ d, refetching }: { d: OrgAnalytics; refetching: boolean }) {
           subtitle="Skor scorecard 0–100"
           refetching={refetching}
           height={Math.max(160, d.suppliers.length * 36)}
-          table={{ columns: ['Supplier', 'Skor', 'Tepat waktu', 'Spend'], rows: d.suppliers.map((s) => [s.name, s.score, formatPercent(s.onTime), compactIdr(s.spendIdr)]) }}
+          table={{ columns: ['Supplier', 'Skor', 'Tepat waktu', 'Belanja'], rows: d.suppliers.map((s) => [s.name, s.score, formatPercent(s.onTime), compactIdr(s.spendIdr)]) }}
         >
           <ResponsiveContainer>
             <BarChart data={d.suppliers} layout="vertical" margin={{ top: 0, right: 12, bottom: 0, left: 0 }}>
@@ -212,12 +212,12 @@ export function AnalyticsPage() {
   return (
     <>
       <PageHeader
-        title="Analytics"
-        description="Spend, penghematan, harga, performa supplier dan auction, serta riwayat procurement."
+        title="Analitik"
+        description="Belanja, penghematan, harga, kinerja supplier dan auction, serta riwayat procurement."
         icon={ChartColumn}
         tone="blue"
         featured
-        actions={<Button variant="outline" className="h-9" disabled={!query.data?.history.length} onClick={() => query.data && exportCsv(query.data)}><Download /> Export CSV</Button>}
+        actions={<Button variant="outline" className="h-9" disabled={!query.data?.history.length} onClick={() => query.data && exportCsv(query.data)}><Download /> Ekspor CSV</Button>}
       />
       <div className="mb-6 flex flex-wrap items-center gap-2">
         <Segmented label="Periode" value={String(months)} options={[['3', '3 bulan'], ['6', '6 bulan'], ['12', '12 bulan']]} onChange={(v) => set('months', v === '12' ? null : v)} />
@@ -227,7 +227,7 @@ export function AnalyticsPage() {
         </select>
       </div>
       <AsyncView query={query} skeleton={<Skeleton className="h-96 rounded-xl" />} isEmpty={(d) => !d.history.length}
-        empty={<EmptyState icon={ChartColumn} tone="blue" title="Belum ada data untuk filter ini" description="Analytics terisi dari procurement yang selesai. Coba periode atau kategori lain." />}>
+        empty={<EmptyState icon={ChartColumn} tone="blue" title="Belum ada data untuk filter ini" description="Analitik terisi dari procurement yang selesai. Coba periode atau kategori lain." />}>
         {(d) => <Charts d={d} refetching={query.isPlaceholderData} />}
       </AsyncView>
     </>

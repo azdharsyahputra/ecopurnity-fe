@@ -128,7 +128,7 @@ export function ListingsPage({ kind }: { kind: Kind }) {
                     { key: 'item', header: 'Item', primary: true, cell: (r) => <span>{r.item} <span className="ml-1 text-xs font-normal text-muted-foreground">{r.code}</span></span>, sortValue: (r) => r.item },
                     { key: 'cat', header: 'Kategori', cell: (r) => <CategoryTag id={r.categoryId} /> },
                     { key: 'qty', header: 'Kuantitas', align: 'right', cell: (r) => formatQty(r.quantity, { compact: true }), sortValue: (r) => r.quantity.value },
-                    { key: 'price', header: kind === 'supply' ? 'Harga ekspektasi' : 'Budget', align: 'right', cell: priceOf, sortValue: (r) => (r.kind === 'supply' ? r.priceIdr : r.budgetIdr) },
+                    { key: 'price', header: kind === 'supply' ? 'Harga ekspektasi' : 'Anggaran', align: 'right', cell: priceOf, sortValue: (r) => (r.kind === 'supply' ? r.priceIdr : r.budgetIdr) },
                     { key: 'status', header: 'Status', cell: (r) => (r.kind === 'supply' ? <StatusBadge entity="supply" status={r.status} /> : <StatusBadge entity="demand" status={r.status} />) },
                     { key: 'updated', header: 'Diperbarui', cell: (r) => <span className="text-muted-foreground">{formatRelative(r.updatedAt)}</span>, sortValue: (r) => r.updatedAt },
                   ]}
@@ -258,8 +258,8 @@ function ListingForm({ kind, existing }: { kind: Kind; existing?: Listing }) {
       </div>
     ) : (
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Budget total (Rp)" aside={<span className="text-destructive" aria-label="Wajib diisi">*</span>} type="number" min={0} inputMode="numeric" value={d.budget} onChange={(e) => set('budget', e.target.value)} hint={qty > 0 && Number(d.budget) > 0 ? `≈ ${formatIdr(Math.round(Number(d.budget) / qty))} per ${d.unit}` : undefined} />
-        <Field label="Deadline" aside={<span className="text-destructive" aria-label="Wajib diisi">*</span>} type="date" value={d.deadline} onChange={(e) => set('deadline', e.target.value)} />
+        <Field label="Anggaran total (Rp)" aside={<span className="text-destructive" aria-label="Wajib diisi">*</span>} type="number" min={0} inputMode="numeric" value={d.budget} onChange={(e) => set('budget', e.target.value)} hint={qty > 0 && Number(d.budget) > 0 ? `≈ ${formatIdr(Math.round(Number(d.budget) / qty))} per ${d.unit}` : undefined} />
+        <Field label="Batas waktu" aside={<span className="text-destructive" aria-label="Wajib diisi">*</span>} type="date" value={d.deadline} onChange={(e) => set('deadline', e.target.value)} />
         {qty > 0 && <PriceHint category={d.categoryId} unit={d.unit} item={d.item} perUnit={Number(d.budget) / qty} exclude={existing?.id} onUse={(m) => set('budget', String(m * qty))} />}
         <SelectField label="Lokasi pengiriman" value={d.location} onChange={(e) => set('location', e.target.value)}>
           {REGIONS.map((r) => <option key={r}>{r}</option>)}
@@ -292,7 +292,7 @@ function ListingForm({ kind, existing }: { kind: Kind; existing?: Listing }) {
       error={<FormError error={save.error} />}
       steps={[
         { id: 'item', title: kind === 'supply' ? 'Item & kualitas' : 'Kebutuhan', description: `Isi informasi utama ${kind === 'supply' ? 'produk atau jasa' : 'yang kamu cari'}. Kolom bertanda * wajib diisi.`, content: step1, blocker: !d.item.trim() ? 'Isi nama item' : !(qty > 0) ? 'Isi kuantitas' : undefined },
-        { id: 'terms', title: kind === 'supply' ? 'Harga & ketersediaan' : 'Budget & jadwal', description: 'Tentukan nilai dan informasi pengiriman agar calon mitra dapat menilai listing ini.', content: step2, blocker: kind === 'supply' ? (!(Number(d.price) > 0) ? 'Isi harga ekspektasi' : undefined) : !(Number(d.budget) > 0) ? 'Isi budget' : !d.deadline ? 'Isi deadline' : undefined },
+        { id: 'terms', title: kind === 'supply' ? 'Harga & ketersediaan' : 'Anggaran & jadwal', description: 'Tentukan nilai dan informasi pengiriman agar calon mitra dapat menilai listing ini.', content: step2, blocker: kind === 'supply' ? (!(Number(d.price) > 0) ? 'Isi harga ekspektasi' : undefined) : !(Number(d.budget) > 0) ? 'Isi anggaran' : !d.deadline ? 'Isi batas waktu' : undefined },
         { id: 'review', title: 'Lampiran & review', description: 'Tambahkan foto atau dokumen pendukung, lalu periksa kembali ringkasan sebelum menyimpan.', content: step3, blocker: attachmentsBlocker(atts) },
       ]}
       summary={
@@ -310,13 +310,13 @@ function ListingForm({ kind, existing }: { kind: Kind; existing?: Listing }) {
             </>
           ) : (
             <>
-              <SummaryRow label="Budget" value={Number(d.budget) > 0 ? formatIdr(Number(d.budget), { compact: true }) : ''} />
-              <SummaryRow label="Deadline" value={d.deadline ? formatDate(fromDate(d.deadline)) : ''} />
+              <SummaryRow label="Anggaran" value={Number(d.budget) > 0 ? formatIdr(Number(d.budget), { compact: true }) : ''} />
+              <SummaryRow label="Batas waktu" value={d.deadline ? formatDate(fromDate(d.deadline)) : ''} />
             </>
           )}
           <SummaryRow label="Lokasi" value={d.location} />
           <SummaryRow label="Pengiriman" value={DELIVERY_LABEL[d.delivery]} />
-          {!existing && <p className="mt-3 text-xs text-muted-foreground">Draft tersimpan otomatis.</p>}
+          {!existing && <p className="mt-3 text-xs text-muted-foreground">Draf tersimpan otomatis.</p>}
         </>
       }
     />
@@ -406,7 +406,7 @@ export function ListingDetailPage({ kind }: { kind: Kind }) {
                     <ConfirmDialog
                       trigger={<Button variant="ghost" className="h-9"><Archive /> Arsipkan</Button>}
                       title={`Arsipkan ${l.item}?`}
-                      impact={`Listing berhenti ditawarkan ke market dan opportunity. Statusnya menjadi ${kind === 'supply' ? 'Expired' : 'Cancelled'}.`}
+                      impact={`Listing berhenti ditawarkan ke market dan opportunity. Statusnya menjadi ${kind === 'supply' ? 'Kedaluwarsa' : 'Dibatalkan'}.`}
                       confirmLabel="Arsipkan"
                       destructive
                       onConfirm={() => archive.mutateAsync({ type: 'archive' })}
@@ -425,8 +425,8 @@ export function ListingDetailPage({ kind }: { kind: Kind }) {
                   <dl className="mt-5 grid gap-2.5 sm:grid-cols-2">
                     {[
                       ['Kuantitas', formatQty(l.quantity)],
-                      supply ? ['Harga ekspektasi', `${formatIdr(supply.priceIdr)}/${l.quantity.unit}`] : ['Budget', formatIdr(demand!.budgetIdr)],
-                      supply ? ['Nilai total', formatIdr(supply.priceIdr * l.quantity.value)] : ['Deadline', formatDate(demand!.deadline)],
+                      supply ? ['Harga ekspektasi', `${formatIdr(supply.priceIdr)}/${l.quantity.unit}`] : ['Anggaran', formatIdr(demand!.budgetIdr)],
+                      supply ? ['Nilai total', formatIdr(supply.priceIdr * l.quantity.value)] : ['Batas waktu', formatDate(demand!.deadline)],
                       ['Lokasi', l.location],
                       ['Pengiriman', DELIVERY_LABEL[l.delivery]],
                       supply ? ['Tersedia', `${formatDate(supply.availableFrom)}${supply.expiresAt ? ` – ${formatDate(supply.expiresAt)}` : ''}`] : ['Dibuat', formatDate(l.createdAt)],

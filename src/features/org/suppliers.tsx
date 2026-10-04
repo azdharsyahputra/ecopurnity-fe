@@ -43,7 +43,7 @@ function RelationActions({ s, compact }: { s: OrgSupplier; compact?: boolean }) 
     return <span onClick={stop}><GuardedButton size={size} className={cls} variant="outline" reason={manageDeny} onClick={() => run('unblock')}>{ACTION_LABEL.unblock}</GuardedButton></span>
   return (
     <span className="inline-flex flex-wrap gap-1.5" onClick={stop}>
-      {s.relation === 'none' && <GuardedButton size={size} className={cls} variant="outline" reason={createDeny} onClick={() => run('shortlist')}><Star /> Shortlist</GuardedButton>}
+      {s.relation === 'none' && <GuardedButton size={size} className={cls} variant="outline" reason={createDeny} onClick={() => run('shortlist')}><Star /> Tandai pilihan</GuardedButton>}
       {(s.relation === 'none' || s.relation === 'shortlisted') && <GuardedButton size={size} className={cls} reason={createDeny} onClick={() => run('invite')}><UserPlus /> Undang</GuardedButton>}
       {!compact && s.relation !== 'verified' && (
         manageDeny ? <GuardedButton className={cls} variant="outline" reason={manageDeny}>Verifikasi</GuardedButton> : (
@@ -89,7 +89,7 @@ export function SuppliersPage() {
   const relation = (params.get('relation') ?? '') as '' | SupplierRelation
   return (
     <>
-      <PageHeader title="Suppliers" description="Temukan, shortlist, undang, verifikasi, dan nilai supplier. Scorecard dihitung dari transaksi." icon={Truck} tone="blue" featured />
+      <PageHeader title="Supplier" description="Temukan, tandai pilihan, undang, verifikasi, dan nilai supplier. Ringkasan penilaian dihitung dari transaksi." icon={Truck} tone="blue" featured />
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center" role="search">
         <label className="relative sm:w-64">
           <span className="sr-only">Cari supplier</span>
@@ -161,7 +161,7 @@ export function SupplierDetailPage() {
             />
             <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
               <div className="flex min-w-0 flex-col gap-6">
-                <Section title="Supplier Scorecard" actions={<span className="num text-2xl font-semibold" aria-label={`Skor gabungan ${scoreOf(last)} dari 100`}>{scoreOf(last)}<span className="text-sm font-normal text-muted-foreground">/100</span></span>}>
+                <Section title="Ringkasan penilaian supplier" actions={<span className="num text-2xl font-semibold" aria-label={`Skor gabungan ${scoreOf(last)} dari 100`}>{scoreOf(last)}<span className="text-sm font-normal text-muted-foreground">/100</span></span>}>
                   <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     {METRICS.map(([k, label], i) => (
                       <div key={k} className="rounded-lg border p-3">
@@ -172,7 +172,7 @@ export function SupplierDetailPage() {
                   </dl>
                 </Section>
                 <ChartCard
-                  title="Tren scorecard"
+                  title="Tren penilaian"
                   subtitle="Skor 0–100 per bulan"
                   legend={METRICS.map(([, label], i) => ({ label, color: SERIES[i] }))}
                   table={{ columns: ['Bulan', ...METRICS.map(([, l]) => l)], rows: s.scorecard.map((p) => [monthLabel(p.month), ...METRICS.map(([k]) => p[k])]) }}
@@ -241,7 +241,7 @@ export function SupplierDetailPage() {
                   <AuditLog entries={s.activity} />
                 </Section>
                 <Link to={`${access.base}/suppliers`} className="text-sm text-primary hover:underline">Kembali ke daftar supplier</Link>
-                <p className="text-xs text-muted-foreground">Data scorecard per {formatDate(new Date().toISOString())}.</p>
+                <p className="text-xs text-muted-foreground">Data penilaian per {formatDate(new Date().toISOString())}.</p>
               </aside>
             </div>
           </>

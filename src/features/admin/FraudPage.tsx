@@ -76,7 +76,7 @@ export function FraudPage() {
                 </div>
                 {rows.length ? (
                   <DataTable
-                    caption="Fraud alert"
+                    caption="Peringatan penipuan"
                     rows={rows}
                     rowKey={(a) => a.id}
                     rowHref={(a) => `/admin/fraud/${a.id}`}
