@@ -78,7 +78,7 @@ function MatchCard({ m, onDismiss }: { m: Match; onDismiss: () => void }) {
             {m.state === 'saved' ? (
               <Button variant="ghost" className="h-9 border border-border/80 bg-background/80 px-3 shadow-sm transition-all hover:border-primary/40 hover:bg-primary/10 hover:text-foreground" disabled={act.isPending} onClick={run('reset', 'Batal disimpan')}><BookmarkCheck /> Tersimpan</Button>
             ) : (
-              <Button variant="ghost" className="h-9 border border-border/80 bg-background/80 px-3 shadow-sm transition-all hover:border-primary/40 hover:bg-primary/10 hover:text-foreground" disabled={act.isPending} onClick={run('save', 'Match disimpan')}><Bookmark /> Save</Button>
+              <Button variant="ghost" className="h-9 border border-border/80 bg-background/80 px-3 shadow-sm transition-all hover:border-primary/40 hover:bg-primary/10 hover:text-foreground" disabled={act.isPending} onClick={run('save', 'Match disimpan')}><Bookmark /> Simpan</Button>
             )}
             <Button variant="ghost" className="h-9 border border-border/80 bg-background/80 px-3 text-muted-foreground shadow-sm transition-all hover:border-destructive/35 hover:bg-destructive/10 hover:text-destructive" onClick={onDismiss}><X /> Dismiss</Button>
           </>

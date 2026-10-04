@@ -26,7 +26,7 @@ function SubmitDialog({ m, kind, onClose }: { m: MyMarket; kind: 'supply' | 'dem
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Submit {kind} ke {m.name}</DialogTitle>
+          <DialogTitle>Kirim {kind} ke {m.name}</DialogTitle>
           <DialogDescription>Listing ikut round berikutnya dan terlihat oleh peserta market.</DialogDescription>
         </DialogHeader>
         <SelectField label={`Pilih ${kind}`} value={id} onChange={(e) => setId(e.target.value)}>
@@ -38,7 +38,7 @@ function SubmitDialog({ m, kind, onClose }: { m: MyMarket; kind: 'supply' | 'dem
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Batal</Button>
           <Button disabled={!id || action.isPending} onClick={() => action.mutate({ type: 'market', marketId: m.id }, { onSuccess: () => { toast({ title: `Listing masuk ke ${m.name}`, tone: 'green' }); onClose() } })}>
-            Submit
+            Kirim
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -162,7 +162,7 @@ export function MyMarketsPage() {
                           <Button size="xs" variant="ghost" className="border border-border/80 bg-background/80 text-muted-foreground shadow-sm transition-all hover:border-destructive/35 hover:bg-destructive/10 hover:text-destructive" aria-label={`Keluar dari ${m.name}`} onClick={() => action.mutate({ type: 'leave', id: m.id })}><LogOut /></Button>
                         </>
                       ) : (
-                        <Button size="xs" className="shadow-sm hover:bg-primary/90 hover:shadow-md" onClick={() => action.mutate({ type: 'join', id: m.id }, { onSuccess: () => toast({ title: `Bergabung ke ${m.name}`, tone: 'green' }) })}>Join</Button>
+                        <Button size="xs" className="shadow-sm hover:bg-primary/90 hover:shadow-md" onClick={() => action.mutate({ type: 'join', id: m.id }, { onSuccess: () => toast({ title: `Bergabung ke ${m.name}`, tone: 'green' }) })}>Gabung</Button>
                       )}
                     </div>
                   ),

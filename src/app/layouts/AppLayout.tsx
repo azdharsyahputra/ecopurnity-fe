@@ -126,7 +126,7 @@ function Sidebar({ ws, onNavigate }: { ws: Workspace; onNavigate?: () => void })
           : ws.id === 'admin'
             ? [
                 { label: 'Ikhtisar', items: ws.items.slice(0, 1) },
-                { label: 'Review & keputusan', items: ws.items.slice(1, 8) },
+                { label: 'Peninjauan & keputusan', items: ws.items.slice(1, 8) },
                 { label: 'Pengawasan', items: ws.items.slice(8) },
               ]
           : [{ label: '', items: ws.items }]

@@ -46,7 +46,7 @@ export function AdminMarketsPage() {
   const query = useAdminMarkets()
   return (
     <>
-      <PageHeader title="Market moderation" description="Flag dari sistem dan laporan pengguna. Review, beri flag, atau suspend market dengan alasan tertulis." icon={Store} tone="orange" />
+      <PageHeader title="Moderasi market" description="Tandai laporan dari sistem dan pengguna. Tinjau, beri tanda, atau tangguhkan market dengan alasan tertulis." icon={Store} tone="orange" />
       <AsyncView query={query} skeleton={<Skeleton className="h-96 rounded-xl" />} emptyFallback={false}>
         {(rows) => {
           const active = rows.filter((m) => m.status === 'active').length
@@ -187,7 +187,7 @@ export function AdminAuctionsPage() {
   const query = useAdminAuctions()
   return (
     <>
-      <PageHeader title="Auction governance" description="Periksa semua bid (sealed bid baru terbuka setelah ditutup), temuan pelanggaran aturan, dan bekukan auction yang mencurigakan." icon={Gavel} tone="orange" />
+      <PageHeader title="Pengawasan auction" description="Periksa semua bid (sealed bid baru terbuka setelah ditutup), temuan pelanggaran aturan, dan bekukan auction yang mencurigakan." icon={Gavel} tone="orange" />
       <AsyncView query={query} skeleton={<Skeleton className="h-96 rounded-xl" />} emptyFallback={false}>
         {(rows) => {
           const active = rows.filter((a) => ['scheduled', 'qualification', 'live', 'extended'].includes(a.status)).length

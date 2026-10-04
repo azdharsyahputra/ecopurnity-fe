@@ -27,9 +27,9 @@ export interface Workspace {
 
 
 const personal: Workspace = {
-  id: 'personal', label: 'Personal', caption: 'My Economy', base: '/app', icon: UserRound, tone: 'teal',
+  id: 'personal', label: 'Personal', caption: 'Ekonomiku', base: '/app', icon: UserRound, tone: 'teal',
   items: [
-    { label: 'My Economy', path: '', icon: House },
+    { label: 'Ekonomiku', path: '', icon: House },
     { label: 'Identity', path: 'identity', icon: IdCard },
     { label: 'Supply', path: 'supply', icon: PackageOpen },
     { label: 'Demand', path: 'demand', icon: ShoppingCart },
@@ -58,14 +58,14 @@ function orgWorkspace(org: User['orgs'][number]): Workspace {
     id: `org:${org.orgId}`, label: org.orgName, caption: ORG_ROLE_LABEL[org.role] ?? org.role, base: `/org/${org.orgId}`,
     icon: Building2, tone: 'blue',
     items: [
-      { label: 'Overview', path: '', icon: LayoutDashboard },
+      { label: 'Ringkasan', path: '', icon: LayoutDashboard },
       { label: 'Procurement', path: 'procurement', icon: ClipboardList },
       { label: 'Collective', path: 'collective', icon: UsersRound },
       { label: 'Auctions', path: 'auctions', icon: Gavel },
       { label: 'Suppliers', path: 'suppliers', icon: Truck },
-      { label: 'Inventory', path: 'inventory', icon: Warehouse },
+      { label: 'Persediaan', path: 'inventory', icon: Warehouse },
       { label: 'Transactions', path: 'transactions', icon: ReceiptText },
-      { label: 'Analytics', path: 'analytics', icon: ChartColumn },
+      { label: 'Analitik', path: 'analytics', icon: ChartColumn },
     ],
     footer: [
       { label: 'Tim', path: 'team', icon: Users },
@@ -77,25 +77,25 @@ function orgWorkspace(org: User['orgs'][number]): Workspace {
 const marketOps: Workspace = {
   id: 'mm', label: 'Market Ops', caption: 'Market Maker', base: '/mm', icon: Compass, tone: 'purple',
   items: [
-    { label: 'Operations', path: '', icon: LayoutDashboard },
-    { label: 'Opportunity pipeline', path: 'opportunities', icon: Kanban },
+    { label: 'Operasional', path: '', icon: LayoutDashboard },
+    { label: 'Alur opportunity', path: 'opportunities', icon: Kanban },
     { label: 'Buat market', path: 'markets/new', icon: SquarePlus },
-    { label: 'Analytics', path: 'analytics', icon: ChartColumn },
+    { label: 'Analitik', path: 'analytics', icon: ChartColumn },
   ],
 }
 
 const governance: Workspace = {
   id: 'admin', label: 'Governance', caption: 'Admin', base: '/admin', icon: ShieldCheck, tone: 'orange',
   items: [
-    { label: 'Overview', path: '', icon: LayoutDashboard },
-    { label: 'Users', path: 'users', icon: Users },
-    { label: 'Verification', path: 'verification', icon: FileCheck2 },
+      { label: 'Ringkasan', path: '', icon: LayoutDashboard },
+      { label: 'Pengguna', path: 'users', icon: Users },
+      { label: 'Verifikasi', path: 'verification', icon: FileCheck2 },
     { label: 'Market Maker', path: 'mm-applications', icon: Compass },
     { label: 'Markets', path: 'markets', icon: Store },
     { label: 'Auctions', path: 'auctions', icon: Gavel },
-    { label: 'Disputes', path: 'disputes', icon: Scale },
+      { label: 'Sengketa', path: 'disputes', icon: Scale },
     { label: 'Pencairan', path: 'withdrawals', icon: Banknote },
-    { label: 'Fraud', path: 'fraud', icon: ShieldAlert },
+      { label: 'Penipuan', path: 'fraud', icon: ShieldAlert },
     { label: 'Audit', path: 'audit', icon: History },
   ],
 }

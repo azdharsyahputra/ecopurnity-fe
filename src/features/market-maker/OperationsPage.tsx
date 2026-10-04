@@ -55,11 +55,11 @@ export function OperationsPage() {
         actions={<Button className="h-9" render={<Link to="/mm/markets/new" />}><Plus /> Buat market</Button>}
       />
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <StatTile label="Active markets" icon={Store} tone="purple" loading={!s} value={s && formatNumber(s.activeMarkets)} />
-        <StatTile label="Participants" icon={Users} tone="teal" loading={!s} value={s && formatNumber(s.participants)} />
-        <StatTile label="Active auctions" icon={Gavel} tone="lime" loading={!s} value={s && formatNumber(s.activeAuctions)} />
+        <StatTile label="Market aktif" icon={Store} tone="purple" loading={!s} value={s && formatNumber(s.activeMarkets)} />
+        <StatTile label="Peserta" icon={Users} tone="teal" loading={!s} value={s && formatNumber(s.participants)} />
+        <StatTile label="Auction aktif" icon={Gavel} tone="lime" loading={!s} value={s && formatNumber(s.activeAuctions)} />
         <StatTile label="Volume 30 hari" icon={Wallet} tone="blue" loading={!s} value={s && formatIdr(s.volumeIdr, { compact: true })} />
-        <StatTile label="Matched demand" icon={Percent} tone="green" loading={!s} value={s && formatPercent(s.matchedDemand)} className="col-span-2 lg:col-span-1" />
+        <StatTile label="Demand terpenuhi" icon={Percent} tone="green" loading={!s} value={s && formatPercent(s.matchedDemand)} className="col-span-2 lg:col-span-1" />
       </div>
 
       <AsyncView query={query} skeleton={<Skeleton className="mt-6 h-72 rounded-xl" />}>

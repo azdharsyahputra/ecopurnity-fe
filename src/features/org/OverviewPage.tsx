@@ -18,7 +18,7 @@ export function OverviewPage() {
   return (
     <>
       <PageHeader
-        title={p?.name ?? 'Overview'}
+        title={p?.name ?? 'Ringkasan'}
         description={<>Kamu masuk sebagai <b>{access.roleLabel}</b>. Ringkasan pengadaan, auction, supplier, dan transaksi bisnis.</>}
         icon={LayoutDashboard}
         tone="blue"
@@ -32,7 +32,7 @@ export function OverviewPage() {
           return (
             <div className="flex flex-col gap-6">
               <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-                <StatTile label="Spend bulan ini" icon={Wallet} tone="purple" value={formatIdr(s.spendMonthIdr, { compact: true })} />
+                <StatTile label="Belanja bulan ini" icon={Wallet} tone="purple" value={formatIdr(s.spendMonthIdr, { compact: true })} />
                 <StatTile label="Penghematan vs target" icon={PiggyBank} tone="green" value={formatIdr(s.savingsMonthIdr, { compact: true })} hint={`${formatPercent(ratio)} dari target ${formatIdr(s.savingsTargetIdr, { compact: true })}`} />
                 <StatTile label="Procurement aktif" icon={ClipboardList} tone="blue" value={formatNumber(s.activeProcurement)} />
                 <StatTile label="Auction aktif" icon={Gavel} tone="orange" value={formatNumber(s.activeAuctions)} />

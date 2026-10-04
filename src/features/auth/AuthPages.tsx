@@ -66,7 +66,7 @@ export function RegisterPage() {
           <Field label="Email" type="email" autoComplete="email" required value={form.email} onChange={set('email')} error={fieldError(register.error, 'email')} />
           <div className="flex flex-col gap-2">
             <PasswordField
-              label="Password"
+              label="Kata sandi"
               autoComplete="new-password"
               required
               minLength={8}
@@ -79,13 +79,13 @@ export function RegisterPage() {
             <StrengthMeter password={form.password} />
           </div>
           <PasswordField
-            label="Konfirmasi password"
+            label="Konfirmasi kata sandi"
             autoComplete="new-password"
             required
             minLength={8}
             value={form.confirmPassword}
             onChange={set('confirmPassword')}
-            error={confirmAttempted && form.password !== form.confirmPassword ? 'Password belum sama.' : undefined}
+            error={confirmAttempted && form.password !== form.confirmPassword ? 'Kata sandi belum sama.' : undefined}
             visible={showConfirmPassword}
             onToggle={() => setShowConfirmPassword((shown) => !shown)}
           />
@@ -238,21 +238,21 @@ export function ResetPasswordPage() {
     return (
       <div className="flex flex-col gap-4">
         <IconChip icon={CheckCircle2} tone="green" size="lg" />
-        <AuthHeading title="Password diperbarui">Masuk dengan password barumu.</AuthHeading>
+        <AuthHeading title="Kata sandi diperbarui">Masuk dengan kata sandi barumu.</AuthHeading>
         <Button className="h-10" render={<Link to="/login" />}>Masuk</Button>
       </div>
     )
 
   return (
     <form onSubmit={(e) => (e.preventDefault(), !mismatch && reset.mutate({ token, password }))} className="flex flex-col gap-5">
-      <AuthHeading title="Buat password baru" />
+      <AuthHeading title="Buat kata sandi baru" />
       <div className="flex flex-col gap-2">
-        <PasswordField label="Password baru" autoComplete="new-password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} error={fieldError(reset.error, 'password')} visible={showPassword} onToggle={() => setShowPassword((shown) => !shown)} />
+        <PasswordField label="Kata sandi baru" autoComplete="new-password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} error={fieldError(reset.error, 'password')} visible={showPassword} onToggle={() => setShowPassword((shown) => !shown)} />
         <StrengthMeter password={password} />
       </div>
-      <PasswordField label="Ulangi password" autoComplete="new-password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} error={mismatch ? 'Password tidak sama' : undefined} visible={showConfirm} onToggle={() => setShowConfirm((shown) => !shown)} />
+      <PasswordField label="Ulangi kata sandi" autoComplete="new-password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} error={mismatch ? 'Kata sandi tidak sama' : undefined} visible={showConfirm} onToggle={() => setShowConfirm((shown) => !shown)} />
       <FormError error={reset.error} />
-      <Button type="submit" className="h-10" disabled={reset.isPending || mismatch}>{reset.isPending ? 'Menyimpan…' : 'Simpan password'}</Button>
+      <Button type="submit" className="h-10" disabled={reset.isPending || mismatch}>{reset.isPending ? 'Menyimpan…' : 'Simpan kata sandi'}</Button>
     </form>
   )
 }

@@ -32,7 +32,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
 const TABS = {
-  overview: 'Overview', participants: 'Participants', rounds: 'Auctions / rounds', rules: 'Rules', governance: 'Governance', analytics: 'Analytics', audit: 'Audit log',
+  overview: 'Ringkasan', participants: 'Peserta', rounds: 'Auctions / round', rules: 'Aturan', governance: 'Tata kelola', analytics: 'Analitik', audit: 'Log audit',
 } as const
 type TabId = keyof typeof TABS
 
@@ -74,8 +74,8 @@ function Overview({ d, go }: { d: MmMarketOps; go: (t: TabId) => void }) {
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
         <StatTile label="Demand" icon={ShoppingCart} tone="blue" value={formatQty(m.demand, { compact: true })} hint="per bulan" />
         <StatTile label="Supply" icon={PackageOpen} tone="teal" value={formatQty(m.supply, { compact: true })} hint="per bulan" />
-        <StatTile label="Participants" icon={Users} tone="purple" value={formatNumber(m.buyers + m.suppliers)} hint={`${m.buyers} pembeli · ${m.suppliers} supplier`} />
-        <StatTile label="Round live" icon={Gavel} tone="lime" value={live} hint={`Round ke-${d.currentRound} sudah berjalan`} />
+        <StatTile label="Peserta" icon={Users} tone="purple" value={formatNumber(m.buyers + m.suppliers)} hint={`${m.buyers} pembeli · ${m.suppliers} supplier`} />
+        <StatTile label="Round berlangsung" icon={Gavel} tone="lime" value={live} hint={`Round ke-${d.currentRound} sudah berjalan`} />
         <StatTile label="Volume 30 hari" icon={Wallet} tone="orange" value={formatIdr(m.volume30dIdr, { compact: true })} className="col-span-2 md:col-span-1" />
       </div>
       <div className="grid gap-6 lg:grid-cols-2">
@@ -98,7 +98,7 @@ function Overview({ d, go }: { d: MmMarketOps; go: (t: TabId) => void }) {
           <dl className="grid gap-2 text-sm">
             <div className="flex justify-between gap-2"><dt className="text-muted-foreground">Mekanisme</dt><dd>{MECHANISMS[m.mechanism].label} · round {AUCTION_TYPES[ROUND_TYPE[m.mechanism]].label}</dd></div>
             <div className="flex justify-between gap-2"><dt className="text-muted-foreground">Aturan aktif</dt><dd>v{active.version}</dd></div>
-            <div className="flex justify-between gap-2"><dt className="text-muted-foreground">Approval</dt><dd>{d.settings.approval === 'manual' ? 'Manual' : 'Otomatis'}</dd></div>
+            <div className="flex justify-between gap-2"><dt className="text-muted-foreground">Persetujuan</dt><dd>{d.settings.approval === 'manual' ? 'Manual' : 'Otomatis'}</dd></div>
             <div className="flex justify-between gap-2"><dt className="text-muted-foreground">Verifikasi supplier</dt><dd className="text-right">{SUPPLIER_VERIFICATION[d.settings.supplierVerification]}</dd></div>
           </dl>
         </Panel>
@@ -160,7 +160,7 @@ function Participants({ d }: { d: MmMarketOps }) {
   const groups: [typeof f, string][] = [['pending', 'Menunggu approval'], ['active', 'Aktif'], ['suspended', 'Disuspend'], ['rejected', 'Ditolak'], ['all', 'Semua']]
   return (
     <>
-      <div className="mb-4 flex flex-wrap gap-1.5" role="radiogroup" aria-label="Status participant">
+      <div className="mb-4 flex flex-wrap gap-1.5" role="radiogroup" aria-label="Status peserta">
         {groups.map(([k, l]) => (
           <button key={k} type="button" role="radio" aria-checked={f === k} onClick={() => setFilter(k)}
             className={`rounded-full border px-3 py-1 text-sm ${f === k ? 'border-foreground bg-foreground text-background' : 'text-muted-foreground hover:bg-hover'}`}>
@@ -170,7 +170,7 @@ function Participants({ d }: { d: MmMarketOps }) {
       </div>
       {rows.length ? (
         <DataTable
-          caption="Participants market"
+          caption="Peserta market"
           rows={rows}
           rowKey={(p) => p.id}
           columns={[
@@ -183,7 +183,7 @@ function Participants({ d }: { d: MmMarketOps }) {
           ]}
         />
       ) : (
-        <EmptyState icon={Users} title="Tidak ada participant di status ini" />
+        <EmptyState icon={Users} title="Tidak ada peserta dengan status ini" />
       )}
     </>
   )
@@ -367,9 +367,9 @@ function Rounds({ d }: { d: MmMarketOps }) {
                 cell: (r) => (r.auctionId ? <Link to={`/auctions/${r.auctionId}`} className="font-medium hover:underline">#{r.round} · {r.title}</Link> : `#${r.round} · ${r.title}`),
               },
               { key: 'at', header: 'Tanggal', cell: (r) => formatDate(r.at) },
-              { key: 'open', header: 'Opening', align: 'right', cell: (r) => formatIdr(r.openingIdr) },
+              { key: 'open', header: 'Harga pembuka', align: 'right', cell: (r) => formatIdr(r.openingIdr) },
               { key: 'median', header: 'Median', align: 'right', cell: (r) => (r.medianIdr ? formatIdr(r.medianIdr) : '—') },
-              { key: 'clear', header: 'Clearing', align: 'right', cell: (r) => (r.clearingIdr ? formatIdr(r.clearingIdr) : '—') },
+              { key: 'clear', header: 'Harga akhir', align: 'right', cell: (r) => (r.clearingIdr ? formatIdr(r.clearingIdr) : '—') },
               {
                 key: 'settle', header: '', align: 'right',
                 cell: (r) => r.auctionId && <Button size="sm" variant="outline" onClick={() => setDialog(`settle:${r.auctionId}`)}>Settlement</Button>,
@@ -543,7 +543,7 @@ function Governance({ d }: { d: MmMarketOps }) {
             <ReasonConfirm
               trigger={<Button className="h-9"><Play /> Lanjutkan market</Button>}
               title={`Lanjutkan ${m.name}?`}
-              impact={<>Market kembali Active dan round baru bisa dibuka. {people} menerima notifikasi.</>}
+              impact={<>Market kembali aktif dan round baru bisa dibuka. {people} menerima notifikasi.</>}
               confirmLabel="Lanjutkan"
               error={status.error}
               onConfirm={run('resume')}
@@ -560,7 +560,7 @@ function Governance({ d }: { d: MmMarketOps }) {
               onConfirm={run('close')}
             />
           )}
-          {m.status === 'closed' && <p className="text-sm text-muted-foreground">Market sudah ditutup. Riwayat tetap tersedia di Audit log.</p>}
+          {m.status === 'closed' && <p className="text-sm text-muted-foreground">Market sudah ditutup. Riwayat tetap tersedia di log audit.</p>}
         </div>
       </Panel>
       <section aria-labelledby="disputes">

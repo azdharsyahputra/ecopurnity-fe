@@ -47,7 +47,7 @@ function Card({ o, onDismiss }: { o: PipelineCard; onDismiss: () => void }) {
         <Metric label="Potensi demand" value={formatIdr(o.potentialValueIdr, { compact: true })} />
         <Metric label="Peserta" value={formatNumber(o.participants)} />
         <Metric label="Supply coverage" value={formatPercent(o.demand.value > 0 ? Math.min(1, o.supply.value / o.demand.value) : 0)} />
-        <Metric label="Confidence engine" value={formatPercent(o.confidence)} />
+        <Metric label="Tingkat keyakinan mesin" value={formatPercent(o.confidence)} />
       </dl>
       <div className="mt-3 rounded-xl border border-purple-500/15 bg-purple-500/[0.045] p-3 text-xs dark:border-purple-400/15 dark:bg-purple-400/[0.06]">
         <p className="flex items-center gap-1.5 font-semibold text-purple-800 dark:text-purple-200"><Cpu className="size-3.5 shrink-0" /> Rekomendasi engine</p>
@@ -131,13 +131,13 @@ function PoolRequests() {
               <div className="flex flex-wrap items-center gap-1.5">
                 <CategoryTag id={p.categoryId} />
                 {p.status === 'market_requested' && <Tag tone="yellow">Menunggu market</Tag>}
-                {p.status === 'market_live' && <Tag tone={closed ? 'orange' : 'lime'}>{closed ? 'Round ditutup' : 'Round live'}</Tag>}
+                {p.status === 'market_live' && <Tag tone={closed ? 'orange' : 'lime'}>{closed ? 'Round ditutup' : 'Round berlangsung'}</Tag>}
                 {p.status === 'settled' && <Tag tone="green">Settled</Tag>}
               </div>
               <h3 className="mt-2 text-sm font-medium leading-snug">{p.title}</h3>
               <p className="mt-0.5 text-xs text-muted-foreground">{p.spec} · {p.region}</p>
               <dl className="mt-3 grid grid-cols-3 gap-2">
-                <Metric label="Total demand" value={`${formatNumber(total, { compact: true })} ${p.unit}`} />
+                <Metric label="Jumlah demand" value={`${formatNumber(total, { compact: true })} ${p.unit}`} />
                 <Metric label="Bisnis" value={formatNumber(p.members.length)} />
                 <Metric label="Harga kini" value={formatIdr(p.baseUnitPriceIdr, { compact: true })} />
               </dl>
@@ -150,7 +150,7 @@ function PoolRequests() {
                     impact={
                       <ul className="list-disc space-y-1 pl-4">
                         <li>Market collective procurement di {p.region}, aturan v1 default</li>
-                        <li>Round reverse auction langsung live: lot {formatNumber(total)} {p.unit}, harga pembuka {formatIdr(p.baseUnitPriceIdr)}/{p.unit}, durasi {MOCKS ? '10 menit (demo)' : '24 jam'}</li>
+                        <li>Round reverse auction langsung dibuka: lot {formatNumber(total)} {p.unit}, harga pembuka {formatIdr(p.baseUnitPriceIdr)}/{p.unit}, durasi {MOCKS ? '10 menit (demo)' : '24 jam'}</li>
                         <li>{p.members.length} bisnis anggota diberi tahu; setelah round ditutup, settle dari tab Rounds</li>
                       </ul>
                     }

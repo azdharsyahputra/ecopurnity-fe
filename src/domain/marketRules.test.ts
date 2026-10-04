@@ -47,7 +47,7 @@ describe('market rules', () => {
   })
 
   it('renders the public rule list in field order', () => {
-    expect(rulesToLabeled(base, 'kg').map((r) => r.label)[0]).toBe('Eligibility')
+    expect(rulesToLabeled(base, 'kg').map((r) => r.label)[0]).toBe('Kelayakan')
     expect(rulesToLabeled(base, 'kg')).toHaveLength(10)
   })
 })

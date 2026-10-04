@@ -60,7 +60,7 @@ function ReviewDialog({ a, onClose }: { a: OrgAuctionView; onClose: () => void }
               onDecide={(action, note) => decide.mutateAsync({ id: a.id, action, note }).then(() => { toast({ title: action === 'approve' ? 'Auction disetujui' : 'Auction ditolak', body: a.code, tone: 'green' }); onClose() })}
             />
           </div>
-        ) : <p className="text-sm text-muted-foreground">{a.status === 'pending_approval' ? `Tidak menunggu persetujuan ${access.roleLabel}.` : 'Approval selesai.'}</p>}
+        ) : <p className="text-sm text-muted-foreground">{a.status === 'pending_approval' ? `Tidak menunggu persetujuan ${access.roleLabel}.` : 'Persetujuan selesai.'}</p>}
       </DialogContent>
     </Dialog>
   )
@@ -305,14 +305,14 @@ function AuctionWizard({ source }: { source?: ProcurementRequest }) {
           ),
         },
         {
-          id: 'review', title: 'Review & ajukan',
+          id: 'review', title: 'Tinjau & ajukan',
           content: (
             <div className="flex flex-col gap-4 text-sm">
               <ul className="divide-y rounded-lg border">
                 {lots.map((l, i) => <li key={i} className="flex justify-between gap-2 px-3 py-2"><span className="truncate">{l.item || `Lot ${i + 1}`}</span><span className="num shrink-0">{formatQty(l.quantity, { compact: true })} × {formatIdr(l.reservePriceIdr)}</span></li>)}
               </ul>
               <div className="rounded-lg bg-muted p-3">
-                <p className="font-medium">Approval</p>
+                <p className="font-medium">Persetujuan</p>
                 <p className="mt-1 text-muted-foreground">{approvers.length ? <>Nilai {formatIdr(value, { compact: true })} butuh persetujuan <b>{approvers.map(roleLabel).join(' + ')}</b> sebelum live.</> : 'Tidak perlu approval: auction langsung dibuka.'}</p>
               </div>
               <p className="text-muted-foreground">Setelah live, auction tampil di ruang auction publik dan supplier yang lolos kualifikasi bisa menawar. Evaluasi dan award dibuka setelah semua lot ditutup.</p>
@@ -328,8 +328,8 @@ function AuctionWizard({ source }: { source?: ProcurementRequest }) {
           <SummaryRow label="Pemenang" value={awardRuleInfo(d.award, higherWins(d.type)).label} />
           <SummaryRow label="Rating min." value={d.minRating === '0' ? 'Tanpa' : `★ ${d.minRating}`} />
           <SummaryRow label="Diundang" value={d.invited.length ? `${d.invited.length} supplier` : 'Terbuka'} />
-          <SummaryRow label="Approval" value={approvers.length ? approvers.map(roleLabel).join(' + ') : 'Tidak perlu'} />
-          <p className="mt-3 text-xs text-muted-foreground">Draft tersimpan otomatis.</p>
+          <SummaryRow label="Persetujuan" value={approvers.length ? approvers.map(roleLabel).join(' + ') : 'Tidak perlu'} />
+          <p className="mt-3 text-xs text-muted-foreground">Draf tersimpan otomatis.</p>
         </>
       }
     />
@@ -383,7 +383,7 @@ function PoPreview({ evaluation, onClose }: { evaluation: OrgAuctionEvaluation; 
         <article className="rounded-lg border bg-background p-4 text-sm" aria-label="Dokumen PO">
           <header className="flex flex-wrap justify-between gap-2 border-b pb-3">
             <div><p className="text-base font-semibold">{evaluation.org.name}</p><p className="text-xs text-muted-foreground">{evaluation.org.location} · NPWP {evaluation.org.npwp || '—'}</p></div>
-            <div className="text-right"><p className="font-semibold">PURCHASE ORDER</p><p className="text-xs text-muted-foreground">Draft · {formatDate(new Date().toISOString())}</p><p className="text-xs text-muted-foreground">Ref. {a.code}</p></div>
+            <div className="text-right"><p className="font-semibold">PESANAN PEMBELIAN</p><p className="text-xs text-muted-foreground">Draf · {formatDate(new Date().toISOString())}</p><p className="text-xs text-muted-foreground">Ref. {a.code}</p></div>
           </header>
           <table className="mt-3 block w-full overflow-x-auto sm:table">
             <caption className="sr-only">Baris PO</caption>
@@ -468,7 +468,7 @@ export function OrgEvaluatePage() {
               actions={room && <Button variant="outline" className="h-9" render={<Link to={`/auctions/${room}`} />}><ExternalLink /> Ruang auction publik</Button>}
             />
             {a.status === 'pending_approval' || a.status === 'rejected' ? (
-              <Section title="Approval">
+              <Section title="Persetujuan">
                 <ApprovalTrail required={a.requiredApprovers} approvals={a.approvals} roles={access.settings?.roles ?? []} />
                 {a.status === 'pending_approval' && <Button variant="outline" className="mt-4 h-9" render={<Link to={`${access.base}/auctions?review=${a.id}`} />}>Buka review</Button>}
               </Section>

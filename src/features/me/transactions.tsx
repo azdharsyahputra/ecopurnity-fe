@@ -21,7 +21,7 @@ export function TransactionsPage() {
     <>
       <PageHeader
         title="Transactions"
-        description="Agreement, invoice, pembayaran, pengiriman, dan penerimaan barang, dari dua sisi transaksi."
+        description="Perjanjian, faktur, pembayaran, pengiriman, dan penerimaan barang, dari dua sisi transaksi."
         icon={ReceiptText}
         tone="purple"
         featured

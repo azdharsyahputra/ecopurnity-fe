@@ -17,7 +17,7 @@ export const MODULES: Record<Module, string> = {
   procurement: 'Procurement', auctions: 'Auctions', collective: 'Collective', suppliers: 'Suppliers', inventory: 'Inventory',
   transactions: 'Transactions', analytics: 'Analytics', team: 'Tim', profile: 'Profil bisnis',
 }
-export const ACTIONS: Record<Action, string> = { view: 'Lihat', create: 'Buat', approve: 'Approve', manage: 'Kelola' }
+export const ACTIONS: Record<Action, string> = { view: 'Lihat', create: 'Buat', approve: 'Setujui', manage: 'Kelola' }
 
 export const ROLE_LABEL: Record<OrgRole, string> = { owner: 'Owner', procurement: 'Procurement', finance: 'Finance', operations: 'Operations', sales: 'Sales' }
 
@@ -138,13 +138,13 @@ export type ProcurementStatus =
   | 'draft' | 'pending_approval' | 'approved' | 'published' | 'in_auction' | 'in_collective' | 'awarded' | 'po_issued' | 'rejected' | 'cancelled'
 
 export const PROCUREMENT_STATUS: Record<ProcurementStatus, [label: string, tone: Tone]> = {
-  draft: ['Draft', 'gray'],
-  pending_approval: ['Menunggu approval', 'yellow'],
-  approved: ['Approved', 'blue'],
-  published: ['Published', 'teal'],
+  draft: ['Draf', 'gray'],
+  pending_approval: ['Menunggu persetujuan', 'yellow'],
+  approved: ['Disetujui', 'blue'],
+  published: ['Diterbitkan', 'teal'],
   in_auction: ['Di auction', 'orange'],
   in_collective: ['Di collective', 'purple'],
-  awarded: ['Awarded', 'green'],
+  awarded: ['Pemenang ditetapkan', 'green'],
   po_issued: ['PO terbit', 'green'],
   rejected: ['Ditolak', 'red'],
   cancelled: ['Dibatalkan', 'gray'],
@@ -153,8 +153,8 @@ export const PROCUREMENT_STATUS: Record<ProcurementStatus, [label: string, tone:
 export type Visibility = 'public' | 'private' | 'invite' | 'aggregate'
 
 export const VISIBILITY: Record<Visibility, { label: string; hint: string }> = {
-  public: { label: 'Publish', hint: 'Terlihat oleh semua supplier terverifikasi di kategori ini.' },
-  private: { label: 'Private', hint: 'Hanya tim internal; dipakai untuk pencatatan atau negosiasi langsung.' },
+  public: { label: 'Publik', hint: 'Terlihat oleh semua supplier terverifikasi di kategori ini.' },
+  private: { label: 'Internal', hint: 'Hanya tim internal; dipakai untuk pencatatan atau negosiasi langsung.' },
   invite: { label: 'Undang supplier', hint: 'Hanya supplier yang kamu undang yang bisa melihat dan menawar.' },
   aggregate: { label: 'Gabung pembeli lain', hint: 'Digabung dengan demand bisnis lain untuk harga skala (collective).' },
 }
@@ -190,7 +190,7 @@ export function statusAfterApproval(required: string[], approvals: Approval[]): 
 }
 
 export const PIPELINE = [
-  ['draft', 'Draft'], ['approval', 'Approval'], ['published', 'Published'], ['auction', 'Auction'], ['awarded', 'Awarded'], ['po', 'PO'],
+  ['draft', 'Draf'], ['approval', 'Persetujuan'], ['published', 'Diterbitkan'], ['auction', 'Auction'], ['awarded', 'Pemenang ditetapkan'], ['po', 'PO'],
 ] as const
 export type PipelineStage = (typeof PIPELINE)[number][0]
 
@@ -255,7 +255,7 @@ export interface Supplier {
 export type SupplierRelation = 'none' | 'shortlisted' | 'invited' | 'verified' | 'blocked'
 
 export const RELATION: Record<SupplierRelation, [label: string, tone: Tone]> = {
-  none: ['Belum terhubung', 'gray'], shortlisted: ['Shortlist', 'blue'], invited: ['Diundang', 'purple'], verified: ['Terverifikasi', 'green'], blocked: ['Diblokir', 'red'],
+  none: ['Belum terhubung', 'gray'], shortlisted: ['Pilihan', 'blue'], invited: ['Diundang', 'purple'], verified: ['Terverifikasi', 'green'], blocked: ['Diblokir', 'red'],
 }
 
 export interface OrgSupplier extends Supplier {
@@ -466,8 +466,8 @@ export type WithdrawRule = 'anytime' | 'before_last_30' | 'never'
 export type OrgAuctionStatus = 'pending_approval' | 'scheduled' | 'live' | 'closed' | 'awarded' | 'rejected'
 
 export const ORG_AUCTION_STATUS: Record<OrgAuctionStatus, [label: string, tone: Tone]> = {
-  pending_approval: ['Menunggu approval', 'yellow'], scheduled: ['Scheduled', 'gray'], live: ['Live', 'lime'],
-  closed: ['Closed', 'blue'], awarded: ['Awarded', 'green'], rejected: ['Ditolak', 'red'],
+  pending_approval: ['Menunggu persetujuan', 'yellow'], scheduled: ['Terjadwal', 'gray'], live: ['Berlangsung', 'lime'],
+  closed: ['Ditutup', 'blue'], awarded: ['Pemenang ditetapkan', 'green'], rejected: ['Ditolak', 'red'],
 }
 
 export const WITHDRAW_RULES: Record<WithdrawRule, string> = {

@@ -279,14 +279,14 @@ export function OnboardingPage() {
                   )}
                   {(draft.goals.includes('buy') || draft.goals.includes('business')) && (
                     <label className="flex flex-col gap-1.5 text-sm font-medium">
-                      Budget maksimum per bulan (Rp)
+                      Anggaran maksimum per bulan (Rp)
                       <Input type="number" min={0} inputMode="numeric" className="h-10" value={draft.maxBudgetIdr ?? ''} onChange={(e) => update({ maxBudgetIdr: e.target.value ? Number(e.target.value) : undefined })} />
                     </label>
                   )}
                   {(draft.minPriceIdr || draft.maxBudgetIdr) && (
                     <p className="text-xs text-muted-foreground">
                       {draft.minPriceIdr ? `Minimum Rp ${formatNumber(draft.minPriceIdr)}. ` : ''}
-                      {draft.maxBudgetIdr ? `Budget Rp ${formatNumber(draft.maxBudgetIdr)}.` : ''}
+                      {draft.maxBudgetIdr ? `Anggaran Rp ${formatNumber(draft.maxBudgetIdr)}.` : ''}
                     </p>
                   )}
                 </div>

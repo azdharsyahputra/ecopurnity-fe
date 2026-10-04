@@ -109,7 +109,7 @@ export function UiShowcase() {
       <Section title="Dialog · auth gate">
         <div className="flex flex-wrap gap-2">
           <ConfirmDialog
-            trigger={<Button>Submit bid</Button>}
+            trigger={<Button>Kirim bid</Button>}
             title="Kirim bid Rp 1.750/unit?"
             description="Bid mengikat sampai auction ditutup."
             impact={
@@ -123,20 +123,20 @@ export function UiShowcase() {
             onConfirm={() => new Promise((r) => setTimeout(r, 800))}
           />
           <ConfirmDialog
-            trigger={<Button variant="destructive">Freeze auction</Button>}
-            title="Freeze auction #A-2291?"
+            trigger={<Button variant="destructive">Bekukan auction</Button>}
+            title="Bekukan auction #A-2291?"
             impact="Semua bid dibekukan dan 9 peserta diberi notifikasi. Tercatat di audit trail."
             confirmLabel="Freeze"
             destructive
             onConfirm={() => undefined}
           />
           <Button variant="outline" onClick={() => gate('ikut opportunity ini', () => alert('Sudah login, aksi jalan'))}>
-            Join opportunity (auth gate)
+            Gabung opportunity (perlu masuk)
           </Button>
         </div>
       </Section>
 
-      <Section title="Activity feed">
+      <Section title="Linimasa aktivitas">
         <div className="max-w-lg rounded-xl border px-4">
           <ActivityFeed
             events={[
@@ -148,7 +148,7 @@ export function UiShowcase() {
         </div>
       </Section>
 
-      <Section title="Loading · empty · error">
+      <Section title="Memuat · kosong · galat">
         <div className="grid gap-4 md:grid-cols-3">
           <div className="flex flex-col gap-2 rounded-xl border p-4">
             <Skeleton className="h-4 w-2/3" />

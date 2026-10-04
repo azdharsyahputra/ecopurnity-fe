@@ -30,7 +30,7 @@ export function DisputesPage() {
   return (
     <>
       <PageHeader
-        title="Disputes"
+        title="Sengketa"
         description="Kasus dengan para pihak, transaksi, dan bukti dari kedua sisi. Putusan mengubah status transaksi dan escrow, dan kedua pihak diberi tahu."
         icon={Scale}
         tone="orange"
@@ -139,16 +139,16 @@ function CaseActions({ c }: { c: DisputeCase }) {
           body={(reason) => ({ action: 'request_evidence', from, reason })} onDone={() => toast({ title: 'Permintaan bukti dikirim', tone: 'blue' })} />
       )}
       {actions.includes('start_review') && (
-        <ReasonDialog action={act} name="review" label="Mulai review" variant="default" reasonOptional reasonLabel="Catatan" title="Mulai review kasus?" confirmLabel="Mulai review"
-          impact="Pengumpulan bukti ditutup. Setelah review, kamu bisa memutuskan kasus."
-          body={(reason) => ({ action: 'start_review', reason })} onDone={() => toast({ title: 'Review dimulai', tone: 'blue' })} />
+        <ReasonDialog action={act} name="review" label="Mulai peninjauan" variant="default" reasonOptional reasonLabel="Catatan" title="Mulai peninjauan kasus?" confirmLabel="Mulai peninjauan"
+          impact="Pengumpulan bukti ditutup. Setelah peninjauan, kamu bisa memutuskan kasus."
+          body={(reason) => ({ action: 'start_review', reason })} onDone={() => toast({ title: 'Peninjauan dimulai', tone: 'blue' })} />
       )}
       {actions.includes('resolve') && (
         <ReasonDialog action={act} name="resolve" label="Putuskan & tutup kasus" variant="default" title={`Putuskan ${c.code}`} confirmLabel="Putuskan" reasonLabel="Dasar putusan"
           description={`Dana di escrow: ${formatIdr(total)}. Putusan bersifat final dan langsung mengubah transaksi.`}
           extra={
             <div className="flex flex-col gap-3">
-              <Segmented label="Jenis putusan" value={kind} options={[['refund', 'Refund penuh'], ['release', 'Lepas ke supplier'], ['partial', 'Sebagian']]} onChange={setKind} />
+              <Segmented label="Jenis putusan" value={kind} options={[['refund', 'Pengembalian dana penuh'], ['release', 'Lepas ke supplier'], ['partial', 'Sebagian']]} onChange={setKind} />
               {kind === 'partial' && (
                 <Field label="Nominal refund ke pembeli (Rp)" type="number" inputMode="numeric" min={1} max={total - 1} value={amount} onChange={(e) => setAmount(e.target.value)} error={fieldError(act.error, 'refundIdr')} />
               )}
@@ -176,7 +176,7 @@ export function DisputeCasePage() {
   const query = useDispute(id)
   return (
     <>
-      <BackLink to="/admin/disputes">Disputes</BackLink>
+      <BackLink to="/admin/disputes">Sengketa</BackLink>
       <AsyncView query={query} skeleton={<Skeleton className="h-96 rounded-xl" />}>
         {(c) => {
           const t = c.transaction

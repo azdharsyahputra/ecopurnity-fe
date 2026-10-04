@@ -20,8 +20,8 @@ function LivePanel() {
       <div className="pointer-events-none absolute -right-12 top-20 size-72 rounded-full bg-cyan-200/20 blur-3xl" aria-hidden />
       <div className="relative flex items-center gap-2 text-sm font-medium text-white/85"><ShieldCheck className="size-4" /> Ekonomi yang terbuka dan terhubung</div>
       <div className="relative max-w-xl">
-      <p className="text-xs font-semibold tracking-[0.2em] text-white/75">LIVE ECONOMY</p>
-      <h2 className="mt-3 max-w-lg text-4xl font-semibold leading-tight tracking-tight xl:text-5xl">Find markets that don't exist yet.</h2>
+      <p className="text-xs font-semibold tracking-[0.2em] text-white/75">EKONOMI LANGSUNG</p>
+      <h2 className="mt-3 max-w-lg text-4xl font-semibold leading-tight tracking-tight xl:text-5xl">Temukan market yang belum pernah ada.</h2>
       <p className="mt-4 max-w-md text-base leading-relaxed text-white/75">Temukan peluang dari supply, demand, dan jaringan pelaku usaha yang bergerak bersama.</p>
       <dl className="mt-10 grid grid-cols-2 gap-3">
         {rows.map((r) => (
