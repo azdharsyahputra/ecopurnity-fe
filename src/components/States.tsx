@@ -61,17 +61,23 @@ export function AsyncView<T>({
   query,
   skeleton,
   empty,
+  emptyFallback = true,
   isEmpty = (d) => Array.isArray(d) && d.length === 0,
   children,
 }: {
   query: UseQueryResult<T>
   skeleton: ReactNode
   empty?: ReactNode
+  /** Set false when the child deliberately renders its own empty layout. */
+  emptyFallback?: boolean
   isEmpty?: (data: T) => boolean
   children: (data: T) => ReactNode
 }) {
   if (query.isPending) return <>{skeleton}</>
   if (query.isError) return <ErrorState error={query.error} onRetry={() => query.refetch()} />
-  if (empty && isEmpty(query.data)) return <>{empty}</>
+  if (isEmpty(query.data)) {
+    if (empty !== undefined) return <>{empty}</>
+    if (emptyFallback) return <EmptyState title="Belum ada data" description="Data akan tampil di sini setelah tersedia." />
+  }
   return <>{children(query.data)}</>
 }
