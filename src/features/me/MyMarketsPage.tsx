@@ -11,7 +11,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { AsyncView, EmptyState } from '@/components/States'
 import { StatusBadge, Tag } from '@/components/Tag'
 import { DataTable } from '@/components/DataTable'
-import { Field, FormError, Segmented, SelectField } from '@/components/form'
+import { Field, FormError, SelectField } from '@/components/form'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -92,22 +92,46 @@ export function MyMarketsPage() {
         description="Market yang kamu ikuti, plus market lain yang bisa kamu masuki."
         icon={Store}
         tone="blue"
-        actions={<Segmented label="Cakupan" value={scope} options={[['joined', 'Diikuti'], ['browse', 'Jelajah']]} onChange={setScope} />}
+        featured
+        actions={
+          <div role="group" aria-label="Cakupan market" className="inline-flex rounded-xl border bg-muted/55 p-1">
+            {([['joined', 'Diikuti'], ['browse', 'Jelajah']] as const).map(([value, label]) => (
+              <button key={value} type="button" aria-pressed={scope === value} onClick={() => setScope(value)}
+                className={`inline-flex h-9 items-center rounded-lg border px-3 text-sm font-medium transition-colors ${scope === value ? 'border-primary/35 bg-background text-foreground shadow-sm ring-1 ring-primary/15' : 'border-transparent text-muted-foreground hover:bg-background/70 hover:text-foreground'}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+        }
       />
       <AsyncView query={query} skeleton={<Skeleton className="h-64 rounded-xl" />}>
         {(all) => {
           const rows = scope === 'joined' ? all.filter((m) => m.joined) : all.filter((m) => !m.joined)
-          if (!rows.length)
-            return (
-              <EmptyState
-                icon={Store}
-                tone="blue"
-                title={scope === 'joined' ? 'Belum mengikuti market' : 'Semua market sudah kamu ikuti'}
-                action={scope === 'joined' && <Button onClick={() => setScope('browse')}>Jelajah market</Button>}
-              />
-            )
           return (
-            <DataTable
+            <>
+            <section className="mb-5 grid gap-3 sm:grid-cols-3" aria-label="Ringkasan market">
+              <div className="rounded-2xl border bg-linear-to-br from-card to-primary/5 p-4 shadow-sm shadow-foreground/[0.02]">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Market diikuti</p>
+                <p className="num mt-2 text-2xl font-semibold tracking-tight">{formatNumber(all.filter((m) => m.joined).length)}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">Tempat kamu berpartisipasi</p>
+              </div>
+              <div className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.02]">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Market aktif</p>
+                <p className="num mt-2 text-2xl font-semibold tracking-tight">{formatNumber(all.filter((m) => m.status === 'active').length)}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">Sedang menjalankan kegiatan</p>
+              </div>
+              <div className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.02]">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Kategori</p>
+                <p className="num mt-2 text-2xl font-semibold tracking-tight">{formatNumber(new Set(all.map((m) => m.categoryId)).size)}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">Kategori yang tersedia</p>
+              </div>
+            </section>
+            <section aria-label="Daftar market" className="mt-7">
+            <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+              <div><h2 className="font-semibold tracking-tight">{scope === 'joined' ? 'Market yang diikuti' : 'Jelajahi market'}</h2><p className="mt-1 text-sm text-muted-foreground">{scope === 'joined' ? 'Kelola kontribusi dan pantau pergerakan harga.' : 'Temukan market untuk bergabung dan mulai bertransaksi.'}</p></div>
+              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{formatNumber(rows.length)} market</span>
+            </div>
+            {rows.length ? <DataTable
               caption="Market"
               rows={rows}
               rowKey={(m) => m.id}
@@ -125,25 +149,34 @@ export function MyMarketsPage() {
                 { key: 'status', header: 'Status', cell: (m) => <StatusBadge entity="market" status={m.status} /> },
                 {
                   key: 'actions', header: 'Aksi',
+                  className: 'whitespace-nowrap',
                   cell: (m) => (
-                    <div className="flex flex-wrap gap-1" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex flex-nowrap items-center gap-1" onClick={(e) => e.stopPropagation()}>
                       {m.joined ? (
                         <>
-                          <Button size="xs" variant="outline" onClick={() => open('supply', m.id)}>Supply</Button>
-                          <Button size="xs" variant="outline" onClick={() => open('demand', m.id)}>Demand</Button>
-                          <Button size="xs" variant="ghost" aria-label={`Pantau harga ${m.name}`} onClick={() => open('watch', m.id)}>
+                          <Button size="xs" variant="outline" className="shadow-sm transition-colors hover:border-primary/40 hover:bg-primary/5" onClick={() => open('supply', m.id)}>Supply</Button>
+                          <Button size="xs" variant="outline" className="shadow-sm transition-colors hover:border-primary/40 hover:bg-primary/5" onClick={() => open('demand', m.id)}>Demand</Button>
+                          <Button size="xs" variant="ghost" className="border border-border/80 bg-background/80 shadow-sm transition-all hover:border-primary/40 hover:bg-primary/10" aria-label={`Pantau harga ${m.name}`} onClick={() => open('watch', m.id)}>
                             <BellRing className={m.watchPriceIdr ? 'text-primary' : undefined} />
                           </Button>
-                          <Button size="xs" variant="ghost" aria-label={`Keluar dari ${m.name}`} onClick={() => action.mutate({ type: 'leave', id: m.id })}><LogOut /></Button>
+                          <Button size="xs" variant="ghost" className="border border-border/80 bg-background/80 text-muted-foreground shadow-sm transition-all hover:border-destructive/35 hover:bg-destructive/10 hover:text-destructive" aria-label={`Keluar dari ${m.name}`} onClick={() => action.mutate({ type: 'leave', id: m.id })}><LogOut /></Button>
                         </>
                       ) : (
-                        <Button size="xs" onClick={() => action.mutate({ type: 'join', id: m.id }, { onSuccess: () => toast({ title: `Bergabung ke ${m.name}`, tone: 'green' }) })}>Join</Button>
+                        <Button size="xs" className="shadow-sm hover:bg-primary/90 hover:shadow-md" onClick={() => action.mutate({ type: 'join', id: m.id }, { onSuccess: () => toast({ title: `Bergabung ke ${m.name}`, tone: 'green' }) })}>Join</Button>
                       )}
                     </div>
                   ),
                 },
               ]}
-            />
+            /> : <EmptyState
+              icon={Store}
+              tone="blue"
+              title={scope === 'joined' ? 'Belum mengikuti market' : 'Semua market sudah kamu ikuti'}
+              description={scope === 'joined' ? 'Jelajahi market yang tersedia untuk menemukan mekanisme dagang dan harga yang sesuai.' : 'Tidak ada market lain untuk dijelajahi saat ini.'}
+              action={scope === 'joined' && <Button onClick={() => setScope('browse')}>Jelajah market</Button>}
+            />}
+            </section>
+            </>
           )
         }}
       </AsyncView>
