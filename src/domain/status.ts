@@ -39,7 +39,7 @@ export const STATUS = {
   auction: {
     scheduled: ['Terjadwal', 'gray'],
     qualification: ['Kualifikasi', 'blue'],
-    live: ['Berlangsung', 'lime', true],
+    live: ['Live', 'lime', true],
     extended: ['Diperpanjang', 'lime', true],
     closed: ['Ditutup', 'gray'],
     awarded: ['Pemenang ditetapkan', 'green'],
