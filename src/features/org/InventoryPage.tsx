@@ -231,6 +231,7 @@ export function InventoryPage() {
         description="Stok per gudang, kapasitas produksi, logistik, dan pasokan rutin."
         icon={Warehouse}
         tone="blue"
+        featured
         actions={
           <>
             <GuardedButton variant="outline" className="h-9" reason={createDeny} onClick={() => open('import')}><FileUp /> Import CSV</GuardedButton>
