@@ -34,14 +34,15 @@ function Section({ id, eyebrow, title, intro, children, className }: {
 function Hero() {
   const activity = usePublicActivity(4)
   return (
-    <section className="grid items-center gap-10 py-14 md:grid-cols-[1.15fr_1fr] md:py-20">
-      <div>
-        <span className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs text-muted-foreground">
+    <section className="relative isolate mt-6 grid items-center gap-10 overflow-hidden rounded-[2rem] border bg-linear-to-br from-muted/70 via-background to-primary/5 px-6 py-9 shadow-sm shadow-foreground/[0.025] sm:px-8 md:mt-8 md:grid-cols-[1.1fr_0.9fr] md:px-12 md:py-14">
+      <div className="pointer-events-none absolute -right-20 -top-24 -z-10 size-96 rounded-full bg-primary/10 blur-3xl" />
+      <div className="relative">
+        <span className="inline-flex items-center gap-2 rounded-full border bg-background/80 px-3 py-1 text-xs text-muted-foreground shadow-sm">
           <span className="size-1.5 rounded-full bg-lime" /> Economic Opportunity Engine
         </span>
-        <h1 className="mt-5 text-4xl font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl">
+        <h1 className="mt-5 max-w-2xl text-4xl font-semibold leading-[1.06] tracking-tight text-balance sm:text-5xl lg:text-6xl">
           Find markets that{' '}
-          <span className="bg-linear-to-r from-[#0a8fb0] to-brand-to dark:from-[#3cc8e4] dark:to-[#7aa8ff] bg-clip-text text-transparent">don't exist yet</span>.
+          <span className="bg-linear-to-r from-primary to-brand-to bg-clip-text text-transparent">don't exist yet</span>.
         </h1>
         <p className="mt-5 max-w-lg text-lg text-muted-foreground text-pretty">
           Ecopurnity membaca supply, demand, dan jaringan untuk menemukan peluang ekonomi, lalu membentuk market dan menjalankan auction
@@ -57,9 +58,9 @@ function Hero() {
         </div>
       </div>
 
-      <div className="rounded-2xl border bg-card p-4 shadow-sm md:p-5">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-medium">Terjadi sekarang</p>
+      <div className="relative rounded-2xl border bg-card/90 p-4 shadow-xl shadow-primary/5 ring-1 ring-foreground/[0.025] md:p-5">
+        <div className="mb-3 flex items-center justify-between border-b pb-3">
+          <div><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Jaringan Ecopurnity</p><p className="mt-0.5 text-sm font-semibold">Terjadi sekarang</p></div>
           <span className="inline-flex items-center gap-1.5 rounded-sm bg-lime px-1.5 py-0.5 text-xs font-semibold text-lime-foreground">
             <span className="size-1.5 animate-pulse rounded-full bg-current" /> LIVE
           </span>
@@ -75,7 +76,7 @@ function Hero() {
 function LiveStats() {
   const { data: s } = usePublicStats()
   return (
-    <section aria-label="Statistik jaringan live" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <section aria-label="Statistik jaringan live" className="relative z-10 -mt-2 grid grid-cols-2 gap-3 rounded-2xl border bg-card p-3 shadow-lg shadow-foreground/[0.035] sm:p-4 lg:grid-cols-4">
       <StatTile label="Participant aktif" icon={Users} tone="teal" loading={!s} value={s && formatNumber(s.activeParticipants)} />
       <StatTile label="Market aktif" icon={Store} tone="blue" loading={!s} value={s && formatNumber(s.activeMarkets)} />
       <StatTile label="Opportunity terdeteksi" icon={Activity} tone="lime" loading={!s} value={s && formatNumber(s.opportunitiesDetected)} />
@@ -94,7 +95,8 @@ function Concept() {
   return (
     <div className="grid gap-3 md:grid-cols-3">
       {CONCEPT.map(([icon, tone, title, body], i) => (
-        <div key={title} className="relative rounded-xl border bg-card p-5">
+        <div key={title} className="group relative overflow-hidden rounded-2xl border bg-card p-5 transition duration-200 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5">
+          <div className="pointer-events-none absolute -right-8 -top-8 size-28 rounded-full bg-primary/5 transition-transform group-hover:scale-125" />
           <IconChip icon={icon} tone={tone} size="lg" />
           <h3 className="mt-4 font-medium">{title}</h3>
           <p className="mt-1.5 text-sm text-muted-foreground">{body}</p>
@@ -118,8 +120,8 @@ function HowItWorks() {
   return (
     <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {STEPS.map(([title, body], i) => (
-        <li key={title} className="rounded-xl border bg-card p-5">
-          <span className="num grid size-8 place-items-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">{i + 1}</span>
+        <li key={title} className="relative rounded-2xl border bg-card p-5 transition-colors hover:border-primary/35">
+          <span className="num grid size-9 place-items-center rounded-xl bg-primary/10 text-sm font-semibold text-primary">0{i + 1}</span>
           <h3 className="mt-4 font-medium">{title}</h3>
           <p className="mt-1.5 text-sm text-muted-foreground">{body}</p>
         </li>
@@ -221,7 +223,7 @@ function EngineShowcase() {
           </button>
         ))}
       </div>
-      <div id="engine-panel" role="tabpanel" aria-labelledby={`engine-${active}`} className="rounded-xl border bg-card p-5 md:p-6">
+      <div id="engine-panel" role="tabpanel" aria-labelledby={`engine-${active}`} className="rounded-2xl border bg-linear-to-br from-card to-muted/50 p-5 shadow-sm md:p-6">
         <EngineDemo id={active} />
       </div>
     </div>
@@ -269,7 +271,7 @@ function Audiences() {
   return (
     <div className="grid gap-3 md:grid-cols-3">
       {AUDIENCES.map(([icon, tone, title, body, cta, to]) => (
-        <div key={title} className="flex flex-col rounded-xl border bg-card p-5">
+        <div key={title} className="flex flex-col rounded-2xl border bg-card p-5 transition duration-200 hover:-translate-y-1 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
           <IconChip icon={icon} tone={tone} size="lg" />
           <h3 className="mt-4 font-medium">{title}</h3>
           <p className="mt-1.5 flex-1 text-sm text-muted-foreground">{body}</p>
@@ -287,7 +289,7 @@ export function LandingPage() {
       <Hero />
       <LiveStats />
 
-      <Section id="concept" eyebrow="Apa itu Ecopurnity" title="Dari kapasitas yang tersebar menjadi market yang berjalan">
+      <Section id="concept" eyebrow="Apa itu Ecopurnity" title="Dari kapasitas yang tersebar menjadi market yang berjalan" className="py-16 md:py-20">
         <Concept />
       </Section>
 
@@ -313,14 +315,16 @@ export function LandingPage() {
         <Audiences />
       </Section>
 
-      <section className="mb-16 overflow-hidden rounded-2xl bg-linear-to-br from-[#0a6f8c] to-brand-to p-8 text-white md:p-12">
+      <section className="relative mb-16 overflow-hidden rounded-[2rem] border bg-linear-to-br from-[#07566b] to-[#2f6fe0] p-8 text-white shadow-xl shadow-primary/15 dark:from-[#124452] dark:to-[#273d79] md:p-12">
+        <div className="pointer-events-none absolute -right-12 -top-24 size-80 rounded-full border border-white/15" />
+        <div className="pointer-events-none absolute -right-2 -top-14 size-64 rounded-full border border-white/10" />
         <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Mulai temukan market-mu</h2>
-            <p className="mt-2 max-w-md text-white/85">Gratis untuk participant. Lihat opportunity di sekitarmu dalam kurang dari 3 menit.</p>
+            <p className="mt-2 max-w-md text-white/80">Gratis untuk participant. Lihat opportunity di sekitarmu dalam kurang dari 3 menit.</p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Button size="lg" className="h-11 bg-white px-5 text-[#0b1220] hover:bg-white/90" render={<Link to="/register" />}>
+            <Button size="lg" className="h-11 bg-white px-5 text-slate-950 hover:bg-white/90" render={<Link to="/register" />}>
               <ShoppingCart /> Daftar gratis
             </Button>
             <Button size="lg" variant="outline" className="h-11 border-white/40 bg-transparent px-5 text-white hover:bg-white/10" render={<Link to="/explore" />}>
