@@ -142,7 +142,7 @@ function OpportunityGraph({ items }: { items: PersonalOpportunity[] }) {
     return { nodes, edges }
   }, [items])
   return (
-    <div className="h-[520px] overflow-hidden rounded-2xl border bg-card shadow-sm shadow-foreground/[0.025]">
+    <div className="opportunity-graph h-[min(65svh,520px)] min-h-[360px] overflow-hidden rounded-2xl border bg-card shadow-sm shadow-foreground/[0.025]">
       <ReactFlow nodes={nodes} edges={edges} fitView proOptions={{ hideAttribution: true }} nodesConnectable={false} onNodeClick={(_, n) => n.id !== 'me' && navigate(`/opportunities/${n.id}`)}>
         <Background color="var(--border)" />
         <Controls showInteractive={false} />
@@ -188,8 +188,8 @@ export function MyOpportunitiesPage() {
           </div>
         }
       />
-      <div className="no-scrollbar -mx-4 mb-5 overflow-x-auto px-4" role="tablist" aria-label="Kelompok opportunity">
-        <div className="flex w-max gap-1 rounded-2xl border bg-muted/35 p-1.5">
+      <div className="relative -mx-3 mb-5 overflow-x-auto overscroll-x-contain px-3 py-1 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [touch-action:pan-x] sm:-mx-4 sm:px-4" role="tablist" aria-label="Kelompok opportunity">
+        <div className="flex w-max snap-x snap-mandatory gap-1 rounded-2xl border bg-muted/55 p-1.5">
         {TABS.map(([id, label]) => (
           <button
             key={id}
@@ -197,7 +197,7 @@ export function MyOpportunitiesPage() {
             role="tab"
             aria-selected={tab === id}
             onClick={() => set('tab', id)}
-            className={cn('shrink-0 rounded-xl border border-transparent px-3.5 py-2 text-sm transition-colors', tab === id ? 'border-border/70 bg-card font-semibold text-foreground shadow-sm' : 'text-muted-foreground hover:bg-background/70 hover:text-foreground')}
+            className={cn('min-h-11 shrink-0 snap-start rounded-xl border px-3.5 py-2 text-sm font-medium transition-colors active:scale-[0.98]', tab === id ? 'border-primary/25 bg-primary/10 text-primary shadow-sm ring-1 ring-primary/10' : 'border-transparent bg-transparent text-muted-foreground hover:border-border/70 hover:bg-background/80 hover:text-foreground')}
           >
             {label}
           </button>
