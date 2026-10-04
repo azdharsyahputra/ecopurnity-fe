@@ -27,12 +27,13 @@ function BankForm({ f }: { f: Finance }) {
   const [b, setB] = useState(f.bank ?? { bank: 'BCA', accountNo: '', holder: '' })
   return (
     <form
-      className="grid gap-3"
+      className="grid gap-4 rounded-2xl border bg-muted/20 p-4 sm:p-5"
       onSubmit={(e) => {
         e.preventDefault()
         act.mutate({ type: 'bank', bank: b }, { onSuccess: () => toast({ title: 'Rekening disimpan', tone: 'green' }) })
       }}
     >
+      <div><h3 className="font-semibold">{f.bank ? 'Perbarui rekening pencairan' : 'Tambahkan rekening pencairan'}</h3><p className="mt-1 text-sm text-muted-foreground">Pastikan data rekening sesuai dengan identitas terverifikasi.</p></div>
       <SelectField label="Bank" value={b.bank} onChange={(e) => setB({ ...b, bank: e.target.value })} error={fieldError(act.error, 'bank')}>
         {BANKS.map((x) => <option key={x}>{x}</option>)}
       </SelectField>
@@ -91,7 +92,7 @@ export function FinancePage() {
   const query = useFinance()
   return (
     <>
-      <PageHeader title="Keuangan" description="Dana di escrow, piutang, saldo yang bisa ditarik, dan riwayat uang masuk-keluar." icon={Wallet} tone="green" />
+      <PageHeader title="Keuangan" description="Dana di escrow, piutang, saldo yang bisa ditarik, dan riwayat uang masuk-keluar." icon={Wallet} tone="green" featured />
       <AsyncView query={query} skeleton={<Skeleton className="h-96 rounded-xl" />}>
         {(f) => (
           <div className="flex flex-col gap-6">
