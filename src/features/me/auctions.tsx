@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { CheckCircle2, Circle, FileUp, Gavel, Plus, Scale, Trophy } from 'lucide-react'
+import { CheckCircle2, Circle, FileUp, Gavel, Scale, Trophy } from 'lucide-react'
 import type { AllocationLine, AuctionDetail, CreateAuctionInput, DemandListing, MyBid } from '@/domain/types'
 import { AUCTION_TYPES } from '@/domain/catalog'
 import { bidLimit, lowerWins, validateBid } from '@/domain/auction'
@@ -230,43 +230,62 @@ export function MyAuctionsPage() {
         description="Bid yang kamu ajukan sebagai supplier, dan auction yang kamu buat sebagai pembeli."
         icon={Gavel}
         tone="orange"
+        featured
         actions={
-          <>
-            <Segmented label="Peran" value={tab} options={[['supplier', 'Sebagai supplier'], ['buyer', 'Sebagai pembeli']]} onChange={setTab} />
-            {tab === 'buyer' && <Button className="h-9" render={<Link to="/app/auctions/new" />}><Plus /> Buat auction</Button>}
-          </>
+          <div role="group" aria-label="Peran auction" className="inline-flex rounded-xl border bg-muted/55 p-1">
+            {([['supplier', 'Sebagai supplier'], ['buyer', 'Sebagai pembeli']] as const).map(([role, label]) => (
+              <button key={role} type="button" aria-pressed={tab === role} onClick={() => setTab(role)}
+                className={cn('inline-flex h-9 items-center rounded-lg border px-3 text-sm font-medium transition-colors', tab === role ? 'border-primary/35 bg-background text-foreground shadow-sm ring-1 ring-primary/15' : 'border-transparent text-muted-foreground hover:bg-background/70 hover:text-foreground')}>
+                {label}
+              </button>
+            ))}
+          </div>
         }
       />
       <AsyncView query={query} skeleton={<Skeleton className="h-64 rounded-xl" />}>
         {(d) => {
-          if (tab === 'buyer')
-            return d.owned.length ? (
-              <CardGrid>
-                {d.owned.map((a) => (
-                  <div key={a.id} className="flex flex-col gap-2">
-                    <AuctionCard a={a} />
-                    <Button variant="outline" className="h-9" render={<Link to={`/app/auctions/${a.id}/evaluate`} />}><Scale /> Evaluasi & award</Button>
-                  </div>
-                ))}
-              </CardGrid>
-            ) : (
-              <EmptyState icon={Gavel} tone="orange" title="Belum ada auction" description="Ubah demand jadi reverse auction supaya supplier bersaing menawarkan harga terbaik." action={<Button render={<Link to="/app/auctions/new" />}>Buat auction</Button>} />
-            )
-
           const groups = {
             bids: d.bids.filter((b) => ['submitted', 'leading', 'outbid'].includes(b.status)),
             won: d.bids.filter((b) => b.status === 'won'),
             lost: d.bids.filter((b) => b.status === 'lost' || b.status === 'withdrawn'),
           }
+          if (tab === 'buyer')
+            return (
+              <>
+                <section className="mb-6 grid gap-3 sm:grid-cols-3" aria-label="Ringkasan auction yang dibuat">
+                  <div className="rounded-2xl border bg-linear-to-br from-card to-orange-500/5 p-4 shadow-sm shadow-foreground/[0.02]"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Auction dibuat</p><p className="num mt-2 text-2xl font-semibold tracking-tight">{formatNumber(d.owned.length)}</p><p className="mt-0.5 text-xs text-muted-foreground">Total auction milikmu</p></div>
+                  <div className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.02]"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Sedang berlangsung</p><p className="num mt-2 text-2xl font-semibold tracking-tight">{formatNumber(d.owned.filter((a) => isLive(a.status)).length)}</p><p className="mt-0.5 text-xs text-muted-foreground">Auction yang menerima bid</p></div>
+                  <div className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.02]"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Perlu evaluasi</p><p className="num mt-2 text-2xl font-semibold tracking-tight">{formatNumber(d.owned.filter((a) => a.status === 'closed').length)}</p><p className="mt-0.5 text-xs text-muted-foreground">Auction selesai, siap ditinjau</p></div>
+                </section>
+                <div className="mb-3 flex flex-wrap items-end justify-between gap-2"><div><h2 className="font-semibold tracking-tight">Auction yang kamu buat</h2><p className="mt-1 text-sm text-muted-foreground">Pantau proses dan evaluasi hasil penawaran supplier.</p></div><span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{formatNumber(d.owned.length)} auction</span></div>
+                {d.owned.length ? (
+                  <CardGrid>
+                    {d.owned.map((a) => (
+                      <div key={a.id} className="flex flex-col gap-2 rounded-2xl border bg-card p-3 shadow-sm shadow-foreground/[0.025]">
+                        <AuctionCard a={a} />
+                        <Button variant="outline" className="h-9 shadow-sm transition-colors hover:border-primary/40 hover:bg-primary/5" render={<Link to={`/app/auctions/${a.id}/evaluate`} />}><Scale /> Evaluasi & award</Button>
+                      </div>
+                    ))}
+                  </CardGrid>
+                ) : (
+                  <EmptyState icon={Gavel} tone="orange" title="Belum ada auction" description="Ubah demand jadi reverse auction supaya supplier bersaing menawarkan harga terbaik." action={<Button render={<Link to="/app/auctions/new" />}>Buat auction</Button>} />
+                )}
+              </>
+            )
+
           return (
             <>
-              <div className="mb-4 flex flex-wrap gap-1.5" role="radiogroup" aria-label="Kelompok">
+              <div className="mb-5 rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.02] sm:p-5">
+                <div className="mb-3 flex flex-wrap items-end justify-between gap-2"><div><h2 className="font-semibold tracking-tight">Auction sebagai supplier</h2><p className="mt-1 text-sm text-muted-foreground">Tinjau bid yang kamu kirim, hasilnya, dan auction yang bisa diikuti.</p></div><span className="rounded-full bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-700 dark:text-orange-300">{formatNumber(d.bids.length + d.eligible.length)} item</span></div>
+                <div className="no-scrollbar overflow-x-auto"><div className="flex w-max gap-1 rounded-xl bg-muted/45 p-1">
                 {([['bids', 'Bid aktif', groups.bids.length], ['eligible', 'Eligible', d.eligible.length], ['won', 'Menang', groups.won.length], ['lost', 'Kalah', groups.lost.length]] as const).map(([k, l, n]) => (
-                  <button key={k} role="radio" aria-checked={sub === k} onClick={() => setSub(k)} className={cn('rounded-full border px-3 py-1 text-sm', sub === k ? 'border-foreground bg-foreground text-background' : 'text-muted-foreground hover:bg-hover')}>
-                    {l} <span className="num opacity-70">{n}</span>
+                  <button key={k} type="button" role="tab" aria-selected={sub === k} onClick={() => setSub(k)} className={cn('rounded-lg border px-3.5 py-2 text-sm transition-colors', sub === k ? 'border-border/70 bg-background font-semibold text-foreground shadow-sm' : 'border-transparent text-muted-foreground hover:bg-background/70 hover:text-foreground')}>
+                    {l} <span className="num ml-1 text-xs opacity-70">{n}</span>
                   </button>
                 ))}
+                </div></div>
               </div>
+              <div className="mb-3 flex flex-wrap items-end justify-between gap-2"><div><h2 className="font-semibold tracking-tight">{sub === 'eligible' ? 'Auction yang bisa kamu ikuti' : sub === 'bids' ? 'Bid aktif' : sub === 'won' ? 'Auction dimenangkan' : 'Bid yang tidak aktif'}</h2><p className="mt-1 text-sm text-muted-foreground">Status terbaru dari aktivitas auction-mu.</p></div><span className="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">{formatNumber(sub === 'eligible' ? d.eligible.length : groups[sub].length)} item</span></div>
               {sub === 'eligible' ? (
                 d.eligible.length ? (
                   <DataTable
@@ -344,7 +363,7 @@ export function CreateAuctionPage() {
 
   return (
     <>
-      <PageHeader title="Buat auction" description="Supplier bersaing menawarkan harga untuk demand-mu." icon={Gavel} tone="orange" />
+      <PageHeader title="Buat auction" description="Supplier bersaing menawarkan harga untuk demand-mu." icon={Gavel} tone="orange" featured />
       <Wizard
         submitLabel="Buka auction"
         submitting={create.isPending}
@@ -435,6 +454,7 @@ export function EvaluatePage() {
               description={<span className="flex flex-wrap items-center gap-1.5">{a.code} <StatusBadge entity="auction" status={a.status} /> {isLive(a.status) && <>sisa <Countdown to={a.endsAt} /></>}</span>}
               icon={Scale}
               tone="orange"
+              featured
               actions={<Button variant="outline" className="h-9" render={<Link to={`/auctions/${a.id}`} />}>Buka auction room</Button>}
             />
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
