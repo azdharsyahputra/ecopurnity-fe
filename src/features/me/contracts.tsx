@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { Repeat } from 'lucide-react'
+import { CalendarClock, CircleDollarSign, PackageCheck, Repeat } from 'lucide-react'
 import { EVERY, type ContractAction, type ContractEvery, type ContractStatus } from '@/domain/contract'
 import { TERMS } from '@/domain/trade'
-import { formatDate, formatDateTime, formatIdr, formatQty } from '@/domain/format'
+import { formatDate, formatDateTime, formatIdr, formatNumber, formatQty } from '@/domain/format'
+import { cn } from '@/lib/utils'
 import { fieldError } from '@/lib/api'
 import { toast } from '@/stores/toast'
 import { useContract, useContractAction, useContracts, useCreateContract, useTransaction, type ContractView } from './hooks'
@@ -82,14 +83,33 @@ export function ContractsPage() {
   return (
     <>
       <PageHeader title="Kontrak rutin" description="Pasokan berulang dengan harga dan termin yang disepakati. Tiap periode, order baru dibuat otomatis sebagai transaksi biasa." icon={Repeat} tone="teal" featured />
-      <AsyncView
-        query={query}
-        skeleton={<Skeleton className="h-64 rounded-xl" />}
-        isEmpty={(r) => r.length === 0}
-        empty={<EmptyState icon={Repeat} title="Belum ada kontrak" description="Buka transaksi yang sudah selesai, lalu pilih “Jadikan kontrak rutin”." action={<Button variant="outline" render={<Link to="/app/transactions" />}>Lihat transaksi</Button>} />}
-      >
-        {(rows) => (
-          <DataTable
+      <AsyncView query={query} skeleton={<Skeleton className="h-64 rounded-xl" />} emptyFallback={false}>
+        {(rows) => {
+          const activeCount = rows.filter((c) => c.status === 'active').length
+          const awaitingCount = rows.filter((c) => c.status === 'proposed').length
+          const orderCount = rows.reduce((sum, c) => sum + c.orders.length, 0)
+          return (
+            <div className="grid gap-6">
+              <section aria-label="Ringkasan kontrak" className="grid gap-3 sm:grid-cols-3">
+                {[
+                  { label: 'Kontrak aktif', value: formatNumber(activeCount), note: 'Jadwal berjalan', icon: Repeat, color: 'text-teal-700 dark:text-teal-300', bg: 'bg-teal-500/10' },
+                  { label: 'Menunggu persetujuan', value: formatNumber(awaitingCount), note: 'Perlu ditinjau kedua pihak', icon: CalendarClock, color: 'text-amber-700 dark:text-amber-300', bg: 'bg-amber-500/10' },
+                  { label: 'Order terlaksana', value: formatNumber(orderCount), note: 'Dibuat dari kontrak rutin', icon: PackageCheck, color: 'text-violet-700 dark:text-violet-300', bg: 'bg-violet-500/10' },
+                ].map(({ label, value, note, icon: Icon, color, bg }) => (
+                  <article key={label} className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] transition-colors hover:bg-muted/20 sm:p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div><p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">{label}</p><p className="mt-2 text-2xl font-semibold tracking-tight tabular-nums">{value}</p><p className="mt-1 text-xs text-muted-foreground">{note}</p></div>
+                      <span className={cn('grid size-10 place-items-center rounded-xl', bg, color)}><Icon className="size-5" aria-hidden="true" /></span>
+                    </div>
+                  </article>
+                ))}
+              </section>
+              <section className="grid gap-4">
+                <div className="flex flex-wrap items-end justify-between gap-3 border-b pb-3">
+                  <div><h2 className="text-lg font-semibold tracking-tight">Daftar kontrak</h2><p className="mt-1 text-sm text-muted-foreground">Lihat frekuensi pasokan, progres order, dan jadwal berikutnya.</p></div>
+                  <span className="rounded-full border bg-muted/40 px-3 py-1 text-xs font-medium text-muted-foreground">{rows.length} kontrak</span>
+                </div>
+                {rows.length ? <DataTable
             caption="Kontrak rutin"
             rows={rows}
             rowKey={(c) => c.id}
@@ -102,8 +122,15 @@ export function ContractsPage() {
               { key: 'next', header: 'Berikutnya', cell: (c) => (c.status === 'active' ? formatDate(c.nextAt) : '–'), sortValue: (c) => c.nextAt },
               { key: 'status', header: 'Status', cell: (c) => <StatusTag s={c.status} /> },
             ]}
-          />
-        )}
+          /> : (
+            <div className="rounded-2xl border border-dashed bg-muted/10 p-5 sm:p-7">
+              <EmptyState icon={CircleDollarSign} tone="teal" title="Belum ada kontrak rutin" description="Mulai dari transaksi yang sudah selesai. Buka detail transaksi, lalu pilih “Jadikan kontrak rutin” untuk mengatur jadwal pasokan berulang." action={<Button variant="outline" className="hover:bg-accent hover:text-accent-foreground" render={<Link to="/app/transactions" />}>Lihat transaksi</Button>} />
+            </div>
+          )}
+              </section>
+            </div>
+          )
+        }}
       </AsyncView>
       {from && <NewContractDialog txId={from} onClose={() => setParams({}, { replace: true })} />}
     </>
