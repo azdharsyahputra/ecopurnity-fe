@@ -4,12 +4,6 @@
 @import "@fontsource-variable/geist";
 
 @custom-variant dark (&:where(.dark, .dark *));
-
-/*
-  Notion-style calm surfaces + Ecopurnity brand color.
-  `accent` stays the shadcn subtle hover; brand lime is `--lime`.
-  Tag colors (--tag-*) are soft bg + dark fg pairs, all ≥ 4.5:1 contrast.
-*/
 :root {
   --background: #ffffff;
   --foreground: #1d2433;
@@ -34,8 +28,6 @@
   --sidebar: #f7f7f5;
   --sidebar-foreground: #37352f;
   --hover: rgb(55 53 47 / 0.06);
-
-  /* Categorical, fixed order; validated with the dataviz palette script (light + dark). */
   --chart-1: #0e9cc0;
   --chart-2: #c46a12;
   --chart-3: #8a63c9;
@@ -164,7 +156,6 @@
     min-width: 0;
   }
   @media (max-width: 767px) {
-    /* Custom data tables stay usable on narrow screens without widening the page. */
     main table {
       display: block;
       max-width: 100%;
@@ -243,8 +234,6 @@
 @utility num {
   font-variant-numeric: tabular-nums;
 }
-
-/* One soft flash when a live value changes (respects reduced motion). */
 @keyframes live-flash {
   from { background-color: var(--tag-lime-bg); }
   to { background-color: transparent; }

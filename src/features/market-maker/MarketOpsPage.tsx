@@ -63,7 +63,7 @@ function Diff({ changes }: { changes: { field: string; before?: string; after?: 
   )
 }
 
-// ── Overview ─────────────────────────────────────────────────────
+
 
 function Overview({ d, go }: { d: MmMarketOps; go: (t: TabId) => void }) {
   const m = d.market
@@ -107,7 +107,7 @@ function Overview({ d, go }: { d: MmMarketOps; go: (t: TabId) => void }) {
   )
 }
 
-// ── Participants ─────────────────────────────────────────────────
+
 
 function ParticipantActions({ marketId, p }: { marketId: string; p: MmParticipant }) {
   const act = useParticipantAction(marketId)
@@ -189,7 +189,7 @@ function Participants({ d }: { d: MmMarketOps }) {
   )
 }
 
-// ── Rounds ───────────────────────────────────────────────────────
+
 
 const MOCKS = import.meta.env.VITE_USE_MOCKS !== 'false'
 
@@ -386,7 +386,7 @@ function Rounds({ d }: { d: MmMarketOps }) {
   )
 }
 
-// ── Rules ────────────────────────────────────────────────────────
+
 
 function RulesEditor({ d, onDone }: { d: MmMarketOps; onDone: () => void }) {
   const latest = d.ruleVersions[d.ruleVersions.length - 1]
@@ -477,7 +477,7 @@ function Rules({ d }: { d: MmMarketOps }) {
   )
 }
 
-// ── Governance ───────────────────────────────────────────────────
+
 
 function DisputeRow({ marketId, x }: { marketId: string; x: MmDispute }) {
   const act = useDisputeAction(marketId)
@@ -584,7 +584,7 @@ function Audit({ marketId }: { marketId: string }) {
   )
 }
 
-// ── Page ─────────────────────────────────────────────────────────
+
 
 export function MarketOpsPage() {
   const { id = '' } = useParams()

@@ -44,7 +44,7 @@ function Button({
   variant = "default",
   size = "default",
   render,
-  // A `render={<Link />}` is an <a>, not a native <button>.
+
   nativeButton = render === undefined,
   ...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {

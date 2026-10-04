@@ -7,14 +7,14 @@ import { savePersonal } from './personal'
 import { counterpartyTick, seedPairs } from './trade'
 import { contractTick } from './contracts'
 
-// Fake event source standing in for the WebSocket server.
-// ponytail: random but plausible bidding on a timer; scripted scenarios come if QA needs repeatable runs.
+
+
 
 const now = () => new Date().toISOString()
 const jitter = (n: number) => Math.round(n * (Math.random() * 0.02 - 0.005))
 const isLive = (a: AuctionDetail) => a.status === 'live' || a.status === 'extended'
 
-// ponytail: extension cap lives in the mock only; the BE should expose it as an auction rule.
+
 const MAX_EXTENSIONS = 3
 const extensions = new Map<string, number>()
 
@@ -28,7 +28,7 @@ function auctionEvent(a: AuctionDetail, payload: AuctionEvent) {
   publish({ channel: `auction:${a.id}`, type: `auction.${payload.kind}`, payload, ts: now() })
 }
 
-/** One competitive bid on a random live auction; extends the clock inside the extension window. */
+
 function bidTick() {
   const live = economy.auctions.filter((a) => isLive(a) && a.type !== 'dutch')
   const a = live[Math.floor(Math.random() * live.length)]
@@ -37,14 +37,14 @@ function bidTick() {
   const dir = a.type === 'forward' ? 1 : -1
   const steps = 1 + Math.floor(Math.random() * 3)
   const base = economy.bestPrice.get(a.id) ?? a.currentPriceIdr ?? a.openingPriceIdr
-  // Sealed bids aren't bound by the step; they just land somewhere sensible.
+
   const price = a.type === 'sealed' ? Math.round(a.openingPriceIdr * (0.85 + Math.random() * 0.12)) : base + dir * steps * Math.max(a.minStepIdr, 1)
-  // Bots have a walk-away price: 25% below opening in procurement, 25% above in selling.
+
   if (a.type !== 'sealed' && (dir < 0 ? price < a.openingPriceIdr * 0.75 : price > a.openingPriceIdr * 1.25)) return
   if (a.type !== 'sealed' || price < base) economy.bestPrice.set(a.id, a.type === 'sealed' ? Math.min(base, price) : price)
   if (economy.owners.has(a.id)) savePersonal()
   a.bidCount++
-  if (Math.random() < (a.participants < 4 ? 0.7 : 0.15)) a.participants++ // new auctions fill up fast
+  if (Math.random() < (a.participants < 4 ? 0.7 : 0.15)) a.participants++
   const hidden = a.visibility !== 'full'
   if (!hidden) a.currentPriceIdr = price
 
@@ -73,7 +73,7 @@ function bidTick() {
   }
 }
 
-/** Dutch auctions step their ask down until someone accepts (no acceptances in the mock yet). */
+
 function dutchTick() {
   for (const a of economy.auctions.filter((x) => isLive(x) && x.type === 'dutch')) {
     a.currentPriceIdr = Math.max((a.currentPriceIdr ?? a.openingPriceIdr) - a.minStepIdr, Math.round(a.openingPriceIdr * 0.8))

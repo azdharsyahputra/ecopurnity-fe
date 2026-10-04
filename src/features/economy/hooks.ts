@@ -7,7 +7,7 @@ import type {
 } from '@/domain/types'
 import type { PriceSuggestion } from '@/domain/pricing'
 
-// Public economy reads (PRD §6). Filters live in the URL, so every list is shareable.
+
 
 export interface ListFilters {
   q?: string
@@ -52,7 +52,7 @@ export function useAuctions(f: ListFilters = {}) {
   })
 }
 
-/** Auction room state, patched live from `auction:{id}` (PRD §12.2). */
+
 export function useAuction(id: string) {
   const qc = useQueryClient()
   const key = ['auctions', 'detail', id]
@@ -106,7 +106,7 @@ export function useSearch(q: string, opts: { type?: string; limit?: number } = {
   })
 }
 
-/** Public catalog; the list's status filter selects supply or demand. */
+
 export function useListings({ status, ...f }: ListFilters = {}) {
   return useQuery({
     queryKey: ['listings', 'public', f, status],

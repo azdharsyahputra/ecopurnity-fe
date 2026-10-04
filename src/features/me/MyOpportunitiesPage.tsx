@@ -24,7 +24,7 @@ const TABS: [string, string][] = [
   ['supply_gap', 'Supply gaps'], ['joined', 'Joined'], ['following', 'Following'],
 ]
 
-/** Join = contribute one of my listings (or a new quantity) to the opportunity (PRD §8.5). */
+
 function JoinDialog({ o, onClose }: { o: PersonalOpportunity; onClose: () => void }) {
   const [kind, setKind] = useState<'supply' | 'demand'>(o.kind === 'collective_demand' ? 'demand' : 'supply')
   const listings = useListings(kind)
@@ -117,7 +117,7 @@ function PersonalCard({ o, onJoin }: { o: PersonalOpportunity; onJoin: () => voi
   )
 }
 
-/** Me in the middle, opportunities around, linked by why they matched (PRD §8.5 graph view). */
+
 function OpportunityGraph({ items }: { items: PersonalOpportunity[] }) {
   const navigate = useNavigate()
   const { nodes, edges } = useMemo(() => {
@@ -159,7 +159,7 @@ export function MyOpportunitiesPage() {
   const follow = useOpportunityAction()
   const set = (k: string, v: string | null) => setParams((p) => (v ? p.set(k, v) : p.delete(k), p), { replace: true })
 
-  // The join dialog is URL state (?join=<id>), so the public page's "Join" lands straight in it.
+
   const all = usePersonalOpportunities('all')
   const joining = all.data?.find((o) => o.id === params.get('join'))
   const followId = params.get('follow')
@@ -167,7 +167,7 @@ export function MyOpportunitiesPage() {
     if (!followId) return
     follow.mutate({ type: 'follow', id: followId }, { onSuccess: () => toast({ title: 'Kamu mengikuti opportunity ini', tone: 'blue' }) })
     setParams((p) => (p.delete('follow'), p), { replace: true })
-  }, [followId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [followId])
 
   return (
     <>

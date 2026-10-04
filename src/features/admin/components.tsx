@@ -44,7 +44,7 @@ export function Facts({ items }: { items: [string, ReactNode][] }) {
   )
 }
 
-/** Fraud signals are advice, never verdicts: always labelled with score and confidence. */
+
 export function SystemBadge({ source, score, confidence }: { source: 'system' | 'manual'; score: number; confidence: number }) {
   if (source === 'manual') return <Tag tone="blue">Kasus manual</Tag>
   return (
@@ -58,10 +58,10 @@ export function SystemBadge({ source, score, confidence }: { source: 'system' | 
 
 type Mutation = Pick<UseMutationResult<unknown, Error, object>, 'mutateAsync' | 'error' | 'isPending' | 'reset'>
 
-/**
- * Governance action with an impact summary and a written reason that lands in the audit trail.
- * Open state is `?dialog=<name>` so a case link can open straight into the decision.
- */
+
+
+
+
 export function ReasonDialog({
   name, label, title, description, impact, confirmLabel, destructive, variant, action, body, onDone, reasonLabel = 'Alasan', reasonHint, reasonOptional, extra,
 }: {
@@ -75,12 +75,12 @@ export function ReasonDialog({
   variant?: 'default' | 'outline' | 'destructive' | 'secondary'
   action: Mutation
   body: (reason: string) => object
-  /** Called with the API result after the dialog closes. */
+
   onDone?: (result: unknown) => void
   reasonLabel?: string
   reasonHint?: string
   reasonOptional?: boolean
-  /** Extra inputs (amount, target…); their state lives in the caller. */
+
   extra?: ReactNode
 }) {
   const [params, setParams] = useSearchParams()
@@ -97,7 +97,7 @@ export function ReasonDialog({
     try {
       result = await action.mutateAsync(body(reason.trim()))
     } catch {
-      return // shown below via action.error
+      return
     }
     set(false)
     onDone?.(result)

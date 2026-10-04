@@ -1,30 +1,30 @@
 import type { TransactionDetail } from './types'
 
-// Reputation (PRD §8.10), computed from a participant's transactions.
-// Shared by the mock API; the BE should use the same weights so scores match across clients.
+
+
 
 export type ReputationTx = Pick<TransactionDetail, 'id' | 'title' | 'status' | 'counterparty' | 'totalIdr' | 'createdAt' | 'updatedAt' | 'dueAt' | 'timeline' | 'dispute'> &
   Partial<Pick<TransactionDetail, 'role' | 'reviews'>>
 
 export interface ReputationBreakdown {
-  /** Completed ÷ finished (completed, cancelled, disputed). Null without finished transactions. */
+
   fulfillmentRate: number | null
-  /** Completed on or before the due date ÷ completed. */
+
   onTimeRate: number | null
   cancellationRate: number | null
   disputeRate: number | null
-  /** Rupiah of completed transactions. */
+
   volumeIdr: number
-  /** Completed transactions with a counterparty seen more than once ÷ completed. */
+
   repeatRate: number | null
-  /** Average hours from agreement to the next step. */
+
   responseHours: number | null
-  /** Average 1–5 rating counterparties gave this account (PRD F6 post-transaction loop). */
+
   ratingAvg: number | null
   ratingCount: number
 }
 
-/** Ratings this account received: on each of its transactions, the review written by the other side. */
+
 export function receivedRatings(txs: ReputationTx[]): number[] {
   return txs.flatMap((t) => {
     const r = t.role && t.reviews?.[t.role === 'buyer' ? 'supplier' : 'buyer']
@@ -43,9 +43,9 @@ export interface ReputationEvent {
   id: string
   at: string
   title: string
-  /** Score change this event caused. */
+
   delta: number
-  /** Score right after the event. */
+
   score: number
 }
 
@@ -53,13 +53,13 @@ export interface ReputationReport {
   score: number
   breakdown: ReputationBreakdown
   counts: ReputationCounts
-  /** One point per month, oldest first, 12 months ending with the current month. */
+
   trend: { month: string; score: number }[]
-  /** Newest first. */
+
   events: ReputationEvent[]
 }
 
-/** Score for an account with no finished transactions yet. */
+
 export const BASELINE_SCORE = 80
 
 const ratio = (n: number, d: number) => (d ? n / d : null)
@@ -99,7 +99,7 @@ export function reputationScore(txs: ReputationTx[]): { score: number; breakdown
       5 * (b.repeatRate ?? 0) +
       5 * Math.min(1, completed.length / 20)
     : BASELINE_SCORE
-  // Reviews weigh 10%: 1★ → 0, 5★ → 10 points.
+
   const rated = b.ratingAvg === null ? raw : 0.9 * raw + 10 * ((b.ratingAvg - 1) / 4)
   return {
     score: Math.round(Math.min(100, Math.max(0, rated))),
@@ -110,7 +110,7 @@ export function reputationScore(txs: ReputationTx[]): { score: number; breakdown
 
 const EVENT_TITLE: Record<string, string> = { completed: 'Transaksi selesai', cancelled: 'Transaksi dibatalkan', disputed: 'Dispute dibuka' }
 
-/** Full report; `now` decides which 12 months the trend covers. */
+
 export function reputationReport(txs: ReputationTx[], now = new Date()): ReputationReport {
   const byTime = [...txs].sort((a, b) => a.updatedAt.localeCompare(b.updatedAt))
   const events: ReputationEvent[] = []

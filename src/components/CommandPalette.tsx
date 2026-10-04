@@ -20,7 +20,7 @@ interface Command {
   run: () => void
 }
 
-/** ⌘K: entity search (PRD §6.6) on top, then page jumps and actions. */
+
 export function CommandPalette() {
   const { paletteOpen: open, setPaletteOpen: setOpen, setTheme } = useUi()
   const { data: me } = useMe()

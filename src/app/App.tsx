@@ -21,7 +21,7 @@ import { ROUTE_WORKSPACES, type Workspace } from './nav'
 import { NotFound } from './NotFound'
 
 const UiShowcase = lazy(() => import('@/features/showcase/UiShowcase').then((m) => ({ default: m.UiShowcase })))
-// Public economy pages pull in recharts; keep them out of the landing bundle.
+
 const named = <K extends string>(load: () => Promise<Record<K, React.ComponentType>>, key: K) => lazy(() => load().then((m) => ({ default: m[key] })))
 const economy = () => import('@/features/economy/pages')
 const ExplorerPage = named(economy, 'ExplorerPage')
@@ -76,7 +76,7 @@ const O = {
 
 const [personal, org, marketOps, governance] = ROUTE_WORKSPACES
 
-/** One route per nav item of a workspace; every item must have a page. */
+
 function workspaceRoutes(ws: Workspace, pages: Record<string, React.ComponentType>) {
   return [...ws.items, ...(ws.footer ?? [])].map((item) => {
     const Page = pages[item.path]
@@ -86,11 +86,11 @@ function workspaceRoutes(ws: Workspace, pages: Record<string, React.ComponentTyp
 }
 
 
-/** Router-aware singletons. */
+
 function Shell() {
   const { data: me } = useMe()
   useLiveNotifications(me?.id)
-  // One socket per tab, reopened when the identity changes (undefined = still loading).
+
   const identity = me === undefined ? undefined : (me?.id ?? 'anonymous')
   useEffect(() => {
     if (identity === undefined || import.meta.env.VITE_USE_MOCKS !== 'false') return
@@ -108,7 +108,7 @@ function Shell() {
   )
 }
 
-/** The browser's router, or a fixed `location` when prerendering (src/entry-server.tsx). */
+
 function Router({ location, children }: { location?: string; children: ReactNode }) {
   return location === undefined ? <BrowserRouter>{children}</BrowserRouter> : <StaticRouter location={location}>{children}</StaticRouter>
 }

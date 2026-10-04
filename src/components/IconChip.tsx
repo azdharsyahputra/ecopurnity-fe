@@ -4,7 +4,7 @@ import type { Tone } from '@/domain/status'
 
 const SIZES = { sm: 'size-6 rounded-md [&>svg]:size-3.5', md: 'size-8 rounded-lg [&>svg]:size-4', lg: 'size-11 rounded-xl [&>svg]:size-5.5' }
 
-/** Soft colored square holding an icon: the main source of color on calm surfaces. */
+
 export function IconChip({
   icon: Icon,
   tone = 'gray',

@@ -26,7 +26,7 @@ const time = (iso: string) => new Intl.DateTimeFormat('id-ID', { hour: '2-digit'
 const isLive = (a: AuctionDetail) => a.status === 'live' || a.status === 'extended'
 const pricesHidden = (a: AuctionDetail) => a.visibility !== 'full'
 
-/** Visitors see a disabled box; logged-in users see what they need before bidding (PRD §6.5). */
+
 function BidBox({ a }: { a: AuctionDetail }) {
   const { data: me } = useMe()
   const gate = useAuthGate()

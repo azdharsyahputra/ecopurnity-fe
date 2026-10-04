@@ -1,6 +1,6 @@
-// Paying an invoice through the payment gateway (Midtrans Core API; contract: ecopurnity-api openapi/paths/payments.yaml).
-// The buyer picks a method, gets instructions (VA number, Mandiri bill key, QR or e-wallet link) and the trade moves
-// to paid when the gateway reports settlement. No cards yet (they need Midtrans JS tokenization and 3DS).
+
+
+
 
 export type PaymentMethod = 'bank_transfer' | 'echannel' | 'qris' | 'gopay' | 'shopeepay'
 export type VaBank = 'bca' | 'bni' | 'bri' | 'permata' | 'cimb'
@@ -8,34 +8,34 @@ export type PaymentStatus = 'pending' | 'settlement' | 'expire' | 'cancel' | 'de
 
 export interface PaymentInput {
   method: PaymentMethod
-  /** Required for bank_transfer. */
+
   bank?: VaBank
 }
 
 export interface Payment {
   id: string
   transactionId: string
-  /** Gateway order id, unique per attempt. */
+
   orderId: string
   method: PaymentMethod
-  /** The VA bank; `mandiri` for echannel. */
+
   bank?: VaBank | 'mandiri'
-  /** What the buyer owes: subtotal + PPN 11%. */
+
   amountIdr: number
   status: PaymentStatus
   vaNumber?: string
   billerCode?: string
   billKey?: string
-  /** QRIS / GoPay QR image URL. */
+
   qrUrl?: string
-  /** GoPay / ShopeePay app link (opens on a phone). */
+
   deeplinkUrl?: string
   expiresAt: string
   createdAt: string
   paidAt?: string
 }
 
-/** The method picker: one option per VA bank, then Mandiri bill and the instant methods. */
+
 export const PAYMENT_OPTIONS: { key: string; label: string; group: 'va' | 'instant'; input: PaymentInput }[] = [
   ...(['bca', 'bni', 'bri', 'permata', 'cimb'] as const).map((bank) => ({
     key: bank, label: { bca: 'BCA', bni: 'BNI', bri: 'BRI', permata: 'Permata', cimb: 'CIMB Niaga' }[bank], group: 'va' as const,
@@ -47,7 +47,7 @@ export const PAYMENT_OPTIONS: { key: string; label: string; group: 'va' | 'insta
   { key: 'shopeepay', label: 'ShopeePay', group: 'instant', input: { method: 'shopeepay' } },
 ]
 
-/** How long a new payment stays payable (the API's custom_expiry). */
+
 export const paymentExpiryMs = (method: PaymentMethod) => (method === 'bank_transfer' || method === 'echannel' ? 24 * 3_600_000 : 15 * 60_000)
 
 export function paymentLabel(p: Pick<Payment, 'method' | 'bank'>) {
@@ -60,11 +60,11 @@ export const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
   cancel: 'Pembayaran dibatalkan', deny: 'Pembayaran ditolak', failure: 'Pembayaran gagal',
 }
 
-/** Still payable: pending and not past its expiry. */
+
 export const paymentOpen = (p: Payment | null | undefined, now = Date.now()) =>
   !!p && p.status === 'pending' && new Date(p.expiresAt).getTime() > now
 
-/** Short how-to steps for the instructions view. */
+
 export function howToPay(p: Payment): string[] {
   const va = p.vaNumber ?? ''
   const vaSteps = (app: string, menu: string) => [`Buka ${app}`, `Pilih ${menu}`, `Masukkan nomor ${va}`, 'Periksa nama dan jumlah, lalu konfirmasi dengan PIN']

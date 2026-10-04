@@ -74,7 +74,7 @@ export function VerificationQueuePage() {
   )
 }
 
-/** Mock document "viewer": the page as a paper card with the fields the BE read from it. */
+
 function DocumentViewer({ v }: { v: VerificationRequest }) {
   const [params, setParams] = useSearchParams()
   const kind = params.get('doc') ?? v.documents[0]?.kind

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-/** Form state that survives reloads (PRD §5: wizards autosave drafts). `null` key = no persistence. */
+
 export function useLocalDraft<T>(key: string | null, initial: T) {
   const [value, setValue] = useState<T>(() => {
     if (!key) return initial

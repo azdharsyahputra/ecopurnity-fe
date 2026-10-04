@@ -10,8 +10,8 @@ import { ChartCard, ChartTooltip } from '@/components/Chart'
 import { SERIES, axis, grid } from '@/components/chart-tokens'
 import { Skeleton } from '@/components/ui/skeleton'
 
-// Dataviz rules as in ExplorerPage: one y-axis per chart, SERIES in fixed order, legend for ≥ 2 series,
-// table toggle on every chart. Each metric keeps its slot in every chart it appears in.
+
+
 
 const C = {
   buyers: SERIES[0], suppliers: SERIES[1],
@@ -154,7 +154,7 @@ export function AnalyticsView({ data, marketId }: { data: MmAnalytics; marketId?
   )
 }
 
-/** Per-market subset for the market detail tab. */
+
 export function MarketAnalytics({ marketId }: { marketId: string }) {
   const query = useMmAnalytics(marketId)
   return (

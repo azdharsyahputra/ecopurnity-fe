@@ -5,8 +5,8 @@ import { audit } from './audit'
 import { db } from './db'
 import { personal, savePersonal } from './personal'
 
-// Personal verification (PRD F6, email only): KTP + selfie into the admin verification queue, and the
-// per-level commitment limits enforced at bid / accept / buyer auction / quote acceptance.
+
+
 
 const api = (path: string) => `/api/v1${path}`
 const fail = (status: number, code: string, message: string, fields?: Record<string, string>) =>
@@ -20,7 +20,7 @@ function verificationOf(userId: string) {
 
 export const levelOf = (userId: string) => kycLevel(verificationOf(userId))
 
-/** 403 response when the commitment is above the user's verification limit, else null. */
+
 export function commitGuard(userId: string, valueIdr: number) {
   const err = limitError(levelOf(userId), valueIdr)
   return err ? fail(403, 'kyc_limit', err) : null
@@ -36,7 +36,7 @@ const session = () => {
   return userId && db.users.some((u) => u.id === userId) ? userId : null
 }
 
-// Uploads (same rules as the API): presigned-URL stand-in served by MSW itself.
+
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 const RULES: Record<string, { types: string[]; mb: number; typeError: string }> = {
   kyc_ktp: { types: IMAGE_TYPES, mb: 8, typeError: 'Format file tidak didukung. Pakai JPG, PNG, atau WebP.' },
@@ -48,7 +48,7 @@ const RULES: Record<string, { types: string[]; mb: number; typeError: string }> 
 }
 const uploads: Record<string, { owner: string; purpose: string; fileName: string; type: string; size: number; uploaded: boolean; used: boolean }> = {}
 
-/** Checks an upload without using it up (consumeUpload once the feature succeeded): the file name, or field errors. */
+
 export function claim(userId: string, id: string | undefined, purpose: string, field: string): string | Record<string, string> {
   const u = id ? uploads[id] : undefined
   if (!u || u.owner !== userId) return { [field]: 'File tidak ditemukan. Unggah ulang.' }
@@ -58,13 +58,13 @@ export function claim(userId: string, id: string | undefined, purpose: string, f
   return u.fileName
 }
 
-// ponytail: uploaded bytes live in memory for the tab, so mock file URLs break after a reload (the API keeps them).
+
 const blobs: Record<string, Blob> = {}
 
-/** Type, size and a readable mock URL of an upload (call after consumeUpload succeeded). */
+
 export const uploadFileInfo = (id: string) => ({ contentType: uploads[id].type, sizeBytes: uploads[id].size, url: api(`/_mock/storage/${id}`) })
 
-/** Claims an upload for one use (other mock areas): the file name, or field errors. */
+
 export function consumeUpload(userId: string, id: string | undefined, purpose: string, field: string) {
   const r = claim(userId, id, purpose, field)
   if (typeof r === 'string') uploads[id!].used = true
@@ -93,7 +93,7 @@ export const kycHandlers = [
       { status: 201 },
     )
   }),
-  /** Mock-only: the "object storage" the presigned URL points at. */
+
   http.put(api('/_mock/storage/:id'), async ({ params, request }) => {
     const u = uploads[String(params.id)]
     const body = await request.arrayBuffer()
@@ -102,7 +102,7 @@ export const kycHandlers = [
     blobs[String(params.id)] = new Blob([body], { type: u.type })
     return new HttpResponse(null, { status: 200 })
   }),
-  /** Mock-only: presigned GET stand-in for files attached somewhere (listing attachments). */
+
   http.get(api('/_mock/storage/:id'), ({ params }) => {
     const b = blobs[String(params.id)]
     return b ? new HttpResponse(b, { headers: { 'Content-Type': b.type } }) : new HttpResponse(null, { status: 404 })

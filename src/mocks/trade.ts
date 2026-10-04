@@ -10,15 +10,15 @@ import { db } from './db'
 import { newId, notify, personal, savePersonal } from './personal'
 import { claim, consumeUpload, uploadFileInfo } from './kyc'
 
-// Settlement engine for the mock (PRD F6). One trade, two records when both sides are platform accounts:
-// every action is applied to the actor's record and mirrored to the peer's. Fictional counterparties are
-// played by a bot so every flow can be completed in a demo.
+
+
+
 
 const now = () => new Date().toISOString()
 const day = 864e5
 const userName = (userId: string) => db.users.find((u) => u.id === userId)?.name ?? 'Pengguna'
 
-// ── Normalising records created before F6 ───────────────────────
+
 
 export function ensureF6<T extends TransactionDetail>(t: T): T {
   t.terms ??= 'escrow'
@@ -47,7 +47,7 @@ function rebuildTimeline(t: TransactionDetail) {
 
 export const tradeState = (t: TransactionDetail): TradeState => tradeStateOf(ensureF6(t))
 
-// ── Creating trades ──────────────────────────────────────────────
+
 
 type Side = { userId: string } | { party: PartyRef }
 
@@ -81,7 +81,7 @@ function baseRecord(n: NewTrade, id: string, role: Role, counterparty: PartyRef)
   }
 }
 
-/** Creates the trade for whichever sides are platform accounts and links them as peers. Returns { buyerTx?, supplierTx? }. */
+
 export function createTrade(n: NewTrade) {
   const id = newId('trx')
   const out: { buyer?: TransactionDetail; supplier?: TransactionDetail } = {}
@@ -103,14 +103,14 @@ export function createTrade(n: NewTrade) {
   return out
 }
 
-// ── Applying actions ─────────────────────────────────────────────
+
 
 const SHARED: (keyof TransactionDetail)[] = [
   'status', 'updatedAt', 'timeline', 'documents', 'payment', 'delivery', 'dispute', 'terms', 'agreement', 'makerFeeRate',
   'invoice', 'shipments', 'qc', 'reviews', 'quantity', 'totalIdr', 'dueAt',
 ]
 
-/** Copies the shared trade state onto the other party's record. */
+
 export function mirror(t: TransactionDetail) {
   if (!t.peer) return
   const other = personal(t.peer.userId).transactions.find((x) => x.id === t.peer!.txId)
@@ -118,12 +118,12 @@ export function mirror(t: TransactionDetail) {
   for (const k of SHARED) (other as unknown as Record<string, unknown>)[k] = structuredClone(t[k])
 }
 
-/** `fileUrl`: the stored file's link (mock storage) once a user's upload was claimed. */
+
 export type ActionInput = TradeActionInput & { fileUrl?: string }
 
 export type ActionResult = { ok: true; tx: TransactionDetail } | { ok: false; status: number; code: string; message: string; fields?: Record<string, string> }
 
-/** Where an applied action is persisted and audited: the personal store by default, an org store for org trades. */
+
 export interface TradeSink {
   save: () => void
   audit: (entry: Parameters<typeof audit>[0]) => unknown
@@ -132,14 +132,14 @@ const personalSink: TradeSink = { save: () => savePersonal(), audit }
 
 const err = (status: number, code: string, message: string, fields?: Record<string, string>): ActionResult => ({ ok: false, status, code, message, fields })
 
-/** Validates and applies one action for `actorName` on `t` (the actor's own record), mirrors, notifies, audits. */
+
 export function applyAction(t: TransactionDetail, actorName: string, input: ActionInput, sink: TradeSink = personalSink): ActionResult {
   const s = tradeState(t)
   const role = t.role
   if (!tradeActions(s, role).includes(input.action)) return err(409, 'invalid_transition', 'Aksi ini tidak tersedia untuk status sekarang')
   const at = now()
   let note = TRADE_ACTION_LABEL[input.action]
-  let stepNote: string | undefined // timeline note when it differs from note (pay: the payment reference)
+  let stepNote: string | undefined
 
   switch (input.action) {
     case 'accept_agreement':
@@ -242,10 +242,10 @@ export function applyAction(t: TransactionDetail, actorName: string, input: Acti
 
 const FILE_PURPOSE: Partial<Record<TradeAction, string>> = { upload_proof: 'trade_proof', dispute: 'dispute_evidence', add_evidence: 'dispute_evidence' }
 
-/**
- * A user's action (personal, or an org member for the org): files are the user's verified uploads (`uploadId`, used up
- * only when the step succeeds, like the API's transaction); a bare `file` name is the bot's only and is ignored here.
- */
+
+
+
+
 export function applyUserAction(t: TransactionDetail, userId: string, actorName: string, input: TradeActionInput, sink?: TradeSink): ActionResult {
   const purpose = FILE_PURPOSE[input.action]
   let file: string | undefined
@@ -259,21 +259,21 @@ export function applyUserAction(t: TransactionDetail, userId: string, actorName:
   return res
 }
 
-// ── Fictional counterparties ─────────────────────────────────────
+
 
 const BOT_PRIORITY: TradeAction[] = ['accept_agreement', 'issue_invoice', 'pay', 'ship', 'upload_proof', 'confirm_receipt', 'review']
 
-/**
- * The fictional counterparty's next step on `t` (the platform side's own record), applied in place.
- * Returns the action taken, or undefined when it's not the bot's turn.
- */
+
+
+
+
 export function botStep(t: TransactionDetail, sink: TradeSink = personalSink): TradeAction | undefined {
   const other: Role = t.role === 'buyer' ? 'supplier' : 'buyer'
   if (t.peer || (['completed', 'cancelled', 'disputed'].includes(t.status) && t.reviews?.[other])) return
-  if (Date.now() - new Date(t.updatedAt).getTime() < 8_000) return // let the user see each step
+  if (Date.now() - new Date(t.updatedAt).getTime() < 8_000) return
   const action = BOT_PRIORITY.find((a) => tradeActions(tradeState(t), other).includes(a))
   if (!action) return
-  // The bot acts on a copy that plays the other role, then the result is written back.
+
   const view = { ...t, role: other } as TransactionDetail
   const res = applyAction(view, t.counterparty.name, {
     action,
@@ -293,7 +293,7 @@ export const botNotice = (t: TransactionDetail, action: TradeAction) => ({
   title: `${t.code}: ${TRADE_ACTION_LABEL[action]}`, body: `${t.counterparty.name} · ${t.title}`,
 })
 
-/** One step for every personal trade waiting on a fictional counterparty (called on a timer). */
+
 export function counterpartyTick() {
   for (const u of db.users) {
     for (const t of personal(u.id).transactions) {
@@ -303,10 +303,10 @@ export function counterpartyTick() {
   }
 }
 
-// ── Finance (escrow, payouts, refunds) ───────────────────────────
+
 
 const FIN_KEY = 'ecp-mock-finance'
-/** A withdrawal with the account it was requested to (admin payouts read it; the user sees the Finance shape). */
+
 export interface StoredWithdrawal {
   id: string
   code: string
@@ -390,11 +390,11 @@ export function withdraw(userId: string, amountIdr: number) {
   return null
 }
 
-/** Every user's withdrawals (admin payout queue). */
+
 export const allWithdrawals = () =>
   Object.entries(finance).flatMap(([userId, f]) =>
     f.withdrawals.map((w) => {
-      // Stored before payouts existed: no code / bank snapshot.
+
       w.code ??= `WDR-${w.id.slice(-4).toUpperCase()}`
       w.bank ??= f.bank ?? { bank: '—', accountNo: '0000', holder: '—' }
       return { userId, w }
@@ -406,11 +406,11 @@ export function decideWithdrawal(w: StoredWithdrawal, patch: Partial<StoredWithd
   saveFinance()
 }
 
-// ── Demo pairs between real accounts ─────────────────────────────
+
 
 const PAIRS_KEY = 'ecp-mock-pairs-v1'
 
-/** Two trades between demo accounts so both sides of the flow can be tried. Created once. */
+
 export function seedPairs() {
   try {
     if (localStorage.getItem(PAIRS_KEY)) return
@@ -427,7 +427,7 @@ export function seedPairs() {
     title: 'Green bean arabika · 50 kg', buyer: { userId: 'usr-ajar' }, supplier: { userId: 'usr-rina' },
     quantity: { value: 50, unit: 'kg' }, unitPriceIdr: 89_000, terms: 'escrow', address: 'Kantor PT Solusi Kemasan, Bandung',
   })
-  // Fast-forward the second pair to "delivered" so QC and disputes can be tried right away.
+
   if (buyer) {
     const at = new Date(Date.now() - 2 * day).toISOString()
     Object.assign(buyer, {

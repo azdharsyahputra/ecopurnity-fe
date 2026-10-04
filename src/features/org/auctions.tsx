@@ -32,7 +32,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 const MOCKS = import.meta.env.VITE_USE_MOCKS !== 'false'
 type Filter = '' | OrgAuctionStatus
 
-// ── Review (approval) dialog, deep-linked as ?review=<id> ────────
+
 
 function ReviewDialog({ a, onClose }: { a: OrgAuctionView; onClose: () => void }) {
   const access = useOrgAccess()
@@ -66,7 +66,7 @@ function ReviewDialog({ a, onClose }: { a: OrgAuctionView; onClose: () => void }
   )
 }
 
-// ── List ─────────────────────────────────────────────────────────
+
 
 export function OrgAuctionsPage() {
   const access = useOrgAccess()
@@ -113,7 +113,7 @@ export function OrgAuctionsPage() {
   )
 }
 
-// ── Create wizard (6 steps) ──────────────────────────────────────
+
 
 interface LotDraft { item: string; qty: string; unit: string; spec: string; price: string }
 interface Draft {
@@ -364,7 +364,7 @@ export function CreateOrgAuctionPage() {
   )
 }
 
-// ── Evaluate, simulate, award, PO ────────────────────────────────
+
 
 function PoPreview({ evaluation, onClose }: { evaluation: OrgAuctionEvaluation; onClose: () => void }) {
   const access = useOrgAccess()

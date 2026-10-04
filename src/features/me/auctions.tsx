@@ -25,7 +25,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 
 const isLive = (s: string) => s === 'live' || s === 'extended'
 
-// ── Qualification (PRD §8.8 supplier: qualify) ───────────────────
+
 
 export function QualifyDialog({ auctionId, title, onClose }: { auctionId: string; title: string; onClose: () => void }) {
   const me = useAuctionMe(auctionId, true)
@@ -76,7 +76,7 @@ export function QualifyDialog({ auctionId, title, onClose }: { auctionId: string
   )
 }
 
-// ── Bid box for signed-in users (auction room) ───────────────────
+
 
 function BidStatusLine({ bid }: { bid: MyBid }) {
   return (
@@ -96,7 +96,7 @@ export function ParticipantBidBox({ a }: { a: AuctionDetail }) {
   const navigate = useNavigate()
   const [qualifying, setQualifying] = useState(false)
   const [price, setPrice] = useState('')
-  const [qty, setQty] = useState<string | null>(null) // null: the stated capacity so far, else the whole lot
+  const [qty, setQty] = useState<string | null>(null)
   const unit = a.lot.quantity.unit
 
   if (me.isPending) return <Skeleton className="h-32" />
@@ -148,7 +148,7 @@ export function ParticipantBidBox({ a }: { a: AuctionDetail }) {
   const limit = bidLimit({ ...a, currentPriceIdr: a.visibility === 'full' ? a.currentPriceIdr : undefined })
   const value = Number(price || limit)
   const error = price ? validateBid({ ...a, currentPriceIdr: a.visibility === 'full' ? a.currentPriceIdr : undefined }, value) : null
-  // Reverse/sealed: suppliers state how much of the lot they can deliver (only the buyer and the bidder see it).
+
   const withCapacity = lowerWins(a.type)
   const lotQty = a.lot.quantity.value
   const capText = qty ?? String(bid?.capacity?.value ?? lotQty)
@@ -211,14 +211,14 @@ export function ParticipantBidBox({ a }: { a: AuctionDetail }) {
   )
 }
 
-// ── My auctions page ─────────────────────────────────────────────
+
 
 export function MyAuctionsPage() {
   const query = useMyAuctions()
   const [params, setParams] = useSearchParams()
   const [tab, setTab] = useState<'supplier' | 'buyer'>(params.get('tab') === 'buyer' ? 'buyer' : 'supplier')
   const [sub, setSub] = useState<'bids' | 'eligible' | 'won' | 'lost'>('bids')
-  // Qualification dialog is URL state (?qualify=<auctionId>), reachable from the public auction room.
+
   const qualifyId = params.get('qualify')
   const qualify = qualifyId ? { id: qualifyId, title: query.data?.eligible.find((a) => a.id === qualifyId)?.title ?? 'auction ini' } : null
   const setQualify = (q: { id: string } | null) => setParams((p) => (q ? p.set('qualify', q.id) : p.delete('qualify'), p), { replace: true })
@@ -335,7 +335,7 @@ export function MyAuctionsPage() {
   )
 }
 
-// ── Create auction from a demand (PRD §8.8 buyer) ────────────────
+
 
 const MOCKS = import.meta.env.VITE_USE_MOCKS !== 'false'
 
@@ -426,7 +426,7 @@ export function CreateAuctionPage() {
   )
 }
 
-// ── Evaluate & award (PRD §8.8 buyer: compare, award) ────────────
+
 
 export function EvaluatePage() {
   const { id = '' } = useParams()

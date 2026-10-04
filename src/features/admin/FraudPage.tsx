@@ -101,7 +101,7 @@ export function FraudPage() {
 
 const NODE_TONE: Record<string, Tone> = { person: 'blue', business: 'teal', auction: 'purple', device: 'gray' }
 
-/** Who is linked to whom; flagged nodes are the accounts the engine suspects. */
+
 function RelationGraph({ graph }: { graph: NonNullable<FraudAlert['graph']> }) {
   const { nodes, edges } = useMemo(() => {
     const r = 200

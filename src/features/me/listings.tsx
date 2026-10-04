@@ -45,7 +45,7 @@ const DELIVERY_LABEL = Object.fromEntries(DELIVERY) as Record<DeliveryMode, stri
 
 const priceOf = (l: Listing) => (l.kind === 'supply' ? `${formatIdr(l.priceIdr)}/${l.quantity.unit}` : formatIdr(l.budgetIdr, { compact: true }))
 
-// ── List ─────────────────────────────────────────────────────────
+
 
 export function ListingsPage({ kind }: { kind: Kind }) {
   const c = COPY[kind]
@@ -142,7 +142,7 @@ export function ListingsPage({ kind }: { kind: Kind }) {
   )
 }
 
-// ── Form ─────────────────────────────────────────────────────────
+
 
 const toDate = (iso?: string) => (iso ? iso.slice(0, 10) : '')
 const fromDate = (d: string) => (d ? new Date(`${d}T00:00:00`).toISOString() : '')
@@ -178,7 +178,7 @@ function fromListing(l: Listing): Draft {
   }
 }
 
-/** Market price band for the category and unit; `perUnit` is what the user typed, per unit. */
+
 function PriceHint({ category, unit, item, perUnit, exclude, onUse }: { category: CategoryId; unit: string; item: string; perUnit: number; exclude?: string; onUse: (medianIdr: number) => void }) {
   const { data: s } = usePriceSuggestion(category, unit, item, exclude)
   if (!s) return null
@@ -201,7 +201,7 @@ function ListingForm({ kind, existing }: { kind: Kind; existing?: Listing }) {
   const save = useSaveListing(existing?.id)
   const [d, setD, clear] = useLocalDraft<Draft>(existing ? null : `ecp-draft-${kind}-new`, existing ? fromListing(existing) : emptyDraft())
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((x) => ({ ...x, [k]: v }))
-  // Not in the saved draft: previews and in-flight uploads don't survive a reload.
+
   const [atts, setAtts] = useState<AttachmentDraft[]>(() => (existing ? draftsOf(existing.attachments) : []))
   const qty = Number(d.qty)
 
@@ -341,7 +341,7 @@ export function ListingFormPage({ kind }: { kind: Kind }) {
   )
 }
 
-// ── Detail ───────────────────────────────────────────────────────
+
 
 function MarketPicker({ id, markets }: { id: string; markets: { id: string; name: string; region: string }[] }) {
   const action = useListingAction(id)

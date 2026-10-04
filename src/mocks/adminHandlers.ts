@@ -19,8 +19,8 @@ import { normName, payoutDueAt } from '@/domain/payout'
 import { admin, saveAdmin, type DisputeOverlay } from './admin'
 import { reputationTxs } from './profileHandlers'
 
-// Governance API (PRD §11). Admins inspect, freeze and decide; nothing here edits bids or
-// transaction amounts directly. Every write requires a reason where it is punitive and is audited.
+
+
 
 const api = (path: string) => `/api/v1${path}`
 const fail = (status: number, code: string, message: string, fields?: Record<string, string>) =>
@@ -31,7 +31,7 @@ const H = 3_600_000
 
 type Ctx = { actor: string; params: Record<string, string | readonly string[] | undefined>; request: Request }
 
-/** Session must carry the admin capability (403 otherwise). */
+
 export const asAdmin = (fn: (ctx: Ctx) => Response | Promise<Response>) =>
   async ({ params, request }: { params: Ctx['params']; request: Request }) => {
     await delay(250)
@@ -42,7 +42,7 @@ export const asAdmin = (fn: (ctx: Ctx) => Response | Promise<Response>) =>
   }
 
 const MIN_REASON = 10
-/** Punitive actions need a written reason; returns the 422 or null. */
+
 export const reasonError = (reason: unknown) =>
   typeof reason === 'string' && reason.trim().length >= MIN_REASON
     ? null
@@ -50,7 +50,7 @@ export const reasonError = (reason: unknown) =>
 
 const dbUserId = (name: string) => db.users.find((u) => u.name === name)?.id
 
-// ── Users ────────────────────────────────────────────────────────
+
 
 function users(): AdminUser[] {
   const fromDb = db.users.map((u) => {
@@ -82,7 +82,7 @@ function setUserStatus(u: AdminUser, status: AccountStatus, actor: string, reaso
   audit({ actor, action: `${STATUS_VERB[status]}${via ? ` (eskalasi ${via})` : ''}`, entity: { type: 'user', id: u.id, label: u.name }, reason, changes: [{ field: 'status', before: u.status, after: status }] })
 }
 
-// ── Markets & auctions ───────────────────────────────────────────
+
 
 const ACTIVE_AUCTION = ['scheduled', 'qualification', 'live', 'extended']
 
@@ -109,7 +109,7 @@ function setMarketStatus(id: string, status: 'suspended' | 'active', actor: stri
 
 const IDENTITIES = ['CV Kilat Jaya', 'PT Mitra Karton Abadi', 'PT Kemas Prima', 'UD Makmur Jaya', 'CV Sumber Pangan', 'PT Logistik Andalan', 'Koperasi Mitra Tani', 'PT Rasa Nusantara', 'Budi Santoso', 'Hendra Gunawan']
 
-/** The unmasked bid ledger. Participants' own bids come from their stores; the rest is the engine's book. */
+
 function ledger(a: AuctionDetail): AdminBid[] | null {
   if (a.type === 'sealed' && ACTIVE_AUCTION.includes(a.status)) return null
   const who = (masked: string) => (masked === 'Supplier 3' && a.id === 'auc-karton-100k' ? 'CV Kilat Jaya' : IDENTITIES[hash(a.id + masked) % IDENTITIES.length])
@@ -160,13 +160,13 @@ function adminMarkets(): AdminMarket[] {
   }))
 }
 
-// ── Disputes ─────────────────────────────────────────────────────
+
 
 interface CaseRef {
   case: DisputeCase
   tx: TransactionDetail
   overlay: DisputeOverlay
-  /** Persists whichever store holds the transaction. */
+
   save: () => void
 }
 
@@ -187,7 +187,7 @@ function caseRefs(): CaseRef[] {
     }
   })
   const real = allPersonal().flatMap(([userId, p]) =>
-    // A linked trade has two records; the buyer's copy carries the case.
+
     p.transactions.filter((t) => t.dispute && !(t.peer && t.role === 'supplier')).map((t): CaseRef => {
       const id = `dsp-${t.id}`
       const user = db.users.find((u) => u.id === userId)
@@ -228,7 +228,7 @@ function notifyParties(c: DisputeCase, roles: ('buyer' | 'supplier')[], title: s
 
 const ROLE_LABEL = { buyer: 'pembeli', supplier: 'supplier', both: 'kedua pihak' }
 
-// ── Fraud ────────────────────────────────────────────────────────
+
 
 const ALERT_LABEL: Record<AlertType, string> = {
   bid_manipulation: 'Bid manipulation', collusion: 'Collusion pattern', fake_accounts: 'Fake accounts', abnormal_bidding: 'Abnormal bidding',
@@ -237,7 +237,7 @@ const ALERT_LABEL: Record<AlertType, string> = {
 
 const alertEntity = (al: FraudAlert): AuditEntry['entity'] => ({ type: 'alert', id: al.id, label: `${al.code} · ${al.title}` })
 
-// ── Payouts ──────────────────────────────────────────────────────
+
 
 function adminWithdrawal(userId: string, w: StoredWithdrawal): AdminWithdrawal {
   const u = db.users.find((x) => x.id === userId)
@@ -249,7 +249,7 @@ function adminWithdrawal(userId: string, w: StoredWithdrawal): AdminWithdrawal {
   }
 }
 
-// ── Handlers ─────────────────────────────────────────────────────
+
 
 export const adminHandlers = [
   http.get(api('/admin/overview'), asAdmin(() => {
@@ -280,7 +280,7 @@ export const adminHandlers = [
     return HttpResponse.json(overview)
   })),
 
-  // Users
+
   http.get(api('/admin/users'), asAdmin(({ request }) => {
     const p = new URL(request.url).searchParams
     const q = p.get('q')?.trim().toLowerCase()
@@ -325,7 +325,7 @@ export const adminHandlers = [
     return HttpResponse.json(users().find((x) => x.id === u.id))
   })),
 
-  // Business verification
+
   http.get(api('/admin/verifications'), asAdmin(() => HttpResponse.json(admin.verifications))),
   http.get(api('/admin/verifications/:id'), asAdmin(({ params }) => {
     const v = admin.verifications.find((x) => x.id === params.id)
@@ -354,7 +354,7 @@ export const adminHandlers = [
     return HttpResponse.json(v)
   })),
 
-  // Market moderation
+
   http.get(api('/admin/markets'), asAdmin(() => HttpResponse.json(adminMarkets()))),
   http.get(api('/admin/markets/:id'), asAdmin(({ params }) => {
     const m = adminMarkets().find((x) => x.id === params.id)
@@ -389,7 +389,7 @@ export const adminHandlers = [
     return HttpResponse.json({ ok: true })
   })),
 
-  // Auction governance
+
   http.get(api('/admin/auctions'), asAdmin(() => HttpResponse.json(economy.auctions.map(adminAuction)))),
   http.get(api('/admin/auctions/:id'), asAdmin(({ params }) => {
     const a = economy.auctions.find((x) => x.id === params.id)
@@ -416,7 +416,7 @@ export const adminHandlers = [
     if (action === 'unfreeze') {
       if (a.status !== 'frozen') return fail(409, 'not_frozen', 'Auction tidak sedang dibekukan')
       const prev = admin.frozen[a.id] ?? 'closed'
-      // Time kept running while frozen: an expired live auction reopens as closed.
+
       a.status = (prev === 'live' || prev === 'extended') && new Date(a.endsAt).getTime() < Date.now() ? 'closed' : prev
       delete admin.frozen[a.id]
       saveAdmin()
@@ -435,7 +435,7 @@ export const adminHandlers = [
     return HttpResponse.json({ caseId: al.id })
   })),
 
-  // Disputes
+
   http.get(api('/admin/disputes'), asAdmin(() => HttpResponse.json(disputeCases().map(summary)))),
   http.get(api('/admin/disputes/:id'), asAdmin(({ params }) => {
     const c = disputeCases().find((x) => x.id === params.id)
@@ -484,7 +484,7 @@ export const adminHandlers = [
     return HttpResponse.json(caseRefs().find((x) => x.case.id === c.id)!.case)
   })),
 
-  // Fraud detection
+
   http.get(api('/admin/alerts'), asAdmin(() => HttpResponse.json([...admin.alerts].sort((a, b) => b.detectedAt.localeCompare(a.detectedAt))))),
   http.get(api('/admin/alerts/:id'), asAdmin(({ params }) => {
     const al = admin.alerts.find((x) => x.id === params.id)
@@ -502,7 +502,7 @@ export const adminHandlers = [
       audit({ actor, action: `Buka investigasi ${al.code} (${ALERT_LABEL[al.type]})`, entity: alertEntity(al), changes: [{ field: 'status alert', before: 'new', after: 'investigating' }] })
       return HttpResponse.json(al)
     }
-    // Everything below is only possible on an open case.
+
     if (al.status !== 'investigating' || !al.investigation) return fail(409, 'no_case', 'Buka investigasi dulu sebelum mengambil tindakan')
     if (input.action === 'note') {
       if (!input.text?.trim()) return fail(422, 'validation', 'Catatan kosong', { text: 'Tulis catatan' })
@@ -544,8 +544,8 @@ export const adminHandlers = [
     return HttpResponse.json(al)
   })),
 
-  // Audit trail
-  // Manual payouts: the admin transfers by hand, then records it here.
+
+
   http.get(api('/admin/withdrawals'), asAdmin(({ request }) => {
     const status = new URL(request.url).searchParams.get('status')
     const rows = allWithdrawals().filter(({ w }) => !status || w.status === status).map(({ userId, w }) => adminWithdrawal(userId, w))

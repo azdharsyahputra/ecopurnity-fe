@@ -16,7 +16,7 @@ const ENTITY_LABEL: Record<AuditEntry['entity']['type'], string> = {
   rule: 'Aturan', procurement: 'Procurement', supplier: 'Supplier',
 }
 
-/** Dates are WIB calendar days; entries are UTC instants. */
+
 const wibDay = (iso: string) => new Date(new Date(iso).getTime() + 7 * 3_600_000).toISOString().slice(0, 10)
 
 function exportCsv(rows: AuditEntry[]) {

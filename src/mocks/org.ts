@@ -13,8 +13,8 @@ import { economy } from './economy'
 import { ensureF6 } from './trade'
 import { notify } from './personal'
 
-// Business workspace mock data (PRD §9). One persisted blob per org plus the shared collective pools.
-// ponytail: whole-store JSON in localStorage, rewritten on every mutation; fine for two demo orgs.
+
+
 
 export type OrgTx = TransactionDetail & { supplierId?: string }
 
@@ -34,16 +34,16 @@ export interface HistoryRow {
 }
 
 export interface OrgData {
-  /** activeRoles is derived from members (settingsView), never stored. */
+
   settings: Omit<OrgSettings, 'activeRoles'>
   members: (OrgMember & { userId?: string })[]
-  /** Demo user who owns this org's economy auctions (economy.owners). */
+
   ownerUserId: string
   savingsTargetIdr: number
   inventory: InventoryData
   procurements: ProcurementRequest[]
   auctions: OrgAuction[]
-  /** Live lots as economy auctions; re-injected into the public economy on load. */
+
   economyAuctions: AuctionDetail[]
   suppliers: Record<string, { relation: SupplierRelation; myRating?: number }>
   transactions: OrgTx[]
@@ -54,7 +54,7 @@ export interface OrgData {
 type StoredPoolMember = PoolMember & { orgId?: string }
 export type StoredPool = Omit<CollectivePool, 'members' | 'round' | 'settlement'> & {
   members: StoredPoolMember[]
-  /** Market maker who formed the pool's market. */
+
   makerUserId?: string
   settlement?: Omit<PoolSettlement, 'lines'> & { lines: (PoolSettlement['lines'][number] & { orgId?: string })[] }
 }
@@ -79,7 +79,7 @@ const rand = () => {
   return seed / 4294967296
 }
 
-// ── Supplier directory (shared, code-seeded) ─────────────────────
+
 
 type SupplierRow = [id: string, name: string, cats: CategoryId[], region: string, rating: number, verified: boolean, capacity: string, base: number]
 
@@ -122,7 +122,7 @@ export const SUPPLIERS: Supplier[] = SUPPLIER_ROWS.map(([id, name, categories, r
 
 export const supplierById = (id: string) => SUPPLIERS.find((s) => s.id === id)
 
-// ── Shared builders ──────────────────────────────────────────────
+
 
 const RULES = (): ApprovalRule[] => [
   { id: 'rule-50jt', label: 'Procurement > Rp 50 jt', minAmountIdr: 50_000_000, approvers: ['finance', 'owner'], appliesTo: ['procurement', 'auction'] },
@@ -151,7 +151,7 @@ export function makeTx(
   const reached = TIMELINE.indexOf(status)
   const at = (i: number) => ago(Math.max(0, created - i * (created / 6)))
   const code = id.slice(-4).toUpperCase()
-  // Records are F6 trades from the start (terms, agreement, invoice, staged shipments); old stored ones are normalised on read.
+
   return ensureF6({
     id, code: `TRX-${code}`, title: t.title, role: t.role, counterparty: t.counterparty, status, quantity: t.quantity,
     unitPriceIdr: t.unitPriceIdr, totalIdr: t.unitPriceIdr * t.quantity.value, supplierId: t.supplierId, auctionId: t.auctionId,
@@ -172,7 +172,7 @@ export function makeTx(
 const q = (value: number, unit: string) => ({ value, unit })
 const party = (name: string, verified = true) => ({ name, kind: 'business' as const, verified })
 
-/** One economy auction per lot so the realtime bots and the public room treat it like any other. */
+
 export function lotAuction(orgName: string, oa: OrgAuction, lot: OrgLot, i: number, opts: { status?: AuctionDetail['status']; startsAt?: string; endsAt?: string } = {}): AuctionDetail {
   const market = economy.markets.find((m) => m.categoryId === oa.categoryId) ?? economy.markets[0]
   const sealed = oa.type === 'sealed'
@@ -203,7 +203,7 @@ export function lotAuction(orgName: string, oa: OrgAuction, lot: OrgLot, i: numb
   }
 }
 
-/** Seeded bid history for demo auctions (best last → newest first). */
+
 function seedBids(a: AuctionDetail, n: number, to: number) {
   const lastAt = Math.min(Date.now(), new Date(a.endsAt).getTime()) - 60_000
   const span = lastAt - new Date(a.startsAt).getTime()
@@ -218,7 +218,7 @@ function seedBids(a: AuctionDetail, n: number, to: number) {
   economy.bestPrice.set(a.id, to)
 }
 
-// ── Seeds ────────────────────────────────────────────────────────
+
 
 const actorOf = (o: Pick<OrgData, 'members' | 'settings'>, memberId: string) => {
   const m = o.members.find((x) => x.id === memberId)!
@@ -364,7 +364,7 @@ function seedSkn(): OrgData {
   P({ id: 'prq-1020', code: 'PRQ-1020', need: 'Solar industri', categoryId: 'energy', quantity: q(12_000, 'liter'), budgetIdr: 190_000_000, deadline: ago(10 * DAY), spec: 'B35, kirim bertahap', deliveryLocation: 'Gudang Cimahi', visibility: 'private', status: 'rejected', createdBy: 'Wulan Sari (Operations)', createdMin: 30 * DAY })
   o.procurements.find((r) => r.id === 'prq-1020')!.approvals = [{ role: 'finance', by: 'Maya Sari (Finance)', at: ago(29 * DAY), decision: 'rejected', note: 'Pakai kontrak solar tahunan yang sudah ada.' }]
 
-  // Auctions: one live, one closed awaiting evaluation (2 lots), one awarded, one pending approval.
+
   const A = (x: Parameters<typeof orgAuction>[1]) => {
     const a = orgAuction(o, x)
     o.auctions.push(a)
@@ -386,7 +386,7 @@ function seedSkn(): OrgData {
   awarded.award = { lines: [[{ offerId: 'oau-1190-l1-Supplier 4', supplier: 'PT Polimer Jaya', quantity: 8_000, priceIdr: 29_400 }]], reason: 'Harga terendah dan supplier terverifikasi dengan skor kualitas 87.', at: ago(10 * DAY), by: 'Ajar Pratama (Owner)' }
   A({ id: 'oau-1204', code: 'OAU-1204', title: 'Jasa angkut Bandung–Jakarta 40 trip', categoryId: 'logistics', type: 'reverse', status: 'pending_approval', createdBy: 'Bima Santoso (Procurement)', createdMin: 5 * 60, durationMinutes: DAY, approvedBy: ['finance'],
     lots: [{ id: 'lot-1', item: 'Trip truk CDD Bandung–Jakarta', quantity: q(40, 'trip'), spec: 'CDD 5 ton, GPS, asuransi muatan', reservePriceIdr: 1_600_000 }] })
-  // Selling surplus stock above Rp 200 jt: the owner signed; Finance (Maya) and Procurement (Bima) still have to.
+
   A({ id: 'oau-1206', code: 'OAU-1206', title: 'Jual stok box karton RSC 84.000 pcs', categoryId: 'packaging', type: 'forward', status: 'pending_approval', createdBy: 'Ajar Pratama (Owner)', createdMin: 3 * 60, durationMinutes: DAY, approvedBy: ['owner'],
     rules: { award: 'split' },
     lots: [{ id: 'lot-1', item: 'Box karton RSC 3 ply', quantity: q(84_000, 'pcs'), spec: '40×30×20 cm, cetak 1 warna', reservePriceIdr: 2_450 }] }).objective = 'selling'
@@ -473,7 +473,7 @@ function seedKkj(): OrgData {
   return o
 }
 
-/** A freshly onboarded org: profile from the membership, everything else empty. */
+
 function seedBlank(orgId: string): OrgData {
   const user = db.users.find((u) => u.orgs.some((m) => m.orgId === orgId))
   const m = user?.orgs.find((x) => x.orgId === orgId)
@@ -506,7 +506,7 @@ function seedPools(): StoredPool[] {
   ]
 }
 
-// ── Store ────────────────────────────────────────────────────────
+
 
 const store: Store = (() => {
   try {
@@ -531,7 +531,7 @@ if (!store.orgs['org-skn']) store.orgs['org-skn'] = seedSkn()
 if (!store.orgs['org-kkj']) store.orgs['org-kkj'] = seedKkj()
 saveOrg()
 
-// Put live lots back into the public economy so bots bid on them and the auction room shows them.
+
 for (const o of Object.values(store.orgs)) {
   for (const a of o.economyAuctions) {
     if (!economy.auctions.some((x) => x.id === a.id)) economy.auctions.unshift(a)
@@ -540,7 +540,7 @@ for (const o of Object.values(store.orgs)) {
   }
 }
 
-/** The org and business auction a public lot (economy auction id) belongs to, or undefined for other auctions. */
+
 export function lotOwner(economyAuctionId: string) {
   for (const [orgId, o] of Object.entries(store.orgs)) {
     const oa = o.auctions.find((x) => x.lots.some((l) => l.auctionId === economyAuctionId))
@@ -549,23 +549,23 @@ export function lotOwner(economyAuctionId: string) {
   return undefined
 }
 
-/** Org evaluate page (the business auction, all lots) for an economy lot id, or undefined for non-org auctions. */
+
 export function orgEvaluateHref(economyAuctionId: string) {
   const l = lotOwner(economyAuctionId)
   return l && `/org/${l.orgId}/auctions/${l.oa.id}/evaluate`
 }
 
-/** The user's role in an org (platform accounts only), or undefined. */
+
 export const orgRoleOf = (orgId: string, userId: string) => db.users.find((u) => u.id === userId)?.orgs.find((m) => m.orgId === orgId)?.role
 
-/** Role ids held by an active member (OrgSettings.activeRoles, input of the approval deadlock rule). */
+
 export const activeRoles = (o: OrgData) => [...new Set(o.members.filter((m) => m.status === 'active').map((m) => m.role))]
 export const settingsView = (o: OrgData): OrgSettings => ({ ...o.settings, activeRoles: activeRoles(o) })
 
-/**
- * A lot closed: once the business auction's last lot is done, tell the members who can view auctions (owner always)
- * to evaluate it. Returns whether the lot belongs to an org (its owner path is then handled here).
- */
+
+
+
+
 export function notifyOrgLotsClosed(economyAuctionId: string) {
   const l = lotOwner(economyAuctionId)
   if (!l) return false
@@ -591,13 +591,13 @@ export function org(orgId: string): OrgData {
 
 export const pools = () => store.pools
 
-/** Every stored org as [orgId, data], e.g. to find invitations addressed to an email. */
+
 export const allOrgs = () => Object.entries(store.orgs)
 
-/** Platform accounts that belong to an org, e.g. to notify its team. */
+
 export const orgUserIds = (orgId: string) => db.users.filter((u) => u.orgs.some((m) => m.orgId === orgId)).map((u) => u.id)
 
-/** Writes the shared audit log (PRD §12.6) and keeps a copy for the org's activity feed. */
+
 export function orgAudit(o: OrgData, entry: Omit<AuditEntry, 'id' | 'at'>) {
   o.activity.unshift(audit(entry))
   o.activity.length = Math.min(o.activity.length, 200)

@@ -2,10 +2,10 @@ import { useState, type ReactElement, type ReactNode } from 'react'
 import { Button } from './ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog'
 
-/**
- * Risky actions (bid, award, suspend, freeze) summarise their impact instead of "Are you sure?" (PRD §5 principle 6).
- * `onConfirm` may be async; the dialog stays open and busy until it settles.
- */
+
+
+
+
 export function ConfirmDialog({
   trigger,
   title,
@@ -18,7 +18,7 @@ export function ConfirmDialog({
   trigger: ReactElement
   title: string
   description?: ReactNode
-  /** What will happen, e.g. a short list or a summary table. */
+
   impact?: ReactNode
   confirmLabel: string
   destructive?: boolean

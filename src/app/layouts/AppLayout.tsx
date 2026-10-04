@@ -165,7 +165,7 @@ export function AppLayout() {
   const { data: me } = useMe()
   const { pathname } = useLocation()
   const [drawer, setDrawer] = useState(false)
-  // ponytail: workspace comes from the URL prefix, no store needed.
+
   const all = workspacesFor(me!)
   const ws = activeWorkspace(pathname, all)
   const page = [...ws.items, ...(ws.footer ?? [])].find((i) => pathname === href(ws, i))

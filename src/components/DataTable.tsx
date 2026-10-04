@@ -8,18 +8,18 @@ export interface Column<T> {
   key: string
   header: string
   cell: (row: T) => ReactNode
-  /** Makes the column sortable. */
+
   sortValue?: (row: T) => number | string
   align?: 'right'
-  /** Shown as the card title on small screens (exactly one column should set this). */
+
   primary?: boolean
   className?: string
 }
 
-/**
- * Sortable table on desktop, stacked cards on mobile (PRD §14: no horizontal scroll at 375 px).
- * Rows link to `rowHref` when given; the whole row/card is the hit target.
- */
+
+
+
+
 export function DataTable<T>({
   rows,
   columns,

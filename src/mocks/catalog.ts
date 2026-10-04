@@ -10,7 +10,7 @@ import { createTrade } from './trade'
 import { formatIdr } from '@/domain/format'
 import { ops, hash } from './mm'
 
-// Public listing catalog + price suggestion (PRD F6).
+
 
 const api = (path: string) => `/api/v1${path}`
 const PUBLIC_STATUS = ['available', 'in_market', 'open', 'matched']
@@ -31,7 +31,7 @@ function userListings(): PublicListing[] {
   })
 }
 
-// ponytail: fictional listings derived from markets so the catalog isn't empty in demos.
+
 let seeded: PublicListing[] | null = null
 function marketListings(): PublicListing[] {
   return (seeded ??= economy.markets.flatMap((m) => {
@@ -58,7 +58,7 @@ const catalog = () => [...userListings(), ...marketListings()].sort((a, b) => b.
 const fail = (status: number, code: string, message: string, fields?: Record<string, string>) => HttpResponse.json({ error: { code, message, fields } }, { status })
 
 export const catalogHandlers = [
-  // Direct market order (PRD F6): buy a posted supply at its price; escrow terms, maker fee 0.5%.
+
   http.post(api('/markets/:id/orders'), async ({ params, request }) => {
     await delay(400)
     const userId = db.sessionUserId
@@ -109,7 +109,7 @@ export const catalogHandlers = [
     const p = new URL(request.url).searchParams
     const category = p.get('category') as CategoryId | null
     const unit = p.get('unit')?.trim().toLowerCase()
-    // Same category and unit; narrowed to items sharing a word with `item` when that leaves enough data.
+
     const words = (p.get('item') ?? '').toLowerCase().split(/\W+/).filter((w) => w.length >= 4)
     const like = (text: string) => words.some((w) => text.toLowerCase().includes(w))
     const allMarkets = economy.markets.filter((m) => m.categoryId === category && m.priceRange.unit.toLowerCase() === unit)

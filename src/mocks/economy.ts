@@ -8,8 +8,8 @@ import { AUCTION_TYPES, MECHANISMS } from '@/domain/catalog'
 import { formatIdr } from '@/domain/format'
 import { db } from './db'
 
-// Seeded public economy: hand-written entities + deterministic generated history.
-// ponytail: one fixed seed; a scenario switcher comes if QA needs different datasets.
+
+
 
 let seed = 4821
 const rand = () => {
@@ -22,7 +22,7 @@ const days = (d: number) => minutes(d * 1440)
 const q = (value: number, unit: string) => ({ value, unit })
 const biz = (name: string, verified = true): PartyRef => ({ name, kind: 'business', verified })
 
-// ── Markets ──────────────────────────────────────────────────────
+
 
 type MarketRow = [
   id: string, name: string, cat: CategoryId, region: string, objective: MarketObjective, mechanism: MarketMechanism,
@@ -52,7 +52,7 @@ const markets: Market[] = MARKET_ROWS.map(
 
 const marketById = (id: string) => markets.find((m) => m.id === id)!
 
-// ── Auctions ─────────────────────────────────────────────────────
+
 
 type AuctionRow = [
   id: string, marketId: string, title: string, type: AuctionType, status: AuctionStatus, visibility: BidVisibility,
@@ -117,7 +117,7 @@ for (const a of auctionDetails) if (a.status === 'live' || a.status === 'extende
 
 export const toAuction = ({ rules: _r, minStepIdr: _s, extension: _e, bids: _b, ...a }: AuctionDetail): Auction => a
 
-// ── Opportunities ────────────────────────────────────────────────
+
 
 type OppRow = [
   id: string, title: string, kind: OpportunityKind, cat: CategoryId, region: string, status: OpportunityStatus, unit: string,
@@ -190,7 +190,7 @@ export const toOpportunity = ({
   description: _d, requiredContribution: _c, mechanismReason: _m, history: _h, participantsPreview: _p, markets: _k, ...o
 }: OpportunityDetail): Opportunity => o
 
-// ── Market details ───────────────────────────────────────────────
+
 
 const marketDetails: MarketDetail[] = markets.map((m) => {
   const mid = (m.priceRange.minIdr + m.priceRange.maxIdr) / 2
@@ -218,23 +218,23 @@ const marketDetails: MarketDetail[] = markets.map((m) => {
   }
 })
 
-// ── Live state the handlers and the realtime mock share ──────────
+
 
 export const economy = {
   opportunities: opportunityDetails,
   markets: marketDetails,
   auctions: auctionDetails,
-  /** Best competing price per auction, including ones the public can't see (rank_only, sealed). */
+
   bestPrice: new Map<string, number>(
     auctionDetails.map((a) => [a.id, a.currentPriceIdr ?? Math.round(a.openingPriceIdr * (a.type === 'forward' ? 1.04 : 0.93))]),
   ),
-  /** auctionId → userId for auctions created by participants (buyer flow). */
+
   owners: new Map<string, string>(),
-  /** bidId → userId for bids placed by platform accounts; bidder names stay masked for everyone. */
+
   bidOwners: new Map<string, string>(),
 }
 
-/** Stable masked bidder name for a platform account in one auction. */
+
 export function bidderLabel(a: { id: string; type: string }, userId: string) {
   const n = 11 + ([...`${a.id}:${userId}`].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % 80)
   return `${a.type === 'reverse' || a.type === 'sealed' ? 'Supplier' : 'Bidder'} ${n}`
@@ -250,14 +250,14 @@ export function marketDetail(id: string): MarketDetail | undefined {
   }
 }
 
-// ── Explorer ─────────────────────────────────────────────────────
+
 
 const RANGE_DAYS: Record<ExplorerRange, number> = { '7d': 7, '30d': 30, '90d': 90 }
 const INDEX_CATEGORIES: CategoryId[] = ['agri', 'food', 'packaging', 'logistics']
 const midPrice = (m: Market) => (m.priceRange.minIdr + m.priceRange.maxIdr) / 2
 
 export function explorerOverview(range: ExplorerRange, category?: CategoryId): ExplorerOverview {
-  seed = 99 + RANGE_DAYS[range] // same range → same curves
+  seed = 99 + RANGE_DAYS[range]
   const n = RANGE_DAYS[range]
   const scoped = economy.markets.filter((m) => !category || m.categoryId === category)
   const daily = scoped.reduce((s, m) => s + m.volume30dIdr, 0) / 30
@@ -305,7 +305,7 @@ export function aggregates(side: 'demand' | 'supply', category?: CategoryId): Ag
     .sort((a, b) => b.listings - a.listings)
 }
 
-// ── Search ───────────────────────────────────────────────────────
+
 
 const SERVICE_CATS: CategoryId[] = ['it', 'logistics']
 

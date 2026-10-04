@@ -2,7 +2,7 @@ import type { Capability, CategoryId } from './types'
 import type { Tone } from './status'
 import { CATEGORIES } from './catalog'
 
-// Role activation (PRD F6): market maker applications, org invitations, creating an organisation.
+
 
 export type MmApplicationStatus = 'pending' | 'approved' | 'rejected'
 
@@ -15,9 +15,9 @@ export const MM_STATUS: Record<MmApplicationStatus, [string, Tone]> = {
 export interface MmApplicationInput {
   organization: string
   categories: CategoryId[]
-  /** Experience aggregating supply/demand and why they want to run markets. */
+
   experience: string
-  /** Supporting documents, as a note (links, what will be sent on request). */
+
   documents: string
 }
 
@@ -33,7 +33,7 @@ export interface MmApplication extends MmApplicationInput {
 
 export const MIN_EXPERIENCE = 30
 
-/** Field errors for a market maker application; empty when valid. */
+
 export function mmApplicationErrors(i: MmApplicationInput): Record<string, string> {
   const f: Record<string, string> = {}
   if (i.organization.trim().length < 3) f.organization = 'Isi nama organisasi'
@@ -43,7 +43,7 @@ export function mmApplicationErrors(i: MmApplicationInput): Record<string, strin
   return f
 }
 
-/** Why this user can't submit a new application, or undefined when they can (a rejection may reapply). */
+
 export function mmApplyBlocked(capabilities: Capability[], latest?: Pick<MmApplication, 'status'> | null) {
   if (capabilities.includes('market_maker')) return 'Akunmu sudah Market Maker'
   if (latest?.status === 'pending') return 'Pengajuanmu masih direview'
@@ -56,12 +56,12 @@ export type OrgType = (typeof ORG_TYPES)[number]
 export interface NewOrgInput {
   name: string
   type: OrgType
-  /** Optional; 15 digits (old format) or 16 (NIK-based). */
+
   npwp?: string
   categoryId: CategoryId
 }
 
-/** Field errors for "Buat organisasi"; `taken` = names of orgs the user already belongs to. */
+
 export function newOrgErrors(i: NewOrgInput, taken: string[] = []): Record<string, string> {
   const f: Record<string, string> = {}
   const name = i.name.trim()
@@ -74,7 +74,7 @@ export function newOrgErrors(i: NewOrgInput, taken: string[] = []): Record<strin
   return f
 }
 
-/** A pending org invitation addressed to the signed-in user's email. `id` is the org member id. */
+
 export interface OrgInvitation {
   id: string
   orgId: string

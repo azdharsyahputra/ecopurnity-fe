@@ -1,10 +1,10 @@
 import type { ActivityEvent, ActivityType, PublicStats, User } from '@/domain/types'
 import type { Tone } from '@/domain/status'
 
-// In-memory mock database. Handlers read/write here so flows feel real within a session.
-// Only the session id is persisted (stand-in for the httpOnly cookie).
 
-/** Mock-only test password shared by every demo account. */
+
+
+
 export const DEMO_PASSWORD = 'demo1234'
 
 export type MockUser = User & { password: string }
@@ -28,7 +28,7 @@ const users: MockUser[] = [
     id: 'usr-sari', name: 'Sari Kusuma', username: 'sari', email: 'sari@demo.ecopurnity.id', emailVerified: true,
     location: 'Jakarta', capabilities: ['admin'], orgs: [], onboarded: true, password: DEMO_PASSWORD,
   },
-  // Ajar's teammates at PT Solusi Kemasan Nusantara, so business approvals need a real second sign-in.
+
   {
     id: 'usr-maya', name: 'Maya Sari', username: 'maya', email: 'maya@demo.ecopurnity.id', emailVerified: true,
     location: 'Bandung, Jawa Barat', capabilities: [], onboarded: true, password: DEMO_PASSWORD,
@@ -44,7 +44,7 @@ const users: MockUser[] = [
 const SESSION_KEY = 'ecp-mock-session'
 const USERS_KEY = 'ecp-mock-users'
 
-// Accounts created via register/Google survive reloads; seeded demo accounts always come from code.
+
 try {
   users.push(...(JSON.parse(localStorage.getItem(USERS_KEY) ?? '[]') as MockUser[]))
 } catch {
@@ -59,7 +59,7 @@ export function saveUsers() {
   }
 }
 
-// Roles granted in-app (market maker approval, joined or created orgs) survive reloads, seeded accounts included.
+
 const ROLES_KEY = 'ecp-mock-user-roles'
 const roles: Record<string, Pick<User, 'capabilities' | 'orgs'>> = (() => {
   try {
@@ -114,11 +114,11 @@ export const db = {
     opportunitiesDetected: 87,
     transactionVolumeIdr: 8_400_000_000,
   } satisfies PublicStats,
-  // Newest first, spaced 7 minutes apart.
+
   activity: Array.from({ length: 12 }, (_, i) => makeActivity(new Date(Date.now() - i * 7 * 60_000))),
 
-  /** One-time tokens a real BE would email: email → token. */
-  /** email → live verification code (6 digits), with wrong attempts and when it was sent / expires. */
+
+
   verifyCodes: new Map<string, { code: string; attempts: number; sentAt: number; expiresAt: number }>(),
   resetTokens: new Map<string, string>(),
 
@@ -134,7 +134,7 @@ export const db = {
   },
 }
 
-/** Shown on the login page while mocks are on. */
+
 export const DEMO_ACCOUNTS = [
   { name: 'Rina Wulandari', email: 'rina@demo.ecopurnity.id', role: 'Participant', tone: 'teal' },
   { name: 'Ajar Pratama', email: 'ajar@demo.ecopurnity.id', role: 'Business owner', tone: 'blue' },

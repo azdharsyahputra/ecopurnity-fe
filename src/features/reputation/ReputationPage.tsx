@@ -14,7 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 const month = (ym: string) => new Intl.DateTimeFormat('id-ID', { month: 'short', year: '2-digit', timeZone: 'UTC' }).format(new Date(`${ym}-01T00:00:00Z`))
 
-/** [key, label, how to read it, higher is better?] */
+
 const RATES: [keyof ReputationBreakdown, string, string, boolean][] = [
   ['fulfillmentRate', 'Fulfillment rate', 'Transaksi selesai dari semua yang berakhir', true],
   ['onTimeRate', 'On-time rate', 'Selesai sebelum jatuh tempo', true],

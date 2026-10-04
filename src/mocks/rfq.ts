@@ -10,7 +10,7 @@ import { newId, notify, personal } from './personal'
 import { createTrade } from './trade'
 import { commitGuard } from './kyc'
 
-// RFQ, quotes, and conversations (PRD F6 direct trade). Fictional suppliers quote and negotiate on timers.
+
 
 const api = (path: string) => `/api/v1${path}`
 const fail = (status: number, code: string, message: string, fields?: Record<string, string>) => HttpResponse.json({ error: { code, message, fields } }, { status })
@@ -51,14 +51,14 @@ const BOT_SUPPLIERS: Record<CategoryId, string[]> = {
   energy: ['PT Surya Bali', 'CV Energi Hijau', 'PT Daya Mandiri'],
 }
 
-/** Reference unit price: buyer's target, else the median of active markets in the category. */
+
 function refPrice(r: Rfq) {
   if (r.targetPriceIdr) return r.targetPriceIdr
   const m = economy.markets.find((x) => x.categoryId === r.categoryId)
   return m ? Math.round((m.priceRange.minIdr + m.priceRange.maxIdr) / 2) : 10_000
 }
 
-// ── Conversations ────────────────────────────────────────────────
+
 
 export function createConversation(subject: string, participants: TradeParty[], link?: Conversation['link'], opening?: { by: TradeParty; text: string }) {
   const c: Conversation = {
@@ -85,7 +85,7 @@ const BOT_REPLIES = [
   'Terima kasih, spesifikasinya sudah kami catat. Harga sudah termasuk ongkos muat.',
 ]
 
-/** Fictional participants answer the latest human message once. */
+
 export function botReply(c: Conversation) {
   const last = c.messages.at(-1)
   const bot = c.participants.find((p) => !p.userId)
@@ -96,7 +96,7 @@ export function botReply(c: Conversation) {
   }, 5_000)
 }
 
-// ── RFQ helpers ──────────────────────────────────────────────────
+
 
 function botQuote(r: Rfq, name: string, i: number) {
   if (r.status !== 'open' || r.quotes.some((q) => q.supplier.name === name)) return
@@ -114,7 +114,7 @@ function botQuote(r: Rfq, name: string, i: number) {
   if (r.buyer.userId) notify(r.buyer.userId, { type: 'transaction_update', title: `Penawaran baru untuk ${r.code}`, body: `${name}: ${formatIdr(q.priceIdr)}/${r.quantity.unit}`, href: `/app/rfq/${r.id}` })
 }
 
-/** Platform suppliers who should see an RFQ: invited, or holding supply in its category. */
+
 function relevantSupplier(r: Rfq, userId: string) {
   if (r.buyer.userId === userId) return false
   if (r.invited.some((p) => p.userId === userId) || r.quotes.some((q) => q.supplier.userId === userId)) return true
@@ -138,7 +138,7 @@ function accept(r: Rfq, q: Quote, priceIdr: number, actorName: string) {
   if (r.buyer.userId && buyer && actorName !== r.buyer.name) notify(r.buyer.userId, { type: 'transaction_update', title: `${q.supplier.name} menerima tawaran balikmu`, body: `${r.code} · ${formatIdr(priceIdr)}/${r.quantity.unit}`, href: `/app/transactions/${buyer.id}` })
 }
 
-/** Pre-fill hints for "Pesan lagi" (repeat order) and "Minta penawaran" (listing). */
+
 export function createRfq(userId: string, input: Pick<Rfq, 'item' | 'categoryId' | 'quantity' | 'targetPriceIdr' | 'deadline' | 'location' | 'spec' | 'source'> & { invite?: TradeParty[] }) {
   const id = newId('rfq')
   const buyer = userParty(userId)
@@ -148,7 +148,7 @@ export function createRfq(userId: string, input: Pick<Rfq, 'item' | 'categoryId'
   }
   store.rfqs.unshift(r)
   save()
-  // Fictional suppliers in the category answer within seconds; invited fictional parties answer first.
+
   const bots = [...(input.invite ?? []).filter((p) => !p.userId).map((p) => p.name), ...BOT_SUPPLIERS[input.categoryId]].slice(0, 3)
   bots.forEach((name, i) => setTimeout(() => botQuote(r, name, i), 6_000 + i * 5_000))
   for (const u of db.users) if (relevantSupplier(r, u.id)) notify(u.id, { type: 'auction_invitation', title: `RFQ baru: ${r.item}`, body: `${buyer.name} butuh ${r.quantity.value.toLocaleString('id-ID')} ${r.quantity.unit} · ${CATEGORIES[r.categoryId].label}`, href: `/app/rfq/${r.id}` })
@@ -191,7 +191,7 @@ export const rfqHandlers = [
   http.get(api('/me/rfqs/:id'), authed(({ userId, params }) => {
     const r = store.rfqs.find((x) => x.id === params.id)
     if (!r || (r.buyer.userId !== userId && !relevantSupplier(r, userId))) return fail(404, 'not_found', 'RFQ tidak ditemukan')
-    // Suppliers only see their own quote, never competitors'.
+
     return HttpResponse.json(withSide(r.buyer.userId === userId ? r : { ...r, quotes: r.quotes.filter((q) => q.supplier.userId === userId) }, userId))
   })),
 
@@ -236,7 +236,7 @@ export const rfqHandlers = [
       save()
       const other = side === 'buyer' ? q.supplier : r.buyer
       if (other.userId) notify(other.userId, { type: 'transaction_update', title: `${r.code}: ${me.name} ${action === 'counter' ? 'menawar balik' : action === 'revise' ? 'merevisi harga' : action === 'decline' ? 'menolak' : 'menarik penawaran'}`, body: priceIdr ? `${formatIdr(Number(priceIdr))}/${r.quantity.unit}` : r.item, href: `/app/rfq/${r.id}` })
-      // A fictional supplier answers the counter after a short pause.
+
       if (action === 'counter' && !q.supplier.userId) {
         setTimeout(() => {
           if (q.status !== 'countered' || r.status !== 'open') return
@@ -264,7 +264,7 @@ export const rfqHandlers = [
     return HttpResponse.json(withSide(r, userId))
   })),
 
-  // Conversations
+
   http.get(api('/me/conversations'), authed(({ userId }) =>
     HttpResponse.json(store.conversations.filter((c) => c.participants.some((p) => p.userId === userId)).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))),
   )),

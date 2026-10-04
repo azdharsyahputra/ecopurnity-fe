@@ -19,7 +19,7 @@ import { allPersonal, notify, savePersonal } from './personal'
 import { admin, saveAdmin, tx as disputeTx } from './admin'
 import { org, orgAudit, orgUserIds, pools, saveOrg, type StoredPool } from './org'
 
-// Market Maker API (PRD §10). Every mutation is audited; anything that changes a participant's market notifies them.
+
 
 const api = (path: string) => `/api/v1${path}`
 const fail = (status: number, code: string, message: string, fields?: Record<string, string>) =>
@@ -30,7 +30,7 @@ const label = (s: MarketStatus) => statusMeta('market', s).label
 
 type Ctx = { userId: string; params: Record<string, string | readonly string[] | undefined>; request: Request }
 
-/** Session + market_maker capability, else 401/403. */
+
 const maker = (fn: (ctx: Ctx) => Response | Promise<Response>) =>
   async ({ params, request }: { params: Ctx['params']; request: Request }) => {
     await delay(250)
@@ -40,7 +40,7 @@ const maker = (fn: (ctx: Ctx) => Response | Promise<Response>) =>
     return fn({ userId, params, request })
   }
 
-/** One of this maker's markets, with its ops state; 404 for anyone else's. */
+
 function mine(userId: string, id: unknown) {
   if (!operatedIds(userId).includes(String(id))) return undefined
   const m = economy.markets.find((x) => x.id === id)!
@@ -63,7 +63,7 @@ function alerts(m: Market, o: MarketOps): MmAlert[] {
 const audited = (userId: string, m: Market, action: string, extra: { reason?: string; changes?: { field: string; before?: string; after?: string }[] } = {}) =>
   audit({ actor: actor(userId), action, entity: { type: 'market', id: m.id, label: m.name }, ...extra })
 
-// ── Prices per round (recorded results are derived, never editable) ──
+
 
 function results(m: MarketDetail, o: MarketOps): RoundResult[] {
   const up = ROUND_TYPE[m.mechanism] === 'forward'
@@ -87,7 +87,7 @@ function results(m: MarketDetail, o: MarketOps): RoundResult[] {
   return [...past, ...real]
 }
 
-// ── Analytics ────────────────────────────────────────────────────
+
 
 const mid = (m: Market) => (m.priceRange.minIdr + m.priceRange.maxIdr) / 2
 const weekLabel = (k: number) => {
@@ -96,7 +96,7 @@ const weekLabel = (k: number) => {
   return d.toISOString().slice(0, 10)
 }
 
-/** Matched demand and supply utilization now, weighted by market value so units don't matter. */
+
 function efficiency(markets: Market[]) {
   let demand = 0, supply = 0, matched = 0
   for (const m of markets) {
@@ -115,7 +115,7 @@ function analytics(markets: MarketDetail[]): MmAnalytics {
   const live = economy.auctions.filter((a) => isLive(a) && markets.some((m) => m.id === a.marketId))
   const eff = efficiency(markets)
   const seed = markets.reduce((s, m) => s + hash(m.id), 0)
-  // Latest week (k = 0) is exact so it matches the overview's matched-demand tile.
+
   const wobble = (k: number) => (k === 0 ? 1 : 0.97 + ((seed >>> k) % 7) / 100)
   const weeks = Array.from({ length: 8 }, (_, i) => 7 - i)
   return {
@@ -138,7 +138,7 @@ function analytics(markets: MarketDetail[]): MmAnalytics {
   }
 }
 
-// ── Participants & rounds helpers ────────────────────────────────
+
 
 const counts = (m: Market, p: MmParticipant, delta: 1 | -1) => {
   if (p.role === 'buyer') m.buyers = Math.max(0, m.buyers + delta)
@@ -152,7 +152,7 @@ const withAdminStatus = (d: MmDispute): MmDispute => {
   return c ? { ...d, status: c.transaction.dispute!.status } : d
 }
 
-/** Publishes a validated market for this maker (wizard or collective pool); `invite` adds known participants. */
+
 function formMarket(userId: string, input: CreateMarketInput, invite: Omit<MmParticipant, 'id' | 'status' | 'joinedAt'>[] = []): MarketDetail {
   const o = input.opportunityId ? economy.opportunities.find((x) => x.id === input.opportunityId) : undefined
   const user = db.users.find((u) => u.id === userId)!
@@ -189,7 +189,7 @@ function formMarket(userId: string, input: CreateMarketInput, invite: Omit<MmPar
     o.status = 'market_live'
     o.markets.push(m)
     mm.pipeline[o.id] = { stage: 'market_live', marketId: id }
-    // Contributors carry over: their contributed listings move into the new market (PRD F6).
+
     for (const [uid, p] of allPersonal()) {
       const rel = p.opportunities[o.id]
       if (!rel) continue
@@ -219,7 +219,7 @@ function formMarket(userId: string, input: CreateMarketInput, invite: Omit<MmPar
   return m
 }
 
-/** Opens the next round of a market as a live auction; `spec` overrides the lot spec (pool rounds carry the pool's). */
+
 function openRound(userId: string, m: MarketDetail, o: MarketOps, input: CreateRoundInput & { spec?: string }): AuctionDetail {
   const round = currentRound(m.id, o) + 1
   const rules: MarketRules = activeVersion(o.ruleVersions, round).rules
@@ -248,7 +248,7 @@ function openRound(userId: string, m: MarketDetail, o: MarketOps, input: CreateR
   m.activeAuctions++
   const before = m.status
   if (m.status === 'formation') m.status = 'active'
-  // The round that just started may switch the public rule list to a pending version.
+
   m.rules = rulesToLabeled(rules, unit)
   audited(userId, m, `Buka round ${round}: ${a.title}`, {
     changes: [
@@ -262,7 +262,7 @@ function openRound(userId: string, m: MarketDetail, o: MarketOps, input: CreateR
   return a
 }
 
-/** A collective pool as a market maker sees it: members masked unless they opted in, round state attached. */
+
 function makerPool({ makerUserId: _m, settlement, members, ...p }: StoredPool): CollectivePool {
   const a = p.auctionId ? economy.auctions.find((x) => x.id === p.auctionId) : undefined
   const mask = (m: { name: string; optIn: boolean; orgId?: string }, i: number) => (m.optIn ? m.name : `Bisnis lain #${i + 1}`)
@@ -273,7 +273,7 @@ function makerPool({ makerUserId: _m, settlement, members, ...p }: StoredPool): 
 }
 
 export const mmHandlers = [
-  // Operations overview (PRD §10.1)
+
   http.get(api('/mm/overview'), maker(({ userId }) => {
     const markets = operatedIds(userId).map((id) => economy.markets.find((m) => m.id === id)!)
     const rows: MmMarketRow[] = markets.map((m) => ({
@@ -295,11 +295,11 @@ export const mmHandlers = [
       events: [...(mm.events[userId] ?? []), ...bids].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 15),
       liveAuctions: live.map((a) => ({ id: a.id, title: a.title })),
     }
-    saveMm() // persist bot-driven round state now and then
+    saveMm()
     return HttpResponse.json(overview)
   })),
 
-  // Opportunity pipeline (PRD §10.2)
+
   http.get(api('/mm/opportunities'), maker(() => {
     const cards: PipelineCard[] = economy.opportunities.map((o) => {
       const p = mm.pipeline[o.id]
@@ -328,7 +328,7 @@ export const mmHandlers = [
     return new HttpResponse(null, { status: 204 })
   })),
 
-  // Collective pools asking for a market (PRD F6 "Settlement agregasi"): any maker can pick one up; afterwards only theirs.
+
   http.get(api('/mm/pools'), maker(({ userId }) =>
     HttpResponse.json(pools().filter((p) => p.status === 'market_requested' || p.makerUserId === userId).map(makerPool)))),
   http.post(api('/mm/pools/:id/market'), maker(async ({ userId, params, request }) => {
@@ -339,7 +339,7 @@ export const mmHandlers = [
     if (!(durationMinutes > 0)) return fail(422, 'validation', 'Pilih durasi', { durationMinutes: 'Pilih durasi' })
     const total = p.members.reduce((s, x) => s + x.quantity, 0)
     const lot = { value: total, unit: p.unit }
-    // One lot = the whole pool; unit, category and spec come from the pool; suppliers compete down from today's price.
+
     const m = formMarket(userId, {
       name: `Kolektif ${p.title} · ${p.region}`, objective: 'procurement', mechanism: 'collective_procurement', categoryId: p.categoryId, unit: p.unit,
       demand: total, supply: 0, referencePriceIdr: p.baseUnitPriceIdr, autoInvite: false, approval: 'auto', supplierVerification: 'documents',
@@ -360,7 +360,7 @@ export const mmHandlers = [
     return HttpResponse.json({ marketId: m.id, auctionId: a.id }, { status: 201 })
   })),
 
-  // Market creation wizard (PRD §10.3)
+
   http.post(api('/mm/markets'), maker(async ({ userId, request }) => {
     const input = (await request.json()) as CreateMarketInput
     const fields: Record<string, string> = { ...validateRules(input.rules) }
@@ -373,7 +373,7 @@ export const mmHandlers = [
     return HttpResponse.json({ id }, { status: 201 })
   })),
 
-  // Market operations detail (PRD §10.4)
+
   http.get(api('/mm/markets/:id'), maker(({ userId, params }) => {
     const x = mine(userId, params.id)
     if (!x) return fail(404, 'not_found', 'Market tidak ditemukan atau bukan operasimu')
@@ -508,7 +508,7 @@ export const mmHandlers = [
     return HttpResponse.json(d)
   })),
 
-  // Analytics (PRD §10.5); ?market= scopes to one market.
+
   http.get(api('/mm/analytics'), maker(({ userId, request }) => {
     const only = new URL(request.url).searchParams.get('market')
     const ids = operatedIds(userId).filter((id) => !only || id === only)

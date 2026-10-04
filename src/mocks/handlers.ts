@@ -35,7 +35,7 @@ function issueCode(email: string) {
   db.verifyCodes.set(email, { code, attempts: 0, sentAt: Date.now(), expiresAt: Date.now() + 10 * 60_000 })
 }
 
-/** `?page=&pageSize=` over an already filtered list (PRD §13 list contract). */
+
 function paginate<T>(items: T[], url: URL): Page<T> {
   const page = Math.max(1, Number(url.searchParams.get('page') ?? 1))
   const pageSize = Math.min(50, Number(url.searchParams.get('pageSize') ?? 12))
@@ -54,10 +54,10 @@ function matches(url: URL, item: { categoryId: CategoryId; region: string; statu
 }
 
 export const handlers = [
-  // Payment gateway webhook (Midtrans → API). The mock gateway settles by itself (src/mocks/payments.ts): nothing to do.
+
   http.post(api('/payments/midtrans/notification'), () => HttpResponse.json({ received: true })),
 
-  // ── Auth (PRD §7) ──
+
   http.get(api('/auth/me'), async () => {
     await delay(150)
     const user = sessionUser()
@@ -69,7 +69,7 @@ export const handlers = [
     await delay(400)
     const { email, password } = (await request.json()) as { email: string; password: string }
     const user = db.users.find((u) => u.email === email.trim().toLowerCase() && u.password === password)
-    // Same message for unknown email and wrong password.
+
     if (!user) return fail(401, 'invalid_credentials', 'Email atau password salah')
     if (admin.users[user.id]?.status === 'suspended') {
       const ap = admin.appeals?.[user.id]
@@ -80,7 +80,7 @@ export const handlers = [
     return HttpResponse.json(toUser(user))
   }),
 
-  // Suspension appeal (PRD F6): suspended accounts can't sign in, so the appeal re-checks the credentials.
+
   http.post(api('/auth/appeal'), async ({ request }) => {
     await delay(400)
     const { email = '', password, reason } = (await request.json()) as { email?: string; password?: string; reason?: string }
@@ -113,7 +113,7 @@ export const handlers = [
     return HttpResponse.json(toUser(user), { status: 201 })
   }),
 
-  // Mock OAuth: the "provider" always returns the same Google account.
+
   http.post(api('/auth/google'), async () => {
     await delay(600)
     const email = 'tamu.google@gmail.com'
@@ -135,7 +135,7 @@ export const handlers = [
     return noContent()
   }),
 
-  // Email verification by 6-digit code: needs the session; 10 minutes, 5 attempts, resend once a minute.
+
   http.post(api('/auth/verify-email'), async ({ request }) => {
     await delay(400)
     const user = sessionUser()
@@ -171,7 +171,7 @@ export const handlers = [
     return noContent()
   }),
 
-  // Always 204 so the response never reveals whether an email is registered.
+
   http.post(api('/auth/forgot-password'), async ({ request }) => {
     await delay(400)
     const { email } = (await request.json()) as { email: string }
@@ -193,7 +193,7 @@ export const handlers = [
     return noContent()
   }),
 
-  /** Mock-only: lets the UI show what a real BE would have emailed (verification code, reset link token). */
+
   http.get(api('/_mock/outbox'), ({ request }) => {
     const email = new URL(request.url).searchParams.get('email')?.trim().toLowerCase() ?? sessionUser()?.email ?? ''
     return HttpResponse.json({ verifyCode: db.verifyCodes.get(email)?.code ?? null, resetToken: db.resetTokens.get(email) ?? null })
@@ -216,7 +216,7 @@ export const handlers = [
     return HttpResponse.json(toUser(user))
   }),
 
-  // ── Public economy ──
+
   http.get(api('/public/stats'), async () => {
     await delay(200)
     return HttpResponse.json(db.stats)
@@ -242,7 +242,7 @@ export const handlers = [
     await delay(300)
     const o = economy.opportunities.find((x) => x.id === params.id)
     if (!o) return fail(404, 'not_found', 'Opportunity tidak ditemukan')
-    // Visitors get initials only (PRD §6.3).
+
     const masked = sessionUser()
       ? o.participantsPreview
       : o.participantsPreview.map((p) => ({ ...p, name: p.name.replace(/\B\w+/g, '•••') }))
@@ -280,7 +280,7 @@ export const handlers = [
     await delay(250)
     const a = economy.auctions.find((x) => x.id === params.id)
     if (!a) return fail(404, 'not_found', 'Auction tidak ditemukan')
-    // Flag the viewer's own bids so the room can say "Kamu"; everyone else only sees the masked name.
+
     const viewer = db.sessionUserId
     return HttpResponse.json({ ...a, bids: a.bids.map((b) => (viewer && economy.bidOwners.get(b.id) === viewer ? { ...b, mine: true } : b)) })
   }),

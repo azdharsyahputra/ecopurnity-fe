@@ -4,9 +4,9 @@ import type {
 import type { DisputeStatus, Tone } from './status'
 import type { MarketRules, RuleVersion } from './marketRules'
 
-// Market Maker workspace contract (PRD §10). Kept apart from types.ts so F4 owns its own shapes.
 
-// ── Opportunity pipeline ─────────────────────────────────────────
+
+
 
 export type PipelineStage = 'detected' | 'evaluating' | 'forming' | 'market_live' | 'dismissed'
 
@@ -18,7 +18,7 @@ export const PIPELINE_STAGES: Record<PipelineStage, { label: string; tone: Tone 
   dismissed: { label: 'Dismissed', tone: 'gray' },
 }
 
-/** Manual moves. Market Live is only reached by publishing a market; dismissing needs a reason. */
+
 export const PIPELINE_MOVES: Record<PipelineStage, PipelineStage[]> = {
   detected: ['evaluating', 'forming', 'dismissed'],
   evaluating: ['detected', 'forming', 'dismissed'],
@@ -36,7 +36,7 @@ export interface PipelineCard extends Opportunity {
   marketId?: string
 }
 
-// ── Operations ───────────────────────────────────────────────────
+
 
 export type MmAlertKind = 'low_liquidity' | 'disputes' | 'approvals'
 
@@ -56,7 +56,7 @@ export interface MmOverview {
   stats: { activeMarkets: number; participants: number; activeAuctions: number; volumeIdr: number; matchedDemand: number }
   markets: MmMarketRow[]
   events: ActivityEvent[]
-  /** Subscribe to `auction:{id}` for these to keep the feed live. */
+
   liveAuctions: { id: string; title: string }[]
 }
 
@@ -75,7 +75,7 @@ export interface MmParticipant extends PartyRef {
   status: ParticipantStatus
   reputation: number
   joinedAt: string
-  /** Set when the participant is a platform account we can notify. */
+
   userId?: string
   note?: string
 }
@@ -87,7 +87,7 @@ export interface MmDispute {
   status: DisputeStatus
   openedAt: string
   resolution?: string
-  /** Admin dispute case id once a market maker escalated it (PRD F6); status then follows the admin case. */
+
   escalatedTo?: string
 }
 
@@ -95,7 +95,7 @@ export type ParticipantAction = 'approve' | 'reject' | 'verify' | 'suspend'
 export type DisputeAction = 'review' | 'resolve' | 'escalate'
 export type MarketStatusAction = 'pause' | 'resume' | 'close'
 
-/** A round's recorded prices. Closed rounds are history: read-only everywhere. */
+
 export interface RoundResult {
   round: number
   auctionId?: string
@@ -113,7 +113,7 @@ export interface MmMarketOps {
   participants: MmParticipant[]
   disputes: MmDispute[]
   ruleVersions: RuleVersion[]
-  /** Rounds started so far; the next round is `currentRound + 1`. */
+
   currentRound: number
   rounds: Auction[]
   results: RoundResult[]
@@ -128,7 +128,7 @@ export interface CreateRoundInput {
   durationMinutes: number
 }
 
-// ── Analytics ────────────────────────────────────────────────────
+
 
 export interface MmAnalytics {
   liquidity: { buyers: number; suppliers: number; activeOrders: number; ratio: number }
@@ -138,7 +138,7 @@ export interface MmAnalytics {
   priceDiscovery: { marketId: string; name: string; unit: string; rounds: RoundResult[] }[]
 }
 
-// ── Market formation ─────────────────────────────────────────────
+
 
 export type SupplierVerification = 'none' | 'documents' | 'verified_business'
 
@@ -155,7 +155,7 @@ export interface CreateMarketInput {
   mechanism: MarketMechanism
   categoryId: CategoryId
   unit: string
-  /** Expected monthly quantities, same unit. Prefilled from the opportunity. */
+
   demand: number
   supply: number
   referencePriceIdr: number
@@ -165,7 +165,7 @@ export interface CreateMarketInput {
   supplierVerification: SupplierVerification
 }
 
-/** Longer guidance than MECHANISMS.hint: when each mechanism fits. */
+
 export const MECHANISM_GUIDE: Record<MarketMechanism, string> = {
   forward_auction: 'Cocok saat supply terbatas dan banyak pembeli bersaing, misalnya hasil panen premium.',
   reverse_auction: 'Cocok untuk pengadaan: satu kebutuhan jelas, supplier menurunkan harga sampai titik terbaik.',
@@ -175,16 +175,16 @@ export const MECHANISM_GUIDE: Record<MarketMechanism, string> = {
   collective_procurement: 'Cocok saat banyak pembeli kecil membutuhkan barang yang sama; volume digabung untuk harga skala.',
 }
 
-/** Auction type a market's rounds run as. */
+
 export const ROUND_TYPE: Record<MarketMechanism, AuctionType> = {
   forward_auction: 'forward', reverse_auction: 'reverse', sealed_bid: 'sealed', dutch_auction: 'dutch',
   direct_market: 'reverse', collective_procurement: 'reverse',
 }
 
-/**
- * Rough pre-launch estimate shown on the wizard's review step.
- * ponytail: linear heuristics, not a model; replace with the engine's simulation endpoint when BE has one.
- */
+
+
+
+
 export function simulateMarket(input: {
   invited: number
   demand: number
@@ -204,7 +204,7 @@ export function simulateMarket(input: {
   const coverage = input.demand > 0 ? Math.min(1, input.supply / input.demand) : 0
   const suppliers = Math.max(1, Math.round(participants * (0.15 + 0.25 * coverage)))
   const buyers = Math.max(1, participants - suppliers)
-  // Scarce supply pushes forward/collective prices up; reverse/dutch competition pushes them down.
+
   const down = ['reverse_auction', 'dutch_auction', 'collective_procurement', 'sealed_bid'].includes(input.mechanism)
   const pressure = down ? -(0.04 + 0.06 * Math.min(1, suppliers / 8)) : 0.03 + 0.08 * (1 - coverage)
   const mid = Math.round(input.referencePriceIdr * (1 + pressure))
@@ -212,7 +212,7 @@ export function simulateMarket(input: {
     participants,
     buyers,
     suppliers,
-    /** Buyers per supplier. */
+
     ratio: buyers / suppliers,
     liquidity: (suppliers >= 5 && buyers / suppliers <= 8 ? 'baik' : suppliers >= 3 ? 'cukup' : 'rendah') as 'baik' | 'cukup' | 'rendah',
     priceLowIdr: Math.round(mid * 0.96),
@@ -220,5 +220,5 @@ export function simulateMarket(input: {
   }
 }
 
-/** Liquidity alert threshold shared by the overview and detail views. */
+
 export const lowLiquidity = (m: Pick<Market, 'buyers' | 'suppliers'>) => m.suppliers < 8 || m.buyers / Math.max(1, m.suppliers) > 10

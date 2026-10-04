@@ -10,8 +10,8 @@ import type { MarketRules } from '@/domain/marketRules'
 import type { Settlement } from '@/domain/settlement'
 import type { CollectivePool } from '@/domain/org'
 
-// Market Maker workspace data (PRD §10). Keys start with 'mm'; mutations also refresh the public
-// economy lists because markets, rounds and opportunity statuses are shared with them.
+
+
 
 const json = (method: string, body?: unknown) => ({ method, json: body })
 
@@ -27,7 +27,7 @@ export const useMmOverview = () => useQuery({ queryKey: ['mm', 'overview'], quer
 
 export const usePipeline = () => useQuery({ queryKey: ['mm', 'pipeline'], queryFn: () => api<PipelineCard[]>('/mm/opportunities') })
 
-/** Collective pools asking for a market, plus the ones this maker already formed (PRD F6). */
+
 export const usePoolRequests = () => useQuery({ queryKey: ['mm', 'pools'], queryFn: () => api<CollectivePool[]>('/mm/pools'), refetchInterval: 10_000 })
 
 export const useFormPoolMarket = () =>
@@ -36,7 +36,7 @@ export const useFormPoolMarket = () =>
 export const useMoveOpportunity = () =>
   useMmMutation((v: { id: string; stage: PipelineStage; reason?: string }) => api(`/mm/opportunities/${v.id}/stage`, json('POST', { stage: v.stage, reason: v.reason })))
 
-/** Full opportunity (participants, mechanism reason) for prefilling the wizard. */
+
 export const useMmOpportunity = (id: string | null) =>
   useQuery({ queryKey: ['mm', 'opportunity', id], queryFn: () => api<OpportunityDetail>(`/opportunities/${id}`), enabled: !!id })
 
@@ -70,7 +70,7 @@ export const useDisputeAction = (marketId: string) =>
 export const useMmAnalytics = (marketId?: string) =>
   useQuery({ queryKey: ['mm', 'analytics', marketId ?? 'all'], queryFn: () => api<MmAnalytics>(`/mm/analytics${marketId ? `?market=${marketId}` : ''}`) })
 
-/** One search param as state (replace navigation, '' removes it). */
+
 export function useParam(key: string) {
   const [params, setParams] = useSearchParams()
   const set = (v: string) => setParams((p) => (v ? p.set(key, v) : p.delete(key), p), { replace: true })

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { statusMeta, type Entity, type StatusOf, type Tone } from '@/domain/status'
 
-/** Notion-style colored pill. */
+
 export function Tag({ tone = 'gray', className, children }: { tone?: Tone; className?: string; children: ReactNode }) {
   return (
     <span

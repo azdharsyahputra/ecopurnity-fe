@@ -4,7 +4,7 @@ import { ApiError } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { Input } from './ui/input'
 
-// Form controls with label, hint and API field errors (PRD §13 `error.fields`).
+
 
 const controlClass =
   'w-full rounded-lg border border-input bg-background text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive dark:bg-input/30'
@@ -37,7 +37,7 @@ export function Field({ label, error, hint, aside, ...input }: Common & Componen
   )
 }
 
-/** Password field with an accessible control to show or hide its value. */
+
 export function PasswordField({ label, error, hint, aside, visible, onToggle, ...input }: Common & Omit<ComponentProps<'input'>, 'type'> & { visible: boolean; onToggle: () => void }) {
   const id = useId()
   const Icon = visible ? EyeOff : Eye
@@ -105,7 +105,7 @@ export function Segmented<T extends string>({ label, value, options, onChange }:
   )
 }
 
-/** Request-level error; field errors are shown under their inputs instead. */
+
 export function FormError({ error }: { error: unknown }) {
   if (!error || (error instanceof ApiError && error.fields)) return null
   return (

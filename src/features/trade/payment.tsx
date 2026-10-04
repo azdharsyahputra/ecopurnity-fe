@@ -14,12 +14,12 @@ import { FormError } from '@/components/form'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
-// The buyer's "Bayar" step: pick a method (Midtrans Core API in the API), then follow the instructions until the
-// gateway reports the payment; the trade then moves on by itself.
+
+
 
 const TONE: Record<string, Tone> = { bca: 'blue', bni: 'orange', bri: 'blue', permata: 'green', cimb: 'red', mandiri: 'yellow', qris: 'gray', gopay: 'teal', shopeepay: 'orange' }
 
-/** Digits in groups of four for reading aloud / typing; the copy button copies the raw number. */
+
 const group4 = (s: string) => s.replace(/(\d{4})(?=\d)/g, '$1 ')
 
 function CopyValue({ label, value, copy = value, big }: { label: string; value: string; copy?: string; big?: boolean }) {
@@ -106,7 +106,7 @@ function MethodDialog({ t, open, onPick, onClose, busy, error }: { t: Transactio
     </div>
   )
   return (
-    // Always mounted: a dialog mounted by the click that opens it would see that click as an outside press and close.
+
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
@@ -130,14 +130,14 @@ function MethodDialog({ t, open, onPick, onClose, busy, error }: { t: Transactio
   )
 }
 
-/** Replaces the `pay` step's button: method picker, instructions while pending, and the outcome. */
+
 export function PayPanel({ t, scope }: { t: TransactionDetail; scope: TradeScope }) {
   const qc = useQueryClient()
   const { data: p } = useCurrentPayment(scope, t.id)
   const { create, cancel } = usePaymentActions(scope, t.id)
   const [picking, setPicking] = useState(false)
 
-  // Pending → settlement: the trade moved on (escrow or payout); refresh it.
+
   const prev = useRef(p?.status)
   useEffect(() => {
     if (prev.current === 'pending' && p?.status === 'settlement') {

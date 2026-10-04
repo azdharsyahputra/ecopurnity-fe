@@ -3,7 +3,7 @@ import { api } from '@/lib/api'
 import type { ReputationReport } from '@/domain/reputation'
 import type { BusinessProfile, Match, MatchAction, PublicProfile } from './types'
 
-// Participant keys start with 'me' (live notifications refresh them); public profile keys with 'profile'.
+
 
 export const useMatches = () => useQuery({ queryKey: ['me', 'matches'], queryFn: () => api<Match[]>('/me/matches') })
 
@@ -23,5 +23,5 @@ export const usePublicProfile = (username: string) =>
 export const useBusinessProfile = (slug: string) =>
   useQuery({ queryKey: ['profile', 'b', slug], queryFn: () => api<BusinessProfile>(`/profiles/b/${encodeURIComponent(slug)}`) })
 
-/** Plain-language band for a 0–100 score. */
+
 export const scoreBand = (score: number) => (score >= 90 ? 'Sangat baik' : score >= 80 ? 'Baik' : score >= 60 ? 'Cukup' : 'Perlu perhatian')

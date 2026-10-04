@@ -110,7 +110,7 @@ function DismissDialog({ o, onClose }: { o: PipelineCard; onClose: () => void })
 
 const MOCKS = import.meta.env.VITE_USE_MOCKS !== 'false'
 
-/** Collective procurement pools that asked for a market: one click forms the market and opens its round (PRD F6). */
+
 function PoolRequests() {
   const query = usePoolRequests()
   const form = useFormPoolMarket()
@@ -175,7 +175,7 @@ function PoolRequests() {
 
 export function PipelinePage() {
   const query = usePipeline()
-  // Dismiss dialog is URL state (?dismiss=<opportunityId>).
+
   const [dismissId, setDismiss] = useParam('dismiss')
   const [stageParam, setStage] = useParam('stage')
   const selectedStage = STAGES.includes(stageParam as PipelineStage) ? stageParam as PipelineStage : null

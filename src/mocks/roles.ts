@@ -11,7 +11,7 @@ import { notify } from './personal'
 import { allOrgs, newId, org, orgAudit, saveOrg } from './org'
 import { asAdmin, reasonError } from './adminHandlers'
 
-// Role activation (PRD F6): market maker applications, org invitations, creating an organisation.
+
 
 const api = (path: string) => `/api/v1${path}`
 const fail = (status: number, code: string, message: string, fields?: Record<string, string>) =>
@@ -38,7 +38,7 @@ function save() {
 
 const latestOf = (userId: string) => applications.find((a) => a.userId === userId) ?? null
 
-/** Stores an application (newest first) and tells the admins. Onboarding calls this too. */
+
 export function createMmApplication(user: MockUser, input: MmApplicationInput) {
   const a: MmApplication = {
     id: newId('mma'), userId: user.id, applicant: user.name, email: user.email, status: 'pending', submittedAt: now(),
@@ -53,7 +53,7 @@ export function createMmApplication(user: MockUser, input: MmApplicationInput) {
   return a
 }
 
-/** Org members still `invited` under this email, across every stored org. */
+
 function invitationsFor(email: string): OrgInvitation[] {
   return allOrgs().flatMap(([orgId, o]) =>
     o.members
@@ -66,7 +66,7 @@ function invitationsFor(email: string): OrgInvitation[] {
 }
 
 export const roleHandlers = [
-  // ── Market maker application ──
+
   http.get(api('/me/mm-application'), async () => {
     await delay(200)
     const user = sessionUser()
@@ -118,7 +118,7 @@ export const roleHandlers = [
     return HttpResponse.json(a)
   })),
 
-  // ── Org invitations ──
+
   http.get(api('/me/invitations'), async () => {
     await delay(200)
     const user = sessionUser()
@@ -137,7 +137,7 @@ export const roleHandlers = [
     const m = o.members.find((x) => x.id === inv.id)!
     if (action === 'accept') {
       Object.assign(m, { status: 'active', userId: user.id, name: user.name, joinedAt: now() })
-      // ponytail: custom org roles ride in the OrgRole slot; orgAuthed resolves them via org settings.
+
       if (!user.orgs.some((x) => x.orgId === inv.orgId)) {
         user.orgs.push({ orgId: inv.orgId, orgName: inv.orgName, role: inv.role as OrgRole, verified: o.settings.profile.verification === 'verified' })
         saveRoles(user)
@@ -158,7 +158,7 @@ export const roleHandlers = [
     return HttpResponse.json(toUser(user))
   }),
 
-  // ── Create organisation ──
+
   http.post(api('/orgs'), async ({ request }) => {
     await delay(500)
     const user = sessionUser()
@@ -170,7 +170,7 @@ export const roleHandlers = [
     const name = input.name.trim()
     user.orgs.push({ orgId, orgName: name, role: 'owner', verified: false })
     saveRoles(user)
-    // Seeds a blank org with this user as the only (owner) member.
+
     const o = org(orgId)
     Object.assign(o.settings.profile, { industry: `${input.type} · ${CATEGORIES[input.categoryId].label}`, categories: [input.categoryId] })
     o.settings.profile.legal.npwp = input.npwp?.trim() ?? ''

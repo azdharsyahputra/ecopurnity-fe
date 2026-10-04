@@ -8,7 +8,7 @@ import { newId, notify, personal } from './personal'
 import { userParty } from './rfq'
 import { createTrade } from './trade'
 
-// Standing supply contracts (PRD F6). One record shared by both sides; each run is a normal trade.
+
 
 const api = (path: string) => `/api/v1${path}`
 const fail = (status: number, code: string, message: string, fields?: Record<string, string>) =>
@@ -53,7 +53,7 @@ function placeOrder(c: Contract) {
   }
 }
 
-/** Places due orders, and lets fictional counterparties accept proposals. Called from the realtime loop. */
+
 export function contractTick() {
   let changed = false
   for (const c of store) {

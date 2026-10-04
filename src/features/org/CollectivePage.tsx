@@ -90,7 +90,7 @@ function CreatePoolDialog({ onClose, onCreated }: { onClose: () => void; onCreat
   )
 }
 
-/** After a market maker picks the pool up: its round, then the pro-rata split with this org's own sub-PO (PRD F6). */
+
 function PoolMarket({ pool }: { pool: PoolView }) {
   const access = useOrgAccess()
   const s = pool.settlement
@@ -125,7 +125,7 @@ function PoolMarket({ pool }: { pool: PoolView }) {
   )
 }
 
-/** Your demand + other businesses = collective demand (PRD §9.5). */
+
 function Aggregation({ pool, marketDeny, onJoin }: { pool: PoolView; marketDeny?: string; onJoin: () => void }) {
   const act = usePoolAction()
   const t = poolTotals(pool)
