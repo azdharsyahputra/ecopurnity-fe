@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowDown, ArrowUp } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { EmptyState } from './States'
 
@@ -55,21 +55,21 @@ export function DataTable<T>({
 
   return (
     <>
-      <div className="hidden overflow-hidden rounded-xl border bg-card md:block">
+      <div className="hidden overflow-hidden rounded-2xl border bg-card shadow-sm shadow-foreground/[0.025] md:block">
         <table className="w-full text-sm">
           <caption className="sr-only">{caption}</caption>
-          <thead className="border-b text-left text-xs text-muted-foreground">
+          <thead className="border-b bg-muted/40 text-left text-[11px] font-semibold tracking-[0.1em] text-muted-foreground uppercase">
             <tr>
               {columns.map((c) => (
                 <th
                   key={c.key}
                   scope="col"
                   aria-sort={sort?.key === c.key ? (sort.dir === 'asc' ? 'ascending' : 'descending') : undefined}
-                  className={cn('px-4 py-2.5 font-medium', c.align === 'right' && 'text-right')}
+                  className={cn('px-5 py-3 font-semibold', c.align === 'right' && 'text-right')}
                 >
                   {c.sortValue ? (
                     <button type="button" onClick={() => toggle(c.key)} className={cn('inline-flex items-center gap-1 hover:text-foreground', c.align === 'right' && 'flex-row-reverse')}>
-                      {c.header}
+                      <span>{c.header}</span>
                       {sort?.key === c.key && (sort.dir === 'asc' ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" />)}
                     </button>
                   ) : (
@@ -79,17 +79,17 @@ export function DataTable<T>({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y">
+          <tbody className="divide-y divide-border/70">
             {sorted.map((r) => (
               <tr
                 key={rowKey(r)}
                 onClick={rowHref ? () => navigate(rowHref(r)) : undefined}
-                className={cn(rowHref && 'cursor-pointer hover:bg-hover')}
+                className={cn('transition-colors', rowHref && 'group cursor-pointer hover:bg-muted/35')}
               >
                 {columns.map((c) => (
-                  <td key={c.key} className={cn('px-4 py-3', c.align === 'right' && 'num text-right', c.className)}>
+                  <td key={c.key} className={cn('px-5 py-4', c.align === 'right' && 'num text-right', c.className)}>
                     {c === primary && rowHref ? (
-                      <Link to={rowHref(r)} onClick={(e) => e.stopPropagation()} className="font-medium hover:underline">
+                      <Link to={rowHref(r)} onClick={(e) => e.stopPropagation()} className="font-semibold decoration-primary/50 underline-offset-4 group-hover:text-primary group-hover:underline">
                         {c.cell(r)}
                       </Link>
                     ) : (
@@ -103,7 +103,7 @@ export function DataTable<T>({
         </table>
       </div>
 
-      <ul className="flex flex-col gap-2 md:hidden" aria-label={caption}>
+      <ul className="flex flex-col gap-3 md:hidden" aria-label={caption}>
         {sorted.map((r) => (
           <li key={rowKey(r)}>
             <div
@@ -111,14 +111,17 @@ export function DataTable<T>({
               tabIndex={rowHref ? 0 : undefined}
               onClick={rowHref ? () => navigate(rowHref(r)) : undefined}
               onKeyDown={rowHref ? (e) => e.key === 'Enter' && navigate(rowHref(r)) : undefined}
-              className={cn('rounded-xl border bg-card p-3.5', rowHref && 'cursor-pointer active:bg-hover')}
+              className={cn('rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] transition-colors', rowHref && 'cursor-pointer hover:border-primary/25 hover:bg-muted/15 active:bg-muted/35')}
             >
-              <div className="font-medium">{primary.cell(r)}</div>
-              <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 font-semibold leading-snug">{primary.cell(r)}</div>
+                {rowHref && <ChevronRight className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />}
+              </div>
+              <dl className="mt-3 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
                 {rest.map((c) => (
-                  <div key={c.key} className="min-w-0">
-                    <dt className="text-xs text-muted-foreground">{c.header}</dt>
-                    <dd className="truncate">{c.cell(r)}</dd>
+                  <div key={c.key} className="min-w-0 rounded-xl bg-muted/35 px-2.5 py-2">
+                    <dt className="truncate text-[11px] font-medium text-muted-foreground">{c.header}</dt>
+                    <dd className="mt-1 truncate text-sm font-medium">{c.cell(r)}</dd>
                   </div>
                 ))}
               </dl>
