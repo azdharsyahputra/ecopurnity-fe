@@ -45,7 +45,7 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="rounded-2xl border bg-card p-5 shadow-sm sm:p-7">
+    <div>
       <div className="mb-6 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-primary">
         <span className="size-2 rounded-full bg-lime" /> Ecopurnity
       </div>
@@ -221,6 +221,8 @@ export function ResetPasswordPage() {
   const reset = useResetPassword()
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
   const mismatch = confirm.length > 0 && confirm !== password
 
   if (!token || (reset.error instanceof ApiError && reset.error.code === 'invalid_token'))
@@ -245,10 +247,10 @@ export function ResetPasswordPage() {
     <form onSubmit={(e) => (e.preventDefault(), !mismatch && reset.mutate({ token, password }))} className="flex flex-col gap-5">
       <AuthHeading title="Buat password baru" />
       <div className="flex flex-col gap-2">
-        <Field label="Password baru" type="password" autoComplete="new-password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} error={fieldError(reset.error, 'password')} />
+        <PasswordField label="Password baru" autoComplete="new-password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} error={fieldError(reset.error, 'password')} visible={showPassword} onToggle={() => setShowPassword((shown) => !shown)} />
         <StrengthMeter password={password} />
       </div>
-      <Field label="Ulangi password" type="password" autoComplete="new-password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} error={mismatch ? 'Password tidak sama' : undefined} />
+      <PasswordField label="Ulangi password" autoComplete="new-password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} error={mismatch ? 'Password tidak sama' : undefined} visible={showConfirm} onToggle={() => setShowConfirm((shown) => !shown)} />
       <FormError error={reset.error} />
       <Button type="submit" className="h-10" disabled={reset.isPending || mismatch}>{reset.isPending ? 'Menyimpan…' : 'Simpan password'}</Button>
     </form>
