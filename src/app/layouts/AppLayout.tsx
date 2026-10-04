@@ -75,8 +75,8 @@ function NavLinkItem({ ws, item, onNavigate }: { ws: Workspace; item: NavItem; o
       onClick={onNavigate}
       className={({ isActive }) =>
         cn(
-          'group flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground/80 transition-colors hover:bg-hover hover:text-sidebar-foreground',
-          isActive && 'bg-hover font-medium text-sidebar-foreground',
+          'group flex items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-2 text-sm text-sidebar-foreground/80 transition-colors hover:bg-hover hover:text-sidebar-foreground',
+          isActive && (ws.id === 'personal' ? 'border-primary/15 bg-background font-medium text-sidebar-foreground shadow-sm' : 'bg-hover font-medium text-sidebar-foreground'),
         )
       }
     >
@@ -103,13 +103,13 @@ function Sidebar({ ws, all, onNavigate }: { ws: Workspace; all: Workspace[]; onN
           onNavigate?.()
           openPalette(true)
         }}
-        className="mt-1 flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground/80 hover:bg-hover"
+        className="mt-2 flex items-center gap-2.5 rounded-lg border bg-background/70 px-2.5 py-2 text-sm text-sidebar-foreground/80 shadow-sm hover:bg-hover"
       >
         <Search className="size-4 text-muted-foreground" />
         <span className="flex-1 text-left">Cari</span>
         <kbd className="text-xs text-muted-foreground">{isMac ? '⌘K' : 'Ctrl K'}</kbd>
       </button>
-      <nav aria-label={ws.label} className="mt-3 flex flex-col gap-px">
+      <nav aria-label={ws.label} className="mt-3 flex min-h-0 flex-1 flex-col gap-px overflow-y-auto overscroll-contain pr-0.5">
         {ws.items.map((item) => (
           <NavLinkItem key={item.path} ws={ws} item={item} onNavigate={onNavigate} />
         ))}
@@ -150,7 +150,7 @@ export function AppLayout() {
 
   return (
     <div className="flex min-h-svh">
-      <aside className="sticky top-0 hidden h-svh w-60 shrink-0 border-r bg-sidebar md:block">
+      <aside className={cn('sticky top-0 hidden h-svh w-60 shrink-0 border-r bg-sidebar md:block', ws.id === 'personal' && 'shadow-sm shadow-foreground/[0.025]')}>
         <Sidebar ws={ws} all={all} />
       </aside>
 
@@ -162,7 +162,7 @@ export function AppLayout() {
       </Sheet>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-12 items-center gap-2 bg-background/85 px-3 backdrop-blur md:px-6">
+        <header className={cn('sticky top-0 z-30 flex h-14 items-center gap-2 bg-background/85 px-3 backdrop-blur md:px-6', ws.id === 'personal' && 'border-b border-border/70 shadow-sm shadow-foreground/[0.02]')}>
           <Button variant="ghost" size="icon-sm" className="md:hidden" onClick={() => setDrawer(true)} aria-label="Buka navigasi">
             <Menu />
           </Button>
@@ -171,7 +171,7 @@ export function AppLayout() {
             {page && page.path !== '' && (
               <>
                 <span className="text-muted-foreground/60">/</span>
-                <span className="truncate">{page.label}</span>
+                <span className="truncate font-medium">{page.label}</span>
               </>
             )}
           </nav>
@@ -180,8 +180,8 @@ export function AppLayout() {
             <EntityAvatar name={me!.name} src={me!.avatarUrl} size={26} className="ml-1" />
           </div>
         </header>
-        <main className="flex-1">
-          <div className="mx-auto w-full max-w-6xl px-4 pt-6 pb-16 md:px-10 md:pt-10">
+        <main className={cn('flex-1', ws.id === 'personal' && 'bg-muted/20')}>
+          <div className={cn('mx-auto w-full max-w-6xl px-4 pt-6 pb-16 md:px-10 md:pt-8', ws.id === 'personal' && 'participant-workspace')}>
             <Suspense fallback={<Skeleton className="h-96 rounded-xl" />}>
               <Outlet />
             </Suspense>
