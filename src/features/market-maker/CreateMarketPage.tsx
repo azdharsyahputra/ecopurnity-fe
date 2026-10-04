@@ -271,6 +271,7 @@ export function CreateMarketPage() {
         description={oppId ? 'Dibentuk dari opportunity; isian sudah diisi dari rekomendasi engine.' : 'Ubah kebutuhan atau peluang menjadi market dengan aturan yang transparan.'}
         icon={SquarePlus}
         tone="purple"
+        featured
       />
       {oppId ? (
         <AsyncView query={opp} skeleton={<Skeleton className="h-96 rounded-xl" />}>
