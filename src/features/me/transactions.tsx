@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Link2, ReceiptText, Repeat, RotateCcw, Truck, Wallet } from 'lucide-react'
+import { BadgeCheck, CircleDollarSign, Clock3, Link2, ReceiptText, Repeat, RotateCcw, Truck, Wallet } from 'lucide-react'
 import { TERMS } from '@/domain/trade'
-import { formatIdr, formatRelative } from '@/domain/format'
+import { formatIdr, formatNumber, formatRelative } from '@/domain/format'
+import { cn } from '@/lib/utils'
 import { personalTradeScope, useTransaction, useTransactions } from './hooks'
 import { ActionPanel, TradeSections } from '@/features/trade/components'
 import { PageHeader } from '@/components/PageHeader'
@@ -10,7 +11,6 @@ import { AsyncView, EmptyState } from '@/components/States'
 import { StatusBadge, Tag } from '@/components/Tag'
 import { EntityAvatar } from '@/components/EntityAvatar'
 import { DataTable } from '@/components/DataTable'
-import { Segmented } from '@/components/form'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -25,15 +25,47 @@ export function TransactionsPage() {
         icon={ReceiptText}
         tone="purple"
         featured
-        actions={<Segmented label="Peran" value={role} options={[['', 'Semua'], ['buyer', 'Sebagai pembeli'], ['supplier', 'Sebagai supplier']]} onChange={setRole} />}
+        actions={
+          <div role="group" aria-label="Filter peran transaksi" className="inline-flex flex-wrap rounded-xl border bg-muted/55 p-1">
+            {([['', 'Semua'], ['buyer', 'Sebagai pembeli'], ['supplier', 'Sebagai supplier']] as const).map(([value, label]) => (
+              <button key={value || 'all'} type="button" aria-pressed={role === value} onClick={() => setRole(value)}
+                className={cn('inline-flex h-9 items-center rounded-lg border px-3 text-sm font-medium transition-colors', role === value ? 'border-primary/35 bg-background text-foreground shadow-sm ring-1 ring-primary/15' : 'border-transparent text-muted-foreground hover:bg-background/70 hover:text-foreground')}>
+                {label}
+              </button>
+            ))}
+          </div>
+        }
       />
       <AsyncView
         query={query}
         skeleton={<Skeleton className="h-64 rounded-xl" />}
-        empty={<EmptyState icon={ReceiptText} tone="purple" title="Belum ada transaksi" description="Transaksi dibuat saat kamu menang auction, menetapkan pemenang, atau menerima penawaran RFQ." />}
+        emptyFallback={false}
       >
-        {(rows) => (
-          <DataTable
+        {(rows) => {
+          const runningCount = rows.filter((t) => !['completed', 'cancelled', 'disputed'].includes(t.status)).length
+          const totalValue = rows.reduce((sum, t) => sum + t.totalIdr, 0)
+          return (
+            <div className="grid gap-6">
+              <section aria-label="Ringkasan transaksi" className="grid gap-3 sm:grid-cols-3">
+                {[
+                  { label: 'Total transaksi', value: formatNumber(rows.length), note: role === 'buyer' ? 'Sebagai pembeli' : role === 'supplier' ? 'Sebagai supplier' : 'Dari kedua peran', icon: ReceiptText, color: 'text-violet-700 dark:text-violet-300', bg: 'bg-violet-500/10' },
+                  { label: 'Perlu dipantau', value: formatNumber(runningCount), note: 'Belum selesai', icon: Clock3, color: 'text-amber-700 dark:text-amber-300', bg: 'bg-amber-500/10' },
+                  { label: 'Nilai transaksi', value: formatIdr(totalValue, { compact: true }), note: 'Akumulasi daftar ini', icon: CircleDollarSign, color: 'text-teal-700 dark:text-teal-300', bg: 'bg-teal-500/10' },
+                ].map(({ label, value, note, icon: Icon, color, bg }) => (
+                  <article key={label} className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] transition-colors hover:bg-muted/20 sm:p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div><p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">{label}</p><p className="mt-2 text-2xl font-semibold tracking-tight tabular-nums">{value}</p><p className="mt-1 text-xs text-muted-foreground">{note}</p></div>
+                      <span className={cn('grid size-10 place-items-center rounded-xl', bg, color)}><Icon className="size-5" aria-hidden="true" /></span>
+                    </div>
+                  </article>
+                ))}
+              </section>
+              <section className="grid gap-4">
+                <div className="flex flex-wrap items-end justify-between gap-3 border-b pb-3">
+                  <div><h2 className="text-lg font-semibold tracking-tight">Daftar transaksi</h2><p className="mt-1 text-sm text-muted-foreground">Pantau kesepakatan, pembayaran, dan pengiriman dalam satu tempat.</p></div>
+                  <span className="rounded-full border bg-muted/40 px-3 py-1 text-xs font-medium text-muted-foreground">{rows.length} transaksi</span>
+                </div>
+                {rows.length ? <DataTable
             caption="Transaksi"
             rows={rows}
             rowKey={(t) => t.id}
@@ -51,8 +83,15 @@ export function TransactionsPage() {
               { key: 'status', header: 'Status', cell: (t) => <StatusBadge entity="transaction" status={t.status} /> },
               { key: 'updated', header: 'Diperbarui', cell: (t) => <span className="text-muted-foreground">{formatRelative(t.updatedAt)}</span>, sortValue: (t) => t.updatedAt },
             ]}
-          />
-        )}
+          /> : (
+            <div className="rounded-2xl border border-dashed bg-muted/10 p-5 sm:p-7">
+              <EmptyState icon={role ? ReceiptText : BadgeCheck} tone="purple" title={role ? `Belum ada transaksi sebagai ${role === 'buyer' ? 'pembeli' : 'supplier'}` : 'Belum ada transaksi'} description="Transaksi muncul saat kamu menang auction, menetapkan pemenang, atau menerima penawaran RFQ. Setelah terbentuk, status dan langkah berikutnya bisa dipantau di sini." />
+            </div>
+          )}
+              </section>
+            </div>
+          )
+        }}
       </AsyncView>
     </>
   )
