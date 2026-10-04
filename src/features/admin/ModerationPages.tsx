@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ExternalLink, Flag, Gavel, Lock, Scale, ShieldAlert, Store } from 'lucide-react'
+import { CircleAlert, ExternalLink, Flag, Gavel, Lock, Scale, ShieldAlert, Store } from 'lucide-react'
 import { AUCTION_TYPES } from '@/domain/catalog'
 import { formatDateTime, formatIdr, formatNumber, formatRelative } from '@/domain/format'
 import { toast } from '@/stores/toast'
@@ -47,9 +47,25 @@ export function AdminMarketsPage() {
   return (
     <>
       <PageHeader title="Market moderation" description="Flag dari sistem dan laporan pengguna. Review, beri flag, atau suspend market dengan alasan tertulis." icon={Store} tone="orange" />
-      <AsyncView query={query} skeleton={<Skeleton className="h-96 rounded-xl" />} empty={<EmptyState icon={Store} title="Belum ada market" />}>
-        {(rows) => (
-          <DataTable
+      <AsyncView query={query} skeleton={<Skeleton className="h-96 rounded-xl" />} emptyFallback={false}>
+        {(rows) => {
+          const active = rows.filter((m) => m.status === 'active').length
+          const flagCount = rows.reduce((sum, m) => sum + m.flags.length, 0)
+          const reportCount = rows.reduce((sum, m) => sum + m.reports.length, 0)
+          const disputeCount = rows.reduce((sum, m) => sum + m.disputes, 0)
+          return (
+            <div className="grid gap-5">
+              <section aria-label="Ringkasan moderasi market" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {[
+                  { label: 'Total market', value: rows.length, note: 'Dalam pengawasan', icon: Store, color: 'bg-orange-500/10 text-orange-700 dark:text-orange-300' },
+                  { label: 'Market aktif', value: active, note: 'Sedang beroperasi', icon: Store, color: 'bg-teal-500/10 text-teal-700 dark:text-teal-300' },
+                  { label: 'Flag dan laporan', value: flagCount + reportCount, note: `${flagCount} flag · ${reportCount} laporan`, icon: Flag, color: 'bg-red-500/10 text-red-700 dark:text-red-300' },
+                  { label: 'Dispute terkait', value: disputeCount, note: 'Kasus dari market ini', icon: CircleAlert, color: 'bg-amber-500/10 text-amber-700 dark:text-amber-300' },
+                ].map(({ label, value, note, icon: Icon, color }) => <article key={label} className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:p-5"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">{label}</p><p className="mt-2 text-2xl font-semibold tracking-tight tabular-nums">{formatNumber(value)}</p><p className="mt-1 text-xs text-muted-foreground">{note}</p></div><span className={`grid size-10 place-items-center rounded-xl ${color}`}><Icon className="size-5" aria-hidden="true" /></span></div></article>)}
+              </section>
+              <section className="grid gap-3">
+                <div className="flex flex-wrap items-end justify-between gap-2 border-b pb-3"><div><h2 className="text-lg font-semibold tracking-tight">Daftar market</h2><p className="mt-1 text-sm text-muted-foreground">Urutkan berdasarkan flag dan buka market untuk review atau tindakan moderasi.</p></div><span className="rounded-full border bg-muted/40 px-3 py-1 text-xs font-medium text-muted-foreground">{rows.length} market</span></div>
+                {rows.length ? <DataTable
             caption="Market"
             rows={rows}
             rowKey={(m) => m.id}
@@ -63,8 +79,11 @@ export function AdminMarketsPage() {
               { key: 'reports', header: 'Laporan', align: 'right', cell: (m) => m.reports.length || '–', sortValue: (m) => m.reports.length },
               { key: 'disputes', header: 'Dispute', align: 'right', cell: (m) => m.disputes || '–', sortValue: (m) => m.disputes },
             ]}
-          />
-        )}
+          /> : <div className="rounded-2xl border border-dashed bg-muted/10 p-5 sm:p-7"><EmptyState icon={Store} tone="orange" title="Belum ada market" description="Market yang perlu ditinjau akan muncul di direktori ini." /></div>}
+              </section>
+            </div>
+          )
+        }}
       </AsyncView>
     </>
   )
@@ -169,9 +188,24 @@ export function AdminAuctionsPage() {
   return (
     <>
       <PageHeader title="Auction governance" description="Periksa semua bid (sealed bid baru terbuka setelah ditutup), temuan pelanggaran aturan, dan bekukan auction yang mencurigakan." icon={Gavel} tone="orange" />
-      <AsyncView query={query} skeleton={<Skeleton className="h-96 rounded-xl" />} empty={<EmptyState icon={Gavel} title="Belum ada auction" />}>
-        {(rows) => (
-          <DataTable
+      <AsyncView query={query} skeleton={<Skeleton className="h-96 rounded-xl" />} emptyFallback={false}>
+        {(rows) => {
+          const active = rows.filter((a) => ['scheduled', 'qualification', 'live', 'extended'].includes(a.status)).length
+          const findingCount = rows.reduce((sum, a) => sum + a.findings.length, 0)
+          const bidCount = rows.reduce((sum, a) => sum + a.bidCount, 0)
+          return (
+            <div className="grid gap-5">
+              <section aria-label="Ringkasan auction" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {[
+                  { label: 'Total auction', value: rows.length, note: 'Dalam pengawasan', icon: Gavel, color: 'bg-orange-500/10 text-orange-700 dark:text-orange-300' },
+                  { label: 'Sedang berjalan', value: active, note: 'Terjadwal atau live', icon: Store, color: 'bg-teal-500/10 text-teal-700 dark:text-teal-300' },
+                  { label: 'Total bid', value: bidCount, note: 'Bid tercatat di auction', icon: Scale, color: 'bg-blue-500/10 text-blue-700 dark:text-blue-300' },
+                  { label: 'Temuan aturan', value: findingCount, note: 'Perlu diperiksa', icon: ShieldAlert, color: 'bg-red-500/10 text-red-700 dark:text-red-300' },
+                ].map(({ label, value, note, icon: Icon, color }) => <article key={label} className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:p-5"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">{label}</p><p className="mt-2 text-2xl font-semibold tracking-tight tabular-nums">{formatNumber(value)}</p><p className="mt-1 text-xs text-muted-foreground">{note}</p></div><span className={`grid size-10 place-items-center rounded-xl ${color}`}><Icon className="size-5" aria-hidden="true" /></span></div></article>)}
+              </section>
+              <section className="grid gap-3">
+                <div className="flex flex-wrap items-end justify-between gap-2 border-b pb-3"><div><h2 className="text-lg font-semibold tracking-tight">Daftar auction</h2><p className="mt-1 text-sm text-muted-foreground">Buka auction untuk memeriksa temuan, bid, dan mengambil tindakan governance.</p></div><span className="rounded-full border bg-muted/40 px-3 py-1 text-xs font-medium text-muted-foreground">{rows.length} auction</span></div>
+                {rows.length ? <DataTable
             caption="Auction"
             rows={rows}
             rowKey={(a) => a.id}
@@ -185,8 +219,11 @@ export function AdminAuctionsPage() {
               { key: 'bids', header: 'Bid', align: 'right', cell: (a) => formatNumber(a.bidCount), sortValue: (a) => a.bidCount },
               { key: 'findings', header: 'Temuan', cell: (a) => <FindingsTag a={a} />, sortValue: (a) => a.findings.length },
             ]}
-          />
-        )}
+          /> : <div className="rounded-2xl border border-dashed bg-muted/10 p-5 sm:p-7"><EmptyState icon={Gavel} tone="orange" title="Belum ada auction" description="Auction yang perlu diawasi akan muncul di sini." /></div>}
+              </section>
+            </div>
+          )
+        }}
       </AsyncView>
     </>
   )
