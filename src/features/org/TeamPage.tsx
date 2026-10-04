@@ -221,6 +221,7 @@ export function TeamPage() {
         description="Anggota, peran, izin per modul, departemen, dan aturan approval."
         icon={Users}
         tone="blue"
+        featured
         actions={<GuardedButton className="h-9" reason={readOnly} onClick={() => set('invite', '1')}><UserPlus /> Undang anggota</GuardedButton>}
       />
       {readOnly && <p className="-mt-4 mb-6 flex items-center gap-1.5 text-sm text-muted-foreground"><Info className="size-4" /> Hanya Owner yang bisa mengubah tim. Kamu melihat dalam mode baca.</p>}
