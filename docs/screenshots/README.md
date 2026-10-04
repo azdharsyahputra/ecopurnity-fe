@@ -40,6 +40,26 @@ Halaman Ecopurnity dengan data demo (1440 px, tema terang).
 
 ![09-katalog](09-katalog.png)
 
+### 10-search
+
+![10-search](10-search.png)
+
+### 11-business-profile
+
+![11-business-profile](11-business-profile.png)
+
+### 12-user-profile
+
+![12-user-profile](12-user-profile.png)
+
+### 13-login
+
+![13-login](13-login.png)
+
+### 14-register
+
+![14-register](14-register.png)
+
 ## Workspace perorangan
 
 ### 20-app-dashboard
@@ -81,6 +101,34 @@ Halaman Ecopurnity dengan data demo (1440 px, tema terang).
 ### 29-app-rfq-detail
 
 ![29-app-rfq-detail](29-app-rfq-detail.png)
+
+### 30-app-transactions
+
+![30-app-transactions](30-app-transactions.png)
+
+### 31-app-transaction-in-progress
+
+![31-app-transaction-in-progress](31-app-transaction-in-progress.png)
+
+### 32-app-transaction-completed
+
+![32-app-transaction-completed](32-app-transaction-completed.png)
+
+### 34-app-finance
+
+![34-app-finance](34-app-finance.png)
+
+### 35-app-reputation
+
+![35-app-reputation](35-app-reputation.png)
+
+### 36-app-messages
+
+![36-app-messages](36-app-messages.png)
+
+### 38-app-settings
+
+![38-app-settings](38-app-settings.png)
 
 ## Workspace organisasi
 
@@ -203,3 +251,11 @@ Halaman Ecopurnity dengan data demo (1440 px, tema terang).
 ### 67-admin-dispute-case
 
 ![67-admin-dispute-case](67-admin-dispute-case.png)
+
+### 70-admin-withdrawals
+
+![70-admin-withdrawals](70-admin-withdrawals.png)
+
+### 70b-admin-withdrawal-detail
+
+![70b-admin-withdrawal-detail](70b-admin-withdrawal-detail.png)
