@@ -1,5 +1,5 @@
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { BadgeCheck, ExternalLink, Flag, Search, Users } from 'lucide-react'
+import { BadgeCheck, ExternalLink, Flag, Search, ShieldCheck, Users, X } from 'lucide-react'
 import { formatDate, formatIdr, formatNumber, formatRelative } from '@/domain/format'
 import { toast } from '@/stores/toast'
 import { slugify } from '@/features/reputation/slug'
@@ -16,6 +16,7 @@ import { AuditLog } from '@/components/AuditLog'
 import { SelectField } from '@/components/form'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Button } from '@/components/ui/button'
 
 export function AccountTag({ status }: { status: AccountStatus }) {
   const [label, tone] = ACCOUNT_STATUS[status]
@@ -31,22 +32,43 @@ export function AdminUsersPage() {
   return (
     <>
       <PageHeader title="Users" description="Cari akun, lihat riwayat dan laporan dari pengguna lain, lalu ambil keputusan dengan alasan tertulis." icon={Users} tone="orange" />
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end">
-        <label className="relative flex-1">
-          <span className="sr-only">Cari pengguna</span>
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={q} onChange={(e) => set('q', e.target.value)} placeholder="Nama, username, atau email" className="h-10 pl-9" />
-        </label>
-        <div className="sm:w-48">
-          <SelectField label="Status akun" value={status} onChange={(e) => set('status', e.target.value)}>
-            <option value="">Semua</option>
-            {Object.entries(ACCOUNT_STATUS).map(([k, [l]]) => <option key={k} value={k}>{l}</option>)}
-          </SelectField>
+      <section aria-label="Filter pengguna" className="mb-5 rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:p-5">
+        <div className="mb-4"><h2 className="font-semibold tracking-tight">Cari dan filter akun</h2><p className="mt-1 text-sm text-muted-foreground">Temukan akun berdasarkan nama, username, email, atau status.</p></div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <label className="relative min-w-0 flex-1">
+            <span className="mb-1.5 block text-sm font-medium">Pencarian</span>
+            <Search className="pointer-events-none absolute top-[2.55rem] left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input value={q} onChange={(e) => set('q', e.target.value)} placeholder="Nama, username, atau email" className="h-10 pl-9" />
+          </label>
+          <div className="sm:w-56">
+            <SelectField label="Status akun" value={status} onChange={(e) => set('status', e.target.value)}>
+              <option value="">Semua status</option>
+              {Object.entries(ACCOUNT_STATUS).map(([k, [l]]) => <option key={k} value={k}>{l}</option>)}
+            </SelectField>
+          </div>
+          {(q || status) && <Button type="button" variant="outline" className="h-10" onClick={() => setParams({}, { replace: true })}><X /> Hapus filter</Button>}
         </div>
-      </div>
-      <AsyncView query={query} skeleton={<Skeleton className="h-96 rounded-xl" />} empty={<EmptyState icon={Search} title="Tidak ada akun yang cocok" description="Coba kata kunci lain atau hapus filter status." />}>
-        {(rows) => (
-          <DataTable
+      </section>
+      <AsyncView query={query} skeleton={<Skeleton className="h-96 rounded-xl" />} emptyFallback={false}>
+        {(rows) => {
+          const verifiedCount = rows.filter((u) => u.verified).length
+          const reportCount = rows.reduce((sum, u) => sum + u.reportCount, 0)
+          return (
+            <div className="grid gap-5">
+              <section aria-label="Ringkasan hasil akun" className="grid gap-3 sm:grid-cols-3">
+                {[
+                  { label: 'Hasil akun', value: formatNumber(rows.length), hint: q || status ? 'Sesuai pencarian dan status' : 'Akun dalam direktori', icon: Users, tint: 'bg-blue-500/10 text-blue-700 dark:text-blue-300' },
+                  { label: 'Terverifikasi', value: formatNumber(verifiedCount), hint: 'Identitas sudah dikonfirmasi', icon: ShieldCheck, tint: 'bg-teal-500/10 text-teal-700 dark:text-teal-300' },
+                  { label: 'Laporan masuk', value: formatNumber(reportCount), hint: 'Pada akun dalam hasil ini', icon: Flag, tint: 'bg-orange-500/10 text-orange-700 dark:text-orange-300' },
+                ].map(({ label, value, hint, icon: Icon, tint }) => (
+                  <article key={label} className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:p-5">
+                    <div className="flex items-start justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">{label}</p><p className="mt-2 text-2xl font-semibold tracking-tight tabular-nums">{value}</p><p className="mt-1 text-xs text-muted-foreground">{hint}</p></div><span className={`grid size-10 place-items-center rounded-xl ${tint}`}><Icon className="size-5" aria-hidden="true" /></span></div>
+                  </article>
+                ))}
+              </section>
+              <section className="grid gap-3">
+                <div className="flex flex-wrap items-end justify-between gap-2 border-b pb-3"><div><h2 className="text-lg font-semibold tracking-tight">Direktori pengguna</h2><p className="mt-1 text-sm text-muted-foreground">Buka akun untuk melihat riwayat, laporan, dan tindakan yang tersedia.</p></div><span className="rounded-full border bg-muted/40 px-3 py-1 text-xs font-medium text-muted-foreground">{rows.length} akun</span></div>
+                {rows.length ? <DataTable
             caption="Daftar pengguna"
             rows={rows}
             rowKey={(u) => u.id}
@@ -59,8 +81,11 @@ export function AdminUsersPage() {
               { key: 'tx', header: 'Transaksi', align: 'right', cell: (u) => formatNumber(u.transactions), sortValue: (u) => u.transactions },
               { key: 'reports', header: 'Laporan', align: 'right', cell: (u) => (u.reportCount ? <Tag tone="red">{u.reportCount}</Tag> : '–'), sortValue: (u) => u.reportCount },
             ]}
-          />
-        )}
+          /> : <div className="rounded-2xl border border-dashed bg-muted/10 p-5 sm:p-7"><EmptyState icon={Search} title="Tidak ada akun yang cocok" description="Coba kata kunci lain atau hapus filter status." /></div>}
+              </section>
+            </div>
+          )
+        }}
       </AsyncView>
     </>
   )
