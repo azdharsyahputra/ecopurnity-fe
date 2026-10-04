@@ -45,7 +45,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="rounded-2xl border bg-card p-5 shadow-sm sm:p-7">
+    <div>
       <div className="mb-6 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-primary">
         <span className="size-2 rounded-full bg-lime" /> Ecopurnity
       </div>
