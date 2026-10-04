@@ -33,17 +33,17 @@ function WorkspaceSwitcher({ current, all, onNavigate }: { current: Workspace; a
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <button className="flex w-full items-center gap-2.5 rounded-xl border border-border/70 bg-background/65 p-2 text-left shadow-sm transition-colors hover:bg-background hover:shadow">
-            <IconChip icon={current.icon} tone={current.tone} />
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-medium">{current.label}</span>
-              <span className="block truncate text-xs text-muted-foreground">{current.caption}</span>
+          <button aria-label={`Akun dan ruang kerja, ${current.label}`} className="group flex h-10 max-w-64 items-center gap-2.5 rounded-xl border border-border/70 bg-card px-2.5 text-left shadow-sm shadow-foreground/[0.025] transition-all hover:border-border hover:bg-accent/50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
+            <EntityAvatar name={me!.name} src={me!.avatarUrl} size={28} />
+            <span className="hidden min-w-0 flex-1 sm:block">
+              <span className="block truncate text-xs font-semibold leading-4">{me?.name}</span>
+              <span className="block truncate text-[11px] leading-4 text-muted-foreground">{current.label} <span className="px-0.5 text-border">·</span> {current.caption}</span>
             </span>
-            <ChevronsUpDown className="size-4 text-muted-foreground" />
+            <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[popup-open]:rotate-180" />
           </button>
         }
       />
-      <DropdownMenuContent className="w-72 rounded-xl border-border/80 bg-popover p-1.5 shadow-xl shadow-foreground/10">
+      <DropdownMenuContent align="end" className="w-72 rounded-xl border-border/80 bg-popover p-1.5 shadow-xl shadow-foreground/10">
         <DropdownMenuGroup>
           <DropdownMenuLabel className="truncate px-2.5 py-2 text-xs font-medium text-muted-foreground">{me?.email}</DropdownMenuLabel>
           {all.map((ws) => (
@@ -97,11 +97,13 @@ function NavLinkItem({ ws, item, onNavigate }: { ws: Workspace; item: NavItem; o
   )
 }
 
-function Sidebar({ ws, all, onNavigate }: { ws: Workspace; all: Workspace[]; onNavigate?: () => void }) {
+function Sidebar({ ws, onNavigate }: { ws: Workspace; onNavigate?: () => void }) {
   const openPalette = useUi((s) => s.setPaletteOpen)
   return (
-      <div className="flex h-full flex-col gap-1.5 p-2.5">
-      <WorkspaceSwitcher current={ws} all={all} onNavigate={onNavigate} />
+    <div className="flex h-full flex-col gap-1.5 p-2.5">
+      <div className="mb-1 flex h-11 items-center border-b border-border/60 px-1.5 pb-2">
+        <Logo to="/" className="text-base text-sidebar-foreground [&_img]:size-7" />
+      </div>
       <button
         onClick={() => {
           onNavigate?.()
@@ -136,8 +138,7 @@ function Sidebar({ ws, all, onNavigate }: { ws: Workspace; all: Workspace[]; onN
       </nav>
       <div className="mt-auto flex flex-col gap-0.5 border-t border-border/60 pt-3">
         {ws.footer?.map((item) => <NavLinkItem key={item.path} ws={ws} item={item} onNavigate={onNavigate} />)}
-        <div className="mt-2 flex items-center justify-between border-t border-border/60 px-1.5 pt-3">
-          <Logo to="/" className="text-xs text-muted-foreground [&_img]:size-5" />
+        <div className="mt-2 flex items-center justify-end border-t border-border/60 px-1.5 pt-3">
           <ThemeToggle />
         </div>
       </div>
@@ -171,33 +172,38 @@ export function AppLayout() {
   return (
     <div className="flex min-h-svh">
       <aside className={cn('sticky top-0 hidden h-svh w-60 shrink-0 border-r bg-sidebar md:block', ws.id === 'personal' && 'shadow-sm shadow-foreground/[0.025]')}>
-        <Sidebar ws={ws} all={all} />
+        <Sidebar ws={ws} />
       </aside>
 
       <Sheet open={drawer} onOpenChange={setDrawer}>
         <SheetContent side="left" className="w-72 bg-sidebar p-0" showCloseButton={false}>
           <SheetTitle className="sr-only">Navigasi</SheetTitle>
-          <Sidebar ws={ws} all={all} onNavigate={() => setDrawer(false)} />
+          <Sidebar ws={ws} onNavigate={() => setDrawer(false)} />
         </SheetContent>
       </Sheet>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className={cn('sticky top-0 z-30 flex h-14 items-center gap-2 bg-background/85 px-3 backdrop-blur md:px-6', ws.id === 'personal' && 'border-b border-border/70 shadow-sm shadow-foreground/[0.02]')}>
-          <Button variant="ghost" size="icon-sm" className="md:hidden" onClick={() => setDrawer(true)} aria-label="Buka navigasi">
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border/70 bg-background/90 px-3 shadow-sm shadow-foreground/[0.025] backdrop-blur-xl sm:px-5 md:px-7">
+          <Button variant="outline" size="icon-sm" className="size-9 shrink-0 rounded-xl border-border/70 bg-card shadow-sm md:hidden" onClick={() => setDrawer(true)} aria-label="Buka navigasi">
             <Menu />
           </Button>
-          <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-sm">
-            <span className="truncate text-muted-foreground">{ws.label}</span>
+          <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 text-sm">
+            <span className="hidden max-w-48 truncate font-medium text-muted-foreground sm:block">{ws.label}</span>
             {page && page.path !== '' && (
               <>
-                <span className="text-muted-foreground/60">/</span>
-                <span className="truncate font-medium">{page.label}</span>
+                <span className="hidden text-border sm:block">/</span>
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-primary/8 text-primary sm:hidden"><page.icon className="size-4" /></span>
+                  <span className="truncate font-semibold tracking-tight text-foreground">{page.label}</span>
+                </span>
               </>
             )}
           </nav>
-          <div className="ml-auto flex items-center gap-1">
-            <NotificationBell />
-            <EntityAvatar name={me!.name} src={me!.avatarUrl} size={26} className="ml-1" />
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            <div className="flex items-center rounded-xl border border-border/70 bg-card p-0.5 shadow-sm shadow-foreground/[0.025]">
+              <NotificationBell />
+            </div>
+            <WorkspaceSwitcher current={ws} all={all} />
           </div>
         </header>
         <main className={cn('flex-1', ws.id === 'personal' && 'bg-muted/20')}>
