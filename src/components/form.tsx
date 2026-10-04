@@ -1,4 +1,5 @@
 import { useId, type ComponentProps, type ReactNode } from 'react'
+import { Eye, EyeOff } from 'lucide-react'
 import { ApiError } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { Input } from './ui/input'
@@ -32,6 +33,35 @@ export function Field({ label, error, hint, aside, ...input }: Common & Componen
   return (
     <Shell id={id} label={label} error={error} hint={hint} aside={aside}>
       <Input id={id} aria-invalid={!!error} aria-describedby={error || hint ? `${id}-msg` : undefined} className="h-10" {...input} />
+    </Shell>
+  )
+}
+
+/** Password field with an accessible control to show or hide its value. */
+export function PasswordField({ label, error, hint, aside, visible, onToggle, ...input }: Common & Omit<ComponentProps<'input'>, 'type'> & { visible: boolean; onToggle: () => void }) {
+  const id = useId()
+  const Icon = visible ? EyeOff : Eye
+  return (
+    <Shell id={id} label={label} error={error} hint={hint} aside={aside}>
+      <div className="relative">
+        <Input
+          id={id}
+          type={visible ? 'text' : 'password'}
+          aria-invalid={!!error}
+          aria-describedby={error || hint ? `${id}-msg` : undefined}
+          className="h-10 pr-11"
+          {...input}
+        />
+        <button
+          type="button"
+          aria-label={visible ? 'Sembunyikan password' : 'Tampilkan password'}
+          aria-pressed={visible}
+          onClick={onToggle}
+          className="absolute inset-y-0 right-1.5 inline-flex w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <Icon className="size-4" aria-hidden="true" />
+        </button>
+      </div>
     </Shell>
   )
 }
