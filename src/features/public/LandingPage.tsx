@@ -12,7 +12,7 @@ import type { Tone } from '@/domain/status'
 import { cn } from '@/lib/utils'
 import { StatTile } from '@/components/StatTile'
 import { ActivityFeed } from '@/components/ActivityFeed'
-import { AsyncView } from '@/components/States'
+import { AsyncView, EmptyState } from '@/components/States'
 import { IconChip } from '@/components/IconChip'
 import { Tag } from '@/components/Tag'
 import { Button } from '@/components/ui/button'
@@ -242,18 +242,18 @@ function Featured() {
   return (
     <>
       <Section eyebrow="Featured opportunities" title="Peluang terbesar yang sedang terbuka">
-        <AsyncView query={opp} skeleton={skel}>
+        <AsyncView query={opp} skeleton={skel} isEmpty={(p) => !p.data.length} empty={<EmptyState icon={Sparkles} tone="lime" title="Belum ada opportunity terbuka" description="Peluang akan muncul saat engine menemukan kebutuhan dan supply yang bisa dipertemukan." action={<Button variant="outline" render={<Link to="/opportunities" />}>Jelajahi opportunities <ArrowRight /></Button>} />}>
           {(p) => <div className="grid gap-3 md:grid-cols-3">{p.data.map((o) => <OpportunityCard key={o.id} o={o} />)}</div>}
         </AsyncView>
         <Button variant="outline" className="mt-6" render={<Link to="/opportunities" />}>Semua opportunity <ArrowRight /></Button>
       </Section>
       <Section eyebrow="Active auctions" title="Auction yang sedang berjalan" className="pt-0 md:pt-0">
-        <AsyncView query={auctions} skeleton={skel}>
+        <AsyncView query={auctions} skeleton={skel} isEmpty={(p) => !p.data.length} empty={<EmptyState icon={Gavel} tone="orange" title="Belum ada auction yang berjalan" description="Auction aktif akan tampil di sini saat market membuka sesi penawaran." action={<Button variant="outline" render={<Link to="/auctions" />}>Lihat semua auction <ArrowRight /></Button>} />}>
           {(p) => <Rail>{p.data.map((a) => <AuctionCard key={a.id} a={a} />)}</Rail>}
         </AsyncView>
       </Section>
       <Section eyebrow="Active markets" title="Market yang aktif" className="pt-0 md:pt-0">
-        <AsyncView query={markets} skeleton={skel}>
+        <AsyncView query={markets} skeleton={skel} isEmpty={(p) => !p.data.length} empty={<EmptyState icon={Store} tone="blue" title="Belum ada market aktif" description="Market baru akan tampil setelah opportunity dibentuk dan mulai beroperasi." action={<Button variant="outline" render={<Link to="/markets" />}>Jelajahi market <ArrowRight /></Button>} />}>
           {(p) => <Rail>{p.data.map((m) => <MarketCard key={m.id} m={m} />)}</Rail>}
         </AsyncView>
       </Section>
