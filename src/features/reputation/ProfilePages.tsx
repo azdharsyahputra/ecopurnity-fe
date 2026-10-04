@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 
 function Shell({ children }: { children: ReactNode }) {
-  return <div className="mx-auto max-w-6xl px-4 pt-6 pb-16 md:px-6">{children}</div>
+  return <div className="mx-auto max-w-6xl px-4 pt-8 pb-16 md:px-6">{children}</div>
 }
 
 const isNotFound = (e: unknown) => e instanceof ApiError && e.status === 404
@@ -24,7 +24,7 @@ function NotFoundProfile({ what }: { what: string }) {
 
 function ReputationCard({ r }: { r: ProfileReputation }) {
   return (
-    <section className="rounded-xl border bg-card p-4">
+    <section className="rounded-2xl border bg-card p-5 shadow-sm shadow-foreground/[0.025]">
       <h2 className="font-medium">Reputasi</h2>
       <p className="mt-2 flex items-baseline gap-2"><span className="num text-3xl font-semibold">{r.score}</span><span className="text-sm text-muted-foreground">/ 100 · {scoreBand(r.score)}</span></p>
       <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
@@ -38,7 +38,7 @@ function ReputationCard({ r }: { r: ProfileReputation }) {
 
 function Activity({ items }: { items: ProfileActivity[] }) {
   return (
-    <section className="rounded-xl border bg-card p-4">
+    <section className="rounded-2xl border bg-card p-5 shadow-sm shadow-foreground/[0.025]">
       <h2 className="font-medium">Aktivitas publik terbaru</h2>
       {items.length ? (
         <ol className="mt-2 divide-y">
@@ -65,7 +65,7 @@ export function ParticipantProfilePage() {
       <AsyncView query={query} skeleton={<Skeleton className="h-96 rounded-xl" />}>
         {(p) => (
           <>
-            <header className="flex flex-col gap-4 sm:flex-row sm:items-center">
+            <header className="relative flex flex-col gap-4 overflow-hidden rounded-2xl border bg-linear-to-br from-card to-muted/60 p-5 sm:flex-row sm:items-center sm:p-7">
               <EntityAvatar name={p.name} verified={p.verification.identity === 'verified'} size={64} />
               <div className="min-w-0">
                 <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{p.name}</h1>
@@ -152,7 +152,7 @@ export function BusinessProfilePage() {
       <AsyncView query={query} skeleton={<Skeleton className="h-96 rounded-xl" />}>
         {(b) => (
           <>
-            <header className="flex flex-col gap-4 sm:flex-row sm:items-center">
+            <header className="relative flex flex-col gap-4 overflow-hidden rounded-2xl border bg-linear-to-br from-card to-muted/60 p-5 sm:flex-row sm:items-center sm:p-7">
               <EntityAvatar name={b.name} kind="business" verified={b.verified} size={64} />
               <div className="min-w-0">
                 <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{b.name}</h1>
