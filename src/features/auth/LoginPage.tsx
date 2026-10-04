@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAppeal, useLogin, useSetMe } from './hooks'
 import { safeReturnTo } from '@/lib/utils'
 import { AuthHeading, GoogleButton, MOCKS, OrDivider } from './ui'
-import { Field, FormError, TextareaField } from '@/components/form'
+import { Field, FormError, PasswordField, TextareaField } from '@/components/form'
 import { ApiError, fieldError } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Tag } from '@/components/Tag'
@@ -29,6 +29,7 @@ export function LoginPage() {
   const setMe = useSetMe()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
 
   function submit(e: FormEvent) {
     e.preventDefault()
@@ -44,53 +45,64 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <AuthHeading title="Masuk">
-        Belum punya akun?{' '}
-        <Link to={`/register?${params}`} className="font-medium text-primary hover:underline">Daftar gratis</Link>
-      </AuthHeading>
-      <GoogleButton />
-      <OrDivider />
-      <form onSubmit={submit} className="flex flex-col gap-4">
-        <Field label="Email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-        <Field
-          label="Password"
-          type="password"
-          autoComplete="current-password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          aside={<Link to="/forgot-password" className="font-normal text-muted-foreground hover:text-foreground">Lupa password?</Link>}
-        />
-        <FormError error={login.error} />
-        {login.error instanceof ApiError && login.error.code === 'account_suspended' && <Appeal email={email} password={password} />}
-        <Button type="submit" className="mt-1 h-10" disabled={login.isPending}>
-          {login.isPending ? 'Memproses…' : 'Masuk'}
-        </Button>
-      </form>
-
-      {MOCKS && (
-        <div className="rounded-xl border border-dashed p-4">
-          <p className="text-xs font-medium text-muted-foreground">Akun demo (mock) · klik untuk mengisi</p>
-          <ul className="mt-2 flex flex-col">
-            {DEMO_ACCOUNTS.map((a) => (
-              <li key={a.email}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEmail(a.email)
-                    setPassword(a.password)
-                  }}
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-hover"
-                >
-                  <span className="flex-1 truncate">{a.name}</span>
-                  <Tag tone={a.tone}>{a.role}</Tag>
-                </button>
-              </li>
-            ))}
-          </ul>
+    <div className="rounded-2xl border bg-card p-5 shadow-sm sm:p-7">
+      <div className="mb-6 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+        <span className="size-2 rounded-full bg-lime" /> Ecopurnity
+      </div>
+      <div className="flex flex-col gap-5">
+        <div>
+          <AuthHeading title="Masuk ke akunmu">
+            Lanjutkan menemukan peluang dan mengelola aktivitasmu.
+          </AuthHeading>
+          <p className="mt-3 text-sm text-muted-foreground">
+            Belum punya akun?{' '}
+            <Link to={`/register?${params}`} className="font-medium text-primary hover:underline">Daftar gratis</Link>
+          </p>
         </div>
-      )}
+        <GoogleButton />
+        <OrDivider />
+        <form onSubmit={submit} className="flex flex-col gap-4">
+          <Field label="Email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+          <PasswordField
+            label="Password"
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            visible={showPassword}
+            onToggle={() => setShowPassword((shown) => !shown)}
+            aside={<Link to="/forgot-password" className="font-normal text-muted-foreground hover:text-foreground">Lupa password?</Link>}
+          />
+          <FormError error={login.error} />
+          {login.error instanceof ApiError && login.error.code === 'account_suspended' && <Appeal email={email} password={password} />}
+          <Button type="submit" className="mt-1 h-10 w-full" disabled={login.isPending}>
+            {login.isPending ? 'Memproses…' : 'Masuk'}
+          </Button>
+        </form>
+
+        {MOCKS && (
+          <div className="rounded-xl border border-dashed bg-muted/30 p-4">
+            <p className="text-xs font-medium text-muted-foreground">Akun demo (mock) · klik untuk mengisi</p>
+            <ul className="mt-2 flex flex-col">
+              {DEMO_ACCOUNTS.map((a) => (
+                <li key={a.email}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmail(a.email)
+                      setPassword(a.password)
+                    }}
+                    className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-hover"
+                  >
+                    <span className="flex-1 truncate">{a.name}</span>
+                    <Tag tone={a.tone}>{a.role}</Tag>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
