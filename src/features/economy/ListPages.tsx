@@ -26,9 +26,14 @@ function ListShell<T>({
   render: (item: T) => ReactNode
 }) {
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 md:px-6">
+    <div className="mx-auto max-w-6xl px-4 py-8 md:px-6 md:py-10">
       {header}
-      {filters}
+      <div className="rounded-2xl border bg-muted/35 p-3 sm:p-4">
+        <div className="mb-2 flex items-center justify-between px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          <span>Persempit hasil</span><span className="hidden sm:inline">Filter dapat digabungkan</span>
+        </div>
+        {filters}
+      </div>
       <div className="mt-6">
         <h2 className="sr-only">Hasil</h2>
         <AsyncView
@@ -63,6 +68,7 @@ export function OpportunitiesPage() {
           description="Peluang ekonomi yang dideteksi dari supply, demand, jaringan, dan lokasi. Lihat insight-nya gratis, masuk untuk ikut."
           icon={Sparkles}
           tone="lime"
+          featured
         />
       }
       filters={
@@ -87,6 +93,7 @@ export function MarketsPage() {
           description="Market aktif yang dioperasikan market maker, lengkap dengan harga, volume, dan aturan mainnya."
           icon={Store}
           tone="blue"
+          featured
         />
       }
       filters={
@@ -108,6 +115,7 @@ export function AuctionsPage() {
           description="Auction yang sedang berjalan dan akan dimulai. Pantau harga dan aktivitas bid secara langsung."
           icon={Gavel}
           tone="orange"
+          featured
         />
       }
       filters={
@@ -161,6 +169,7 @@ export function ListingsPage() {
           description="Supply dan demand yang dibuka pelaku usaha. Minta penawaran ke supplier atau tawarkan barangmu ke pembeli, langsung tanpa market."
           icon={LayoutGrid}
           tone="green"
+          featured
         />
       }
       filters={<FilterBar placeholder="Cari barang atau pelaku usaha…" statuses={[['supply', 'Supply'], ['demand', 'Demand']]} statusLabel={['Jenis', 'Semua jenis']} />}
