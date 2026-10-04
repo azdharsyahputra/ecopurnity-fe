@@ -220,6 +220,20 @@
     content: '';
     @apply pointer-events-none absolute -right-8 -top-14 size-48 rounded-full bg-orange-500/5 blur-3xl;
   }
+  .detail-workspace > header.relative {
+    @apply mb-6 sm:mb-7;
+  }
+  .detail-workspace section.rounded-xl.border.bg-card,
+  .detail-workspace section.rounded-2xl.border.bg-card {
+    border-color: color-mix(in srgb, var(--border) 82%, var(--primary) 18%);
+    box-shadow: 0 2px 12px rgb(0 0 0 / 0.035);
+  }
+  .detail-workspace section > h2 {
+    letter-spacing: -0.015em;
+  }
+  .detail-workspace aside button {
+    min-height: 2.75rem;
+  }
 }
 
 @utility no-scrollbar {
