@@ -32,7 +32,7 @@ export function AnalyticsView({ data, marketId }: { data: MmAnalytics; marketId?
   return (
     <div className="flex flex-col gap-8">
       <section aria-labelledby="an-liq" className="flex flex-col gap-3">
-        <h2 id="an-liq" className="font-medium">Likuiditas</h2>
+        <div><h2 id="an-liq" className="text-lg font-semibold tracking-tight">Likuiditas</h2><p className="mt-0.5 text-sm text-muted-foreground">Keseimbangan peserta aktif di market.</p></div>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <StatTile label="Buyers" icon={ShoppingCart} tone="blue" value={formatNumber(l.buyers)} />
           <StatTile label="Suppliers" icon={PackageOpen} tone="teal" value={formatNumber(l.suppliers)} />
@@ -62,7 +62,7 @@ export function AnalyticsView({ data, marketId }: { data: MmAnalytics; marketId?
       </section>
 
       <section aria-labelledby="an-price" className="flex flex-col gap-3">
-        <h2 id="an-price" className="font-medium">Price discovery</h2>
+        <div><h2 id="an-price" className="text-lg font-semibold tracking-tight">Price discovery</h2><p className="mt-0.5 text-sm text-muted-foreground">Pergerakan harga dari pembukaan sampai hasil tiap round.</p></div>
         {pd && rounds.length ? (
           <ChartCard
             title={`Harga per round · ${pd.name}`}
@@ -97,7 +97,7 @@ export function AnalyticsView({ data, marketId }: { data: MmAnalytics; marketId?
       </section>
 
       <section aria-labelledby="an-eff" className="flex flex-col gap-3">
-        <h2 id="an-eff" className="font-medium">Efisiensi</h2>
+        <div><h2 id="an-eff" className="text-lg font-semibold tracking-tight">Efisiensi</h2><p className="mt-0.5 text-sm text-muted-foreground">Demand yang terpenuhi dan pemanfaatan supply.</p></div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <StatTile label="Matched demand" tone="green" value={pct(eff.matched)} />
           <StatTile label="Unmatched demand" tone="orange" value={pct(eff.unmatched)} />
@@ -123,7 +123,7 @@ export function AnalyticsView({ data, marketId }: { data: MmAnalytics; marketId?
       </section>
 
       <section aria-labelledby="an-net" className="flex flex-col gap-3">
-        <h2 id="an-net" className="font-medium">Pertumbuhan jaringan</h2>
+        <div><h2 id="an-net" className="text-lg font-semibold tracking-tight">Pertumbuhan jaringan</h2><p className="mt-0.5 text-sm text-muted-foreground">Perubahan peserta, transaksi, koneksi, dan repeat.</p></div>
         <ChartCard
           title="Jaringan per minggu"
           subtitle="Jumlah"
@@ -170,18 +170,21 @@ export function AnalyticsPage() {
   const query = useMmAnalytics(market || undefined)
   return (
     <>
-      <PageHeader title="Market analytics" description="Likuiditas, price discovery, efisiensi, dan pertumbuhan jaringan market yang kamu operasikan." icon={ChartColumn} tone="purple" />
-      <label className="mb-6 flex max-w-xs flex-col gap-1.5 text-sm font-medium">
-        Market
-        <select
-          value={market}
-          onChange={(e) => setMarket(e.target.value)}
-          className="h-9 rounded-lg border border-input bg-background px-2.5 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
-        >
-          <option value="">Semua market saya</option>
-          {overview.data?.markets.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-        </select>
-      </label>
+      <PageHeader title="Market analytics" description="Likuiditas, price discovery, efisiensi, dan pertumbuhan jaringan market yang kamu operasikan." icon={ChartColumn} tone="purple" featured />
+      <div className="mb-6 flex flex-col gap-3 rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:flex-row sm:items-end sm:justify-between sm:p-5">
+        <div><h2 className="font-semibold tracking-tight">Ruang lingkup laporan</h2><p className="mt-0.5 text-sm text-muted-foreground">Pilih satu market atau bandingkan seluruh market aktifmu.</p></div>
+        <label className="flex w-full flex-col gap-1.5 text-sm font-medium sm:max-w-sm">
+          Market
+          <select
+            value={market}
+            onChange={(e) => setMarket(e.target.value)}
+            className="h-10 rounded-xl border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+          >
+            <option value="">Semua market saya</option>
+            {overview.data?.markets.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+          </select>
+        </label>
+      </div>
       <AsyncView query={query} skeleton={<Skeleton className="h-96 rounded-xl" />} isEmpty={(d) => !d.byMarket.length} empty={<EmptyState icon={ChartColumn} title="Belum ada market" description="Analytics muncul setelah kamu mengoperasikan market." />}>
         {(d) => <AnalyticsView data={d} marketId={market || undefined} />}
       </AsyncView>
