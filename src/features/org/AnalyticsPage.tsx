@@ -216,6 +216,7 @@ export function AnalyticsPage() {
         description="Spend, penghematan, harga, performa supplier dan auction, serta riwayat procurement."
         icon={ChartColumn}
         tone="blue"
+        featured
         actions={<Button variant="outline" className="h-9" disabled={!query.data?.history.length} onClick={() => query.data && exportCsv(query.data)}><Download /> Export CSV</Button>}
       />
       <div className="mb-6 flex flex-wrap items-center gap-2">
