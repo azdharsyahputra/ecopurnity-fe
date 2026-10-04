@@ -45,7 +45,7 @@ export function ReputationPage() {
   const query = useReputation()
   return (
     <>
-      <PageHeader title="Reputation" description="Skor dihitung dari riwayat transaksimu: ketepatan, pembatalan, dispute, volume, dan mitra yang kembali." icon={BadgeCheck} tone="yellow" />
+      <PageHeader title="Reputation" description="Skor dihitung dari riwayat transaksimu: ketepatan, pembatalan, dispute, volume, dan mitra yang kembali." icon={BadgeCheck} tone="yellow" featured />
       <AsyncView query={query} skeleton={<Skeleton className="h-96 rounded-xl" />}>
         {(r) => (
           <div className="flex flex-col gap-6">
