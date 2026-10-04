@@ -64,14 +64,14 @@ export function LoginPage() {
         <form onSubmit={submit} className="flex flex-col gap-4">
           <Field label="Email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
           <PasswordField
-            label="Password"
+            label="Kata sandi"
             autoComplete="current-password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             visible={showPassword}
             onToggle={() => setShowPassword((shown) => !shown)}
-            aside={<Link to="/forgot-password" className="font-normal text-muted-foreground hover:text-foreground">Lupa password?</Link>}
+            aside={<Link to="/forgot-password" className="font-normal text-muted-foreground hover:text-foreground">Lupa kata sandi?</Link>}
           />
           <FormError error={login.error} />
           {login.error instanceof ApiError && login.error.code === 'account_suspended' && <Appeal email={email} password={password} />}

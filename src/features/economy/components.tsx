@@ -155,7 +155,7 @@ export function ListingCard({ l, action }: { l: PublicListing; action: React.Rea
       </p>
       <dl className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-muted/70 p-3">
         <Metric label="Kuantitas" value={formatQty(l.quantity)} />
-        <Metric label={supply ? 'Harga minta' : 'Budget'} value={`${formatIdr(l.unitPriceIdr, { compact: true })}/${l.quantity.unit}`} />
+        <Metric label={supply ? 'Harga minta' : 'Anggaran'} value={`${formatIdr(l.unitPriceIdr, { compact: true })}/${l.quantity.unit}`} />
       </dl>
       <div className="mt-3 flex items-center gap-1 text-xs text-muted-foreground">
         <MapPin className="size-3.5" /> {l.location}

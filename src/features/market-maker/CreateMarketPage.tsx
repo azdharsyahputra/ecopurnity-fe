@@ -110,7 +110,7 @@ function MarketWizard({ o }: { o?: OpportunityDetail }) {
   return (
     <>
       <Wizard
-        submitLabel="Publish market"
+        submitLabel="Terbitkan market"
         submitting={create.isPending}
         onSubmit={() => setConfirming(true)}
         error={
@@ -194,7 +194,7 @@ function MarketWizard({ o }: { o?: OpportunityDetail }) {
                 <div className="flex flex-col gap-1.5">
                   <span className="text-sm font-medium">Mode approval</span>
                   <Segmented label="Mode approval" value={f.approval} options={[['manual', 'Manual (review dulu)'], ['auto', 'Otomatis']]} onChange={(v) => set('approval', v)} />
-                  <p className="text-xs text-muted-foreground">{f.approval === 'manual' ? 'Peserta baru masuk antrean approval di tab Participants.' : 'Peserta yang memenuhi eligibility langsung aktif.'}</p>
+                  <p className="text-xs text-muted-foreground">{f.approval === 'manual' ? 'Peserta baru masuk antrean persetujuan di tab Peserta.' : 'Peserta yang memenuhi syarat langsung aktif.'}</p>
                 </div>
                 <SelectField label="Syarat verifikasi supplier" value={f.supplierVerification} onChange={(e) => set('supplierVerification', e.target.value as SupplierVerification)}>
                   {Object.entries(SUPPLIER_VERIFICATION).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
@@ -203,7 +203,7 @@ function MarketWizard({ o }: { o?: OpportunityDetail }) {
             ),
           },
           {
-            id: 'review', title: 'Review',
+            id: 'review', title: 'Tinjau',
             content: (
               <div className="flex flex-col gap-6">
                 <section aria-labelledby="sim" className="rounded-xl border bg-card p-4">
@@ -232,7 +232,7 @@ function MarketWizard({ o }: { o?: OpportunityDetail }) {
             <SummaryRow label="Demand/bln" value={f.demand > 0 ? formatQty({ value: f.demand, unit: f.unit }, { compact: true }) : ''} />
             <SummaryRow label="Harga acuan" value={f.referencePriceIdr > 0 ? formatIdr(f.referencePriceIdr) : ''} />
             <SummaryRow label="Undangan" value={f.autoInvite && o ? `${formatNumber(o.participants)} peserta` : 'Terbuka'} />
-            <SummaryRow label="Approval" value={f.approval === 'manual' ? 'Manual' : 'Otomatis'} />
+            <SummaryRow label="Persetujuan" value={f.approval === 'manual' ? 'Manual' : 'Otomatis'} />
           </>
         }
       />
@@ -240,19 +240,19 @@ function MarketWizard({ o }: { o?: OpportunityDetail }) {
       <Dialog open={confirming} onOpenChange={(v) => !create.isPending && setConfirming(v)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Publish {f.name}?</DialogTitle>
+            <DialogTitle>Terbitkan {f.name}?</DialogTitle>
             <DialogDescription>Market langsung tampil publik dan bisa diikuti peserta.</DialogDescription>
           </DialogHeader>
           <ul className="list-disc space-y-1 rounded-lg bg-muted p-3 pl-7 text-sm">
-            <li>Tampil di halaman publik Markets dengan status Active</li>
-            {o && <li>Opportunity {o.code} pindah ke <b>Market Live</b></li>}
-            {f.autoInvite && o && <li>{o.participantsPreview.length} peserta diundang ({f.approval === 'manual' ? 'menunggu approval kamu' : 'langsung aktif'})</li>}
+            <li>Tampil di halaman publik Markets dengan status Aktif</li>
+            {o && <li>Opportunity {o.code} berubah menjadi <b>Market aktif</b></li>}
+            {f.autoInvite && o && <li>{o.participantsPreview.length} peserta diundang ({f.approval === 'manual' ? 'menunggu persetujuanmu' : 'langsung aktif'})</li>}
             <li>Aturan v1 berlaku mulai round 1; perubahan nanti hanya berlaku untuk round berikutnya</li>
-            <li>Tercatat di audit log market</li>
+            <li>Tercatat di log audit market</li>
           </ul>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirming(false)} disabled={create.isPending}>Batal</Button>
-            <Button onClick={publish} disabled={create.isPending}>{create.isPending ? 'Memproses…' : 'Publish market'}</Button>
+            <Button onClick={publish} disabled={create.isPending}>{create.isPending ? 'Memproses…' : 'Terbitkan market'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

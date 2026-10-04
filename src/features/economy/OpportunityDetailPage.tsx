@@ -26,10 +26,10 @@ function Actions({ o, className }: { o: OpportunityDetail; className?: string })
   return (
     <div className={className}>
       <Button variant="outline" size="lg" className="h-10" onClick={() => gate('mengikuti opportunity ini', () => navigate(`/app/opportunities?follow=${o.id}`))}>
-        <Bell /> Follow
+        <Bell /> Ikuti
       </Button>
       <Button size="lg" className="h-10 flex-1 px-5 sm:flex-none" onClick={() => gate('bergabung ke opportunity ini', () => navigate(`/app/opportunities?join=${o.id}`))}>
-        Join opportunity
+        Bergabung ke opportunity
       </Button>
     </div>
   )
@@ -58,10 +58,10 @@ function Content({ o }: { o: OpportunityDetail }) {
       </header>
 
       <div className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-        <StatTile label="Potential demand" icon={ShoppingCart} tone="blue" value={formatQty(o.demand, { compact: true })} hint="per bulan" />
-        <StatTile label="Current supply" icon={PackageOpen} tone="teal" value={formatQty(o.supply, { compact: true })} hint="per bulan" />
-        <StatTile label="Estimated gap" icon={Boxes} tone="orange" value={formatQty({ value: gap, unit }, { compact: true })} hint={gap ? 'belum terpenuhi' : 'supply mencukupi'} />
-        <StatTile label="Participants" icon={Users} tone="purple" value={formatNumber(o.participants)} hint="bisnis dan individu" />
+        <StatTile label="Perkiraan demand" icon={ShoppingCart} tone="blue" value={formatQty(o.demand, { compact: true })} hint="per bulan" />
+        <StatTile label="Supply saat ini" icon={PackageOpen} tone="teal" value={formatQty(o.supply, { compact: true })} hint="per bulan" />
+        <StatTile label="Perkiraan kesenjangan" icon={Boxes} tone="orange" value={formatQty({ value: gap, unit }, { compact: true })} hint={gap ? 'belum terpenuhi' : 'supply mencukupi'} />
+        <StatTile label="Peserta" icon={Users} tone="purple" value={formatNumber(o.participants)} hint="bisnis dan individu" />
         <StatTile label="Nilai potensi" icon={Wallet} tone="lime" value={formatIdr(o.potentialValueIdr, { compact: true })} hint="per bulan" className="col-span-2 md:col-span-1" />
       </div>
 
@@ -134,7 +134,7 @@ function Content({ o }: { o: OpportunityDetail }) {
             <p className="mt-1 text-sm text-muted-foreground">{o.mechanismReason}</p>
             <div className="mt-4 flex items-center gap-2 text-sm">
               <Gauge className="size-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Confidence</span>
+              <span className="text-muted-foreground">Tingkat keyakinan</span>
               <span className="num ml-auto font-semibold">{formatPercent(o.confidence)}</span>
             </div>
             <div className="mt-1.5 h-1.5 overflow-hidden rounded-full" style={{ background: 'var(--tag-lime-bg)' }}>

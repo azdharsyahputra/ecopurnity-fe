@@ -23,7 +23,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 
 
 const IMPACT: Partial<Record<TradeAction, (t: TransactionDetail) => string>> = {
-  accept_agreement: (t) => `Kamu menyetujui ${formatQty(t.quantity)} × ${formatIdr(t.unitPriceIdr)} dengan termin ${TERMS[t.terms ?? 'escrow'].label}. Agreement mengikat setelah kedua pihak setuju.`,
+  accept_agreement: (t) => `Kamu menyetujui ${formatQty(t.quantity)} × ${formatIdr(t.unitPriceIdr)} dengan termin ${TERMS[t.terms ?? 'escrow'].label}. Perjanjian mengikat setelah kedua pihak setuju.`,
   issue_invoice: (t) => `Invoice ${formatIdr(breakdown(t.totalIdr).buyerPaysIdr)} (termasuk PPN 11%) dikirim ke pembeli.`,
   cancel: () => 'Transaksi dibatalkan untuk kedua pihak. Dana escrow (jika ada) dikembalikan. Tercatat di riwayat reputasi.',
 }
@@ -340,7 +340,7 @@ export function TradeSections({ t, actions, counterparty }: { t: TransactionDeta
 
       {t.status === 'agreement' && (
         <section className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] xl:col-span-12 md:p-5">
-          <h2 className="flex items-center gap-2 border-b border-border/70 pb-3 font-semibold tracking-tight"><Handshake className="size-4 text-primary" /> Agreement</h2>
+          <h2 className="flex items-center gap-2 border-b border-border/70 pb-3 font-semibold tracking-tight"><Handshake className="size-4 text-primary" /> Perjanjian</h2>
           <p className="mt-1 text-sm text-muted-foreground">Mengikat setelah pembeli dan supplier sama-sama setuju. {TERMS[terms].hint}</p>
           <ul className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
             {(['buyer', 'supplier'] as const).map((r) => (
@@ -425,7 +425,7 @@ export function TradeSections({ t, actions, counterparty }: { t: TransactionDeta
             <li key={d.id} className="flex min-w-0 items-center gap-2.5 rounded-xl border bg-muted/15 p-2.5">
               <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary"><FileText className="size-4" /></span>
               <div className="min-w-0 flex-1"><div className="truncate font-medium">{d.url ? <Attachment name={d.name} url={d.url} /> : d.name}</div><p className="mt-0.5 text-[11px] text-muted-foreground">{formatDate(d.at)}</p></div>
-              <Tag>{{ order: 'Order', agreement: 'Agreement', invoice: 'Invoice', proof: 'Bukti' }[d.kind]}</Tag>
+              <Tag>{{ order: 'Pesanan', agreement: 'Perjanjian', invoice: 'Faktur', proof: 'Bukti' }[d.kind]}</Tag>
             </li>
           ))}
         </ul> : <p className="mt-3 rounded-xl border border-dashed bg-muted/15 p-4 text-sm text-muted-foreground">Belum ada dokumen untuk transaksi ini.</p>}

@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 
 const ENTITY_LABEL: Record<AuditEntry['entity']['type'], string> = {
-  user: 'User', business: 'Bisnis', opportunity: 'Opportunity', market: 'Market', alert: 'Fraud alert', auction: 'Auction', transaction: 'Transaksi', dispute: 'Dispute',
+  user: 'Pengguna', business: 'Bisnis', opportunity: 'Opportunity', market: 'Market', alert: 'Peringatan penipuan', auction: 'Auction', transaction: 'Transaksi', dispute: 'Sengketa',
   rule: 'Aturan', procurement: 'Procurement', supplier: 'Supplier',
 }
 

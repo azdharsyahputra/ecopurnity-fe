@@ -72,8 +72,8 @@ export function RulesFields({ value: r, onChange, unit, errors, serverError }: {
   return (
     <div className="flex flex-col gap-6">
       <fieldset className="grid gap-4 sm:grid-cols-2">
-        <legend className="mb-3 text-sm font-medium text-muted-foreground">Eligibility & bid</legend>
-        <SelectField label="Eligibility peserta" value={r.eligibility} onChange={(e) => set('eligibility', e.target.value as MarketRules['eligibility'])}>
+        <legend className="mb-3 text-sm font-medium text-muted-foreground">Kelayakan & bid</legend>
+        <SelectField label="Kelayakan peserta" value={r.eligibility} onChange={(e) => set('eligibility', e.target.value as MarketRules['eligibility'])}>
           {Object.entries(ELIGIBILITY).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
         </SelectField>
         <SelectField label="Visibilitas bid" value={r.visibility} onChange={(e) => set('visibility', e.target.value as MarketRules['visibility'])}>

@@ -64,7 +64,7 @@ export function MmApplicationsPage() {
               <section aria-label="Ringkasan pengajuan Market Maker" className="grid gap-3 sm:grid-cols-3">
                 {[
                   { label: 'Total pengajuan', value: rows.length, note: 'Seluruh keputusan', icon: UsersRound, color: 'bg-orange-500/10 text-orange-700 dark:text-orange-300' },
-                  { label: 'Menunggu review', value: pending, note: 'Perlu keputusan admin', icon: Clock3, color: 'bg-amber-500/10 text-amber-700 dark:text-amber-300' },
+                  { label: 'Menunggu peninjauan', value: pending, note: 'Perlu keputusan admin', icon: Clock3, color: 'bg-amber-500/10 text-amber-700 dark:text-amber-300' },
                   { label: 'Disetujui', value: approved, note: 'Capability telah diberikan', icon: BadgeCheck, color: 'bg-teal-500/10 text-teal-700 dark:text-teal-300' },
                 ].map(({ label, value, note, icon: Icon, color }) => <article key={label} className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:p-5"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">{label}</p><p className="mt-2 text-2xl font-semibold tracking-tight tabular-nums">{formatNumber(value)}</p><p className="mt-1 text-xs text-muted-foreground">{note}</p></div><span className={`grid size-10 place-items-center rounded-xl ${color}`}><Icon className="size-5" aria-hidden="true" /></span></div></article>)}
               </section>

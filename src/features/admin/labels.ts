@@ -8,7 +8,7 @@ export const ACCOUNT_STATUS: Record<AccountStatus, [string, Tone]> = {
 }
 
 export const VERIFICATION_STATUS: Record<VerificationStatus, [string, Tone]> = {
-  pending: ['Menunggu review', 'yellow'],
+  pending: ['Menunggu peninjauan', 'yellow'],
   approved: ['Disetujui', 'green'],
   rejected: ['Ditolak', 'red'],
   reupload: ['Unggah ulang', 'orange'],
@@ -17,20 +17,20 @@ export const VERIFICATION_STATUS: Record<VerificationStatus, [string, Tone]> = {
 export const DOC_KIND: Record<DocKind, string> = { nib: 'NIB', npwp: 'NPWP', akta: 'Akta pendirian', ktp: 'KTP', selfie: 'Selfie + KTP' }
 
 export const ALERT_TYPE: Record<AlertType, { label: string; network: boolean }> = {
-  bid_manipulation: { label: 'Bid manipulation', network: false },
-  collusion: { label: 'Collusion pattern', network: true },
-  fake_accounts: { label: 'Fake accounts', network: true },
-  abnormal_bidding: { label: 'Abnormal bidding', network: false },
-  wash_trading: { label: 'Wash trading', network: true },
-  price_manipulation: { label: 'Sudden price manipulation', network: false },
-  transaction_network: { label: 'Suspicious transaction network', network: true },
+  bid_manipulation: { label: 'Manipulasi bid', network: false },
+  collusion: { label: 'Pola kolusi', network: true },
+  fake_accounts: { label: 'Akun palsu', network: true },
+  abnormal_bidding: { label: 'Penawaran tidak wajar', network: false },
+  wash_trading: { label: 'Transaksi semu', network: true },
+  price_manipulation: { label: 'Manipulasi harga mendadak', network: false },
+  transaction_network: { label: 'Jaringan transaksi mencurigakan', network: true },
 }
 
 export const ALERT_STATUS: Record<AlertStatus, [string, Tone]> = {
   new: ['Baru', 'orange'],
   investigating: ['Investigasi', 'blue'],
   escalated: ['Dieskalasi', 'red'],
-  dismissed: ['Dismissed', 'gray'],
+  dismissed: ['Dikesampingkan', 'gray'],
   closed: ['Ditutup', 'gray'],
 }
 

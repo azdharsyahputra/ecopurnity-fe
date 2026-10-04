@@ -183,7 +183,7 @@ export function ParticipantBidBox({ a }: { a: AuctionDetail }) {
         />
       )}
       <ConfirmDialog
-        trigger={<Button className="h-10 w-full" disabled={!!error || !!capError}>{bid ? 'Update bid' : 'Kirim bid'}</Button>}
+        trigger={<Button className="h-10 w-full" disabled={!!error || !!capError}>{bid ? 'Perbarui bid' : 'Kirim bid'}</Button>}
         title={`Kirim bid ${formatIdr(value)}/${unit}?`}
         description="Bid mengikat sampai auction ditutup."
         impact={
@@ -396,7 +396,7 @@ export function CreateAuctionPage() {
                   <option value="1440">24 jam</option>
                   <option value="4320">3 hari</option>
                 </SelectField>
-                <Field label={`Harga pembuka per ${demand?.quantity.unit ?? 'unit'} (Rp)`} type="number" placeholder={String(suggestedOpening || '')} value={form.opening} onChange={(e) => set('opening', e.target.value)} error={fieldError(create.error, 'openingPriceIdr')} hint={suggestedOpening ? `Dari budget: ${formatIdr(suggestedOpening)}` : undefined} />
+                <Field label={`Harga pembuka per ${demand?.quantity.unit ?? 'unit'} (Rp)`} type="number" placeholder={String(suggestedOpening || '')} value={form.opening} onChange={(e) => set('opening', e.target.value)} error={fieldError(create.error, 'openingPriceIdr')} hint={suggestedOpening ? `Dari anggaran: ${formatIdr(suggestedOpening)}` : undefined} />
                 {form.type === 'reverse' && <Field label="Penurunan minimum (Rp)" type="number" placeholder={String(step)} value={form.step} onChange={(e) => set('step', e.target.value)} hint="Default 1% dari harga pembuka" />}
               </div>
             ),
@@ -418,7 +418,7 @@ export function CreateAuctionPage() {
             <SummaryRow label="Tipe" value={form.type === 'sealed' ? 'Sealed bid' : 'Reverse'} />
             <SummaryRow label="Harga pembuka" value={opening ? formatIdr(opening) : ''} />
             <SummaryRow label="Nilai pembuka" value={demand && opening ? formatIdr(opening * demand.quantity.value, { compact: true }) : ''} />
-            <SummaryRow label="Budget" value={demand ? formatIdr(demand.budgetIdr, { compact: true }) : ''} />
+            <SummaryRow label="Anggaran" value={demand ? formatIdr(demand.budgetIdr, { compact: true }) : ''} />
           </>
         }
       />

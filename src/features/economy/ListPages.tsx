@@ -74,7 +74,7 @@ export function OpportunitiesPage() {
       filters={
         <FilterBar
           placeholder="Cari opportunity…"
-          statuses={[['detected', 'Detected'], ['forming', 'Forming'], ['market_live', 'Market live']]}
+          statuses={[['detected', 'Terdeteksi'], ['forming', 'Sedang dibentuk'], ['market_live', 'Market aktif']]}
         />
       }
       query={useOpportunities(filters)}
@@ -97,7 +97,7 @@ export function MarketsPage() {
         />
       }
       filters={
-        <FilterBar placeholder="Cari market atau market maker…" statuses={[['active', 'Active'], ['formation', 'Formation'], ['paused', 'Paused']]} />
+        <FilterBar placeholder="Cari market atau market maker…" statuses={[['active', 'Aktif'], ['formation', 'Pembentukan'], ['paused', 'Dijeda']]} />
       }
       query={useMarkets(filters)}
       render={(m) => <MarketCard key={m.id} m={m} />}
@@ -122,7 +122,7 @@ export function AuctionsPage() {
         <FilterBar
           placeholder="Cari auction…"
           showRegion={false}
-          statuses={[['live,extended', 'Live'], ['qualification', 'Qualification'], ['scheduled', 'Scheduled'], ['closed,awarded', 'Selesai']]}
+          statuses={[['live,extended', 'Berlangsung'], ['qualification', 'Kualifikasi'], ['scheduled', 'Terjadwal'], ['closed,awarded', 'Selesai']]}
         />
       }
       query={useAuctions(filters)}

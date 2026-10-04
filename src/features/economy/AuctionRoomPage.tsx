@@ -169,7 +169,7 @@ function Content({ a }: { a: AuctionDetail }) {
               <h2 className="font-medium">Aktivitas bid</h2>
               {live && (
                 <span className="inline-flex items-center gap-1.5 rounded-sm bg-lime px-1.5 py-0.5 text-xs font-semibold text-lime-foreground">
-                  <span className="size-1.5 animate-pulse rounded-full bg-current" /> LIVE
+                  <span className="size-1.5 animate-pulse rounded-full bg-current" /> BERLANGSUNG
                 </span>
               )}
             </div>

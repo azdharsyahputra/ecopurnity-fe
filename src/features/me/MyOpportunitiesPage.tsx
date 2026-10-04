@@ -38,7 +38,7 @@ function JoinDialog({ o, onClose }: { o: PersonalOpportunity; onClose: () => voi
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Join {o.title}</DialogTitle>
+          <DialogTitle>Bergabung ke {o.title}</DialogTitle>
           <DialogDescription>Kontribusimu dihitung ke {kind === 'demand' ? 'demand kolektif' : 'supply'} opportunity ini.</DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4">
@@ -64,7 +64,7 @@ function JoinDialog({ o, onClose }: { o: PersonalOpportunity; onClose: () => voi
               )
             }
           >
-            {join.isPending ? 'Menyimpan…' : 'Join'}
+            {join.isPending ? 'Menyimpan…' : 'Gabung'}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -104,11 +104,11 @@ function PersonalCard({ o, onJoin }: { o: PersonalOpportunity; onJoin: () => voi
           <Button variant="outline" className="h-8" onClick={() => action.mutate({ type: 'leave', id: o.id }, { onSuccess: () => toast({ title: `Keluar dari ${o.title}` }) })}>Leave</Button>
         ) : (
           <>
-            <Button className="h-8" onClick={onJoin}>Join</Button>
+            <Button className="h-8" onClick={onJoin}>Gabung</Button>
             {o.relation === 'following' ? (
               <Button variant="ghost" className="h-8" onClick={() => action.mutate({ type: 'leave', id: o.id })}><BellOff /> Unfollow</Button>
             ) : (
-              <Button variant="ghost" className="h-8" onClick={() => action.mutate({ type: 'follow', id: o.id }, { onSuccess: () => toast({ title: 'Kamu mengikuti opportunity ini', tone: 'blue' }) })}><Bell /> Follow</Button>
+              <Button variant="ghost" className="h-8" onClick={() => action.mutate({ type: 'follow', id: o.id }, { onSuccess: () => toast({ title: 'Kamu mengikuti opportunity ini', tone: 'blue' }) })}><Bell /> Ikuti</Button>
             )}
           </>
         )}

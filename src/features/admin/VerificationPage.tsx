@@ -25,7 +25,7 @@ export function VerificationQueuePage() {
   const query = useVerifications()
   return (
     <>
-      <PageHeader title="Verifikasi bisnis" description={`Antrean dokumen NIB, NPWP, dan akta. Target review ${SLA_HOURS} jam sejak diajukan.`} icon={FileCheck2} tone="orange" />
+      <PageHeader title="Verifikasi bisnis" description={`Antrean dokumen NIB, NPWP, dan akta. Target peninjauan ${SLA_HOURS} jam sejak diajukan.`} icon={FileCheck2} tone="orange" />
       <AsyncView query={query} skeleton={<Skeleton className="h-72 rounded-xl" />} emptyFallback={false}>
         {(rows) => {
           const pending = rows.filter((v) => v.status === 'pending')
@@ -35,8 +35,8 @@ export function VerificationQueuePage() {
               <section aria-label="Ringkasan antrean verifikasi" className="grid gap-3 sm:grid-cols-3">
                 {[
                   { label: 'Total pengajuan', value: rows.length, note: 'Semua status verifikasi', icon: FileCheck2, tone: 'bg-orange-500/10 text-orange-700 dark:text-orange-300' },
-                  { label: 'Menunggu review', value: pending.length, note: 'Perlu keputusan admin', icon: ShieldCheck, tone: 'bg-blue-500/10 text-blue-700 dark:text-blue-300' },
-                  { label: 'Melewati SLA', value: overdueCount, note: `Target review ${SLA_HOURS} jam`, icon: Clock3, tone: 'bg-red-500/10 text-red-700 dark:text-red-300' },
+                  { label: 'Menunggu peninjauan', value: pending.length, note: 'Perlu keputusan admin', icon: ShieldCheck, tone: 'bg-blue-500/10 text-blue-700 dark:text-blue-300' },
+                  { label: 'Melewati SLA', value: overdueCount, note: `Target peninjauan ${SLA_HOURS} jam`, icon: Clock3, tone: 'bg-red-500/10 text-red-700 dark:text-red-300' },
                 ].map(({ label, value, note, icon: Icon, tone }) => (
                   <article key={label} className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:p-5">
                     <div className="flex items-start justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">{label}</p><p className="mt-2 text-2xl font-semibold tracking-tight tabular-nums">{formatNumber(value)}</p><p className="mt-1 text-xs text-muted-foreground">{note}</p></div><span className={`grid size-10 place-items-center rounded-xl ${tone}`}><Icon className="size-5" aria-hidden="true" /></span></div>

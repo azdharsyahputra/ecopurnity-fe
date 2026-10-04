@@ -40,9 +40,9 @@ export function ProcurementListPage() {
   const add = <GuardedLink to={`${access.base}/procurement/new`} reason={access.deny('procurement', 'create')}><Plus /> Buat procurement</GuardedLink>
   return (
     <>
-      <PageHeader title="Procurement" description="Permintaan pengadaan tim: dari draft, approval, publish, sampai auction dan PO." icon={ClipboardList} tone="blue" actions={add} featured />
+      <PageHeader title="Procurement" description="Permintaan pengadaan tim: dari draf dan persetujuan hingga diterbitkan, masuk auction, dan menjadi PO." icon={ClipboardList} tone="blue" actions={add} featured />
       <AsyncView query={query} skeleton={<Skeleton className="h-64 rounded-xl" />}
-        empty={<EmptyState icon={ClipboardList} tone="blue" title="Belum ada procurement" description="Catat kebutuhan tim; aturan approval berjalan otomatis sesuai nilai." action={add} />}>
+        empty={<EmptyState icon={ClipboardList} tone="blue" title="Belum ada procurement" description="Catat kebutuhan tim; aturan persetujuan berjalan otomatis sesuai nilai." action={add} />}>
         {(rows) => {
           const visible = filter ? rows.filter((r) => stageOf(r) === filter) : rows
           return (
@@ -64,7 +64,7 @@ export function ProcurementListPage() {
                         <div className="mt-3"><CategoryTag id={r.categoryId} /></div>
                         <dl className="mt-5 grid grid-cols-2 gap-3 border-y py-4">
                           <div className="min-w-0"><dt className="text-xs text-muted-foreground">Kuantitas</dt><dd className="mt-1 truncate text-sm font-semibold">{formatQty(r.quantity, { compact: true })}</dd></div>
-                          <div className="min-w-0"><dt className="text-xs text-muted-foreground">Budget</dt><dd className="num mt-1 truncate text-sm font-semibold">{formatIdr(r.budgetIdr, { compact: true })}</dd></div>
+                          <div className="min-w-0"><dt className="text-xs text-muted-foreground">Anggaran</dt><dd className="num mt-1 truncate text-sm font-semibold">{formatIdr(r.budgetIdr, { compact: true })}</dd></div>
                         </dl>
                         <div className="mt-auto flex items-center justify-between gap-3 pt-4 text-xs text-muted-foreground">
                           <span className="truncate">{VISIBILITY[r.visibility].label} · Diperbarui {formatRelative(r.updatedAt)}</span>
@@ -121,7 +121,7 @@ export function ProcurementFormPage() {
     create.mutate({ ...input, submit: asSubmit }, {
       onSuccess: (r) => {
         clear()
-        toast({ title: asSubmit ? (r.status === 'pending_approval' ? 'Diajukan untuk approval' : 'Procurement disetujui otomatis') : 'Draft disimpan', body: r.code, tone: 'green' })
+        toast({ title: asSubmit ? (r.status === 'pending_approval' ? 'Diajukan untuk persetujuan' : 'Procurement disetujui otomatis') : 'Draf disimpan', body: r.code, tone: 'green' })
         navigate(`${access.base}/procurement/${r.id}`, { replace: true })
       },
     })
@@ -132,7 +132,7 @@ export function ProcurementFormPage() {
 
   return (
     <>
-      <PageHeader title="Buat procurement" description="Kebutuhan, budget, dan siapa yang boleh menawar. Approval mengikuti aturan tim." icon={ClipboardList} tone="blue" featured />
+      <PageHeader title="Buat procurement" description="Kebutuhan, anggaran, dan siapa yang boleh menawar. Persetujuan mengikuti aturan tim." icon={ClipboardList} tone="blue" featured />
       <Wizard
         submitLabel={approvers.length ? 'Ajukan untuk approval' : 'Ajukan'}
         submitting={create.isPending}
@@ -156,11 +156,11 @@ export function ProcurementFormPage() {
             ),
           },
           {
-            id: 'budget', title: 'Budget & pengiriman', blocker: !(budget > 0) ? 'Isi budget' : !d.deadline ? 'Isi deadline' : undefined,
+            id: 'budget', title: 'Anggaran & pengiriman', blocker: !(budget > 0) ? 'Isi anggaran' : !d.deadline ? 'Isi batas waktu' : undefined,
             content: (
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Budget total (Rp)" type="number" min={0} value={d.budget} onChange={(e) => set('budget', e.target.value)} error={fieldError(create.error, 'budgetIdr')} hint={qty > 0 && budget > 0 ? `≈ ${formatIdr(Math.round(budget / qty))} per ${d.unit}` : undefined} />
-                <Field label="Deadline" type="date" value={d.deadline} onChange={(e) => set('deadline', e.target.value)} error={fieldError(create.error, 'deadline')} />
+                <Field label="Anggaran total (Rp)" type="number" min={0} value={d.budget} onChange={(e) => set('budget', e.target.value)} error={fieldError(create.error, 'budgetIdr')} hint={qty > 0 && budget > 0 ? `≈ ${formatIdr(Math.round(budget / qty))} per ${d.unit}` : undefined} />
+                <Field label="Batas waktu" type="date" value={d.deadline} onChange={(e) => set('deadline', e.target.value)} error={fieldError(create.error, 'deadline')} />
                 <div className="sm:col-span-2"><Field label="Lokasi pengiriman" placeholder={access.settings?.profile.location} value={d.deliveryLocation} onChange={(e) => set('deliveryLocation', e.target.value)} /></div>
               </div>
             ),
@@ -185,9 +185,9 @@ export function ProcurementFormPage() {
                 )}
                 {fieldError(create.error, 'invited') && <p className="text-xs text-destructive">{fieldError(create.error, 'invited')}</p>}
                 <div className="rounded-lg bg-muted p-3 text-sm">
-                  <p className="font-medium">Approval yang dibutuhkan</p>
+                  <p className="font-medium">Persetujuan yang dibutuhkan</p>
                   <p className="mt-1 text-muted-foreground">
-                    {approvers.length ? <>Budget {formatIdr(budget, { compact: true })} butuh persetujuan <b>{approvers.map(roleLabel).join(' + ')}</b>.</> : 'Di bawah ambang aturan approval: langsung disetujui saat diajukan.'}
+                    {approvers.length ? <>Anggaran {formatIdr(budget, { compact: true })} butuh persetujuan <b>{approvers.map(roleLabel).join(' + ')}</b>.</> : 'Di bawah ambang aturan persetujuan: langsung disetujui saat diajukan.'}
                   </p>
                 </div>
                 <Button variant="outline" className="h-10 self-start" disabled={create.isPending} onClick={() => submit(false)}>Simpan sebagai draft</Button>
@@ -200,11 +200,11 @@ export function ProcurementFormPage() {
             <SummaryRow label="Kebutuhan" value={d.need} />
             <SummaryRow label="Kategori" value={CATEGORIES[d.categoryId].label} />
             <SummaryRow label="Kuantitas" value={qty > 0 ? formatQty({ value: qty, unit: d.unit }) : ''} />
-            <SummaryRow label="Budget" value={budget > 0 ? formatIdr(budget, { compact: true }) : ''} />
-            <SummaryRow label="Deadline" value={d.deadline ? formatDate(fromDate(d.deadline)) : ''} />
+            <SummaryRow label="Anggaran" value={budget > 0 ? formatIdr(budget, { compact: true }) : ''} />
+            <SummaryRow label="Batas waktu" value={d.deadline ? formatDate(fromDate(d.deadline)) : ''} />
             <SummaryRow label="Visibilitas" value={VISIBILITY[d.visibility].label} />
-            <SummaryRow label="Approval" value={approvers.length ? approvers.map(roleLabel).join(' + ') : 'Tidak perlu'} />
-            <p className="mt-3 text-xs text-muted-foreground">Draft tersimpan otomatis.</p>
+            <SummaryRow label="Persetujuan" value={approvers.length ? approvers.map(roleLabel).join(' + ') : 'Tidak perlu'} />
+            <p className="mt-3 text-xs text-muted-foreground">Draf tersimpan otomatis.</p>
           </>
         }
       />
@@ -267,7 +267,7 @@ export function ProcurementDetailPage() {
                 <>
                   {actions.includes('submit') && <Button className="h-9" disabled={act.isPending} onClick={() => act.mutate({ action: 'submit' }, { onSuccess: done('Diajukan') })}><Send /> Ajukan</Button>}
                   {actions.includes('publish') && (
-                    <ConfirmDialog trigger={<Button className="h-9">Publish</Button>} title={`Publish ${r.code}?`} confirmLabel="Publish"
+                    <ConfirmDialog trigger={<Button className="h-9">Terbitkan</Button>} title={`Terbitkan ${r.code}?`} confirmLabel="Terbitkan"
                       impact={r.visibility === 'invite' ? `Hanya ${r.invitedSupplierIds.length} supplier yang diundang bisa melihat dan menawar.` : r.visibility === 'private' ? 'Tetap internal; tercatat sebagai siap dipenuhi.' : `Terlihat oleh supplier terverifikasi kategori ${CATEGORIES[r.categoryId].label}.`}
                       onConfirm={() => act.mutateAsync({ action: 'publish' }).then(done('Dipublish'))} />
                   )}
@@ -276,7 +276,7 @@ export function ProcurementDetailPage() {
                   {r.auctionId && <Button variant="outline" className="h-9" render={<Link to={`${access.base}/auctions/${r.auctionId}/evaluate`} />}><Gavel /> Lihat auction</Button>}
                   {actions.includes('cancel') && (
                     <ConfirmDialog trigger={<Button variant="ghost" className="h-9">Batalkan</Button>} title={`Batalkan ${r.code}?`} destructive confirmLabel="Batalkan"
-                      impact="Approval yang berjalan dihentikan dan supplier tidak bisa menawar lagi. Tercatat di audit trail."
+                      impact="Proses persetujuan yang berjalan dihentikan dan supplier tidak bisa menawar lagi. Tercatat di log audit."
                       onConfirm={() => act.mutateAsync({ action: 'cancel' }).then(done('Dibatalkan'))} />
                   )}
                 </>
@@ -288,8 +288,8 @@ export function ProcurementDetailPage() {
                 <Section title="Detail permintaan">
                   <dl className="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-3">
                     {[
-                      ['Kuantitas', formatQty(r.quantity)], ['Budget', formatIdr(r.budgetIdr)], ['Harga acuan', `${formatIdr(Math.round(r.budgetIdr / r.quantity.value))}/${r.quantity.unit}`],
-                      ['Deadline', formatDate(r.deadline)], ['Lokasi pengiriman', r.deliveryLocation], ['Dibuat oleh', r.createdBy],
+                      ['Kuantitas', formatQty(r.quantity)], ['Anggaran', formatIdr(r.budgetIdr)], ['Harga acuan', `${formatIdr(Math.round(r.budgetIdr / r.quantity.value))}/${r.quantity.unit}`],
+                      ['Batas waktu', formatDate(r.deadline)], ['Lokasi pengiriman', r.deliveryLocation], ['Dibuat oleh', r.createdBy],
                     ].map(([k, v]) => <div key={k} className="min-w-0 rounded-xl border bg-muted/20 p-3.5"><dt className="text-xs font-medium text-muted-foreground">{k}</dt><dd className="mt-1.5 break-words font-semibold leading-snug">{v}</dd></div>)}
                   </dl>
                   {r.spec && <div className="mt-3 rounded-xl border border-dashed bg-muted/10 p-3"><p className="text-xs font-medium text-muted-foreground">Spesifikasi</p><p className="mt-1 text-sm leading-relaxed">{r.spec}</p></div>}
@@ -305,7 +305,7 @@ export function ProcurementDetailPage() {
                 </Section>
               </div>
               <aside className="flex min-w-0 flex-col gap-5 2xl:gap-6 xl:sticky xl:top-4">
-                <Section title="Approval">
+                <Section title="Persetujuan">
                   <div className="rounded-xl border bg-muted/10 p-3"><ApprovalTrail required={r.requiredApprovers} approvals={r.approvals} roles={roles} /></div>
                   {actions.includes('approve') && (
                     <div className="mt-4 border-t pt-4">
@@ -314,7 +314,7 @@ export function ProcurementDetailPage() {
                       <DecisionButtons
                         subject={r.code}
                         error={act.error}
-                        impact={<>Budget <b>{formatIdr(r.budgetIdr)}</b> untuk {formatQty(r.quantity)} {r.need}. Persetujuanmu tercatat di audit trail{r.requiredApprovers.length > 1 ? ' dan approval lain tetap diperlukan' : ''}.</>}
+                        impact={<>Anggaran <b>{formatIdr(r.budgetIdr)}</b> untuk {formatQty(r.quantity)} {r.need}. Persetujuanmu tercatat di log audit{r.requiredApprovers.length > 1 ? ' dan persetujuan lain tetap diperlukan' : ''}.</>}
                         onDecide={(a, note) => act.mutateAsync({ action: a, note }).then(done(a === 'approve' ? 'Disetujui' : 'Ditolak'))}
                       />
                     </div>

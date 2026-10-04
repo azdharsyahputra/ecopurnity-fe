@@ -16,8 +16,8 @@ export function AdminOverviewPage() {
   return (
     <>
       <PageHeader
-        title="Governance"
-        description="Antrean yang menunggu keputusan. Admin memeriksa, membekukan, dan memutuskan; setiap tindakan tercatat di audit trail."
+        title="Tata kelola"
+        description="Antrean yang menunggu keputusan. Admin memeriksa, membekukan, dan memutuskan; setiap tindakan tercatat di log audit."
         icon={LayoutDashboard}
         tone="orange"
       />
@@ -27,12 +27,12 @@ export function AdminOverviewPage() {
             <section aria-label="Ringkasan antrean governance" className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {([
                 ['Total antrean', Object.values(d.queues).reduce((sum, count) => sum + count, 0), LayoutDashboard, 'orange', ''],
-                ['Users dilaporkan', d.queues.users, Users, 'blue', 'users'],
+                ['Pengguna dilaporkan', d.queues.users, Users, 'blue', 'users'],
                 ['Verifikasi bisnis', d.queues.verification, FileCheck2, 'teal', 'verification'],
                 ['Market ter-flag', d.queues.markets, Store, 'purple', 'markets'],
                 ['Auction dengan temuan', d.queues.auctions, Gavel, 'yellow', 'auctions'],
                 ['Dispute terbuka', d.queues.disputes, Scale, 'orange', 'disputes'],
-                ['Fraud alert aktif', d.queues.fraud, ShieldAlert, 'red', 'fraud'],
+                ['Peringatan penipuan aktif', d.queues.fraud, ShieldAlert, 'red', 'fraud'],
                 ['Pencairan menunggu', d.queues.withdrawals, Banknote, 'green', 'withdrawals'],
               ] as const).map(([label, n, icon, tone, path]) => {
                 const tile = <StatTile label={label} value={formatNumber(n)} icon={icon} tone={tone} className="h-full min-h-28 rounded-2xl shadow-sm shadow-foreground/[0.025] transition-all hover:-translate-y-0.5 hover:border-primary/20 hover:bg-muted/25 hover:shadow-md" />
@@ -45,7 +45,7 @@ export function AdminOverviewPage() {
             </section>
 
             <div className="grid items-start gap-5 xl:grid-cols-2">
-              <Panel title="Fraud alert terbaru" action={<Link to="/admin/fraud" className="inline-flex h-8 items-center gap-1 rounded-lg px-2 text-sm font-medium text-primary transition-colors hover:bg-primary/10">Semua <ArrowRight className="size-3.5" /></Link>}>
+              <Panel title="Peringatan penipuan terbaru" action={<Link to="/admin/fraud" className="inline-flex h-8 items-center gap-1 rounded-lg px-2 text-sm font-medium text-primary transition-colors hover:bg-primary/10">Semua <ArrowRight className="size-3.5" /></Link>}>
                 {d.newAlerts.length ? (
                   <ul className="divide-y divide-border/70">
                     {d.newAlerts.map((a) => (
@@ -87,7 +87,7 @@ export function AdminOverviewPage() {
               </Panel>
             </div>
 
-            <Panel title="SLA review">
+            <Panel title="SLA peninjauan">
               <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {d.sla.map((s) => (
                     <li key={s.module} className="rounded-xl border bg-muted/15 p-3.5 transition-colors hover:bg-muted/30">

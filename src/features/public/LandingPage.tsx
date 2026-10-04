@@ -38,19 +38,19 @@ function Hero() {
       <div className="pointer-events-none absolute -right-20 -top-24 -z-10 size-96 rounded-full bg-primary/10 blur-3xl" />
       <div className="relative">
         <span className="inline-flex items-center gap-2 rounded-full border bg-background/80 px-3 py-1 text-xs text-muted-foreground shadow-sm">
-          <span className="size-1.5 rounded-full bg-lime" /> Economic Opportunity Engine
+          <span className="size-1.5 rounded-full bg-lime" /> Mesin Economic Opportunity Engine
         </span>
         <h1 className="mt-5 max-w-2xl text-4xl font-semibold leading-[1.06] tracking-tight text-balance sm:text-5xl lg:text-6xl">
-          Find markets that{' '}
-          <span className="bg-linear-to-r from-primary to-brand-to bg-clip-text text-transparent">don't exist yet</span>.
+          Temukan market yang{' '}
+          <span className="bg-linear-to-r from-primary to-brand-to bg-clip-text text-transparent">belum pernah ada</span>.
         </h1>
         <p className="mt-5 max-w-lg text-lg text-muted-foreground text-pretty">
           Ecopurnity membaca supply, demand, dan jaringan untuk menemukan peluang ekonomi, lalu membentuk market dan menjalankan auction
-          secara real-time.
+            secara langsung.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Button size="lg" className="h-11 px-5" render={<Link to="/explore" />}>
-            Explore live economy <ArrowRight />
+            Jelajahi ekonomi secara langsung <ArrowRight />
           </Button>
           <Button size="lg" variant="outline" className="h-11 px-5" render={<Link to="/register" />}>
             Mulai gratis
@@ -62,7 +62,7 @@ function Hero() {
         <div className="mb-3 flex items-center justify-between border-b pb-3">
           <div><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Jaringan Ecopurnity</p><p className="mt-0.5 text-sm font-semibold">Terjadi sekarang</p></div>
           <span className="inline-flex items-center gap-1.5 rounded-sm bg-lime px-1.5 py-0.5 text-xs font-semibold text-lime-foreground">
-            <span className="size-1.5 animate-pulse rounded-full bg-current" /> LIVE
+            <span className="size-1.5 animate-pulse rounded-full bg-current" /> LANGSUNG
           </span>
         </div>
         <AsyncView query={activity} skeleton={<Skeleton className="mt-3 h-56" />}>
@@ -76,7 +76,7 @@ function Hero() {
 function LiveStats() {
   const { data: s } = usePublicStats()
   return (
-    <section aria-label="Statistik jaringan live" className="relative z-10 -mt-2 grid grid-cols-2 gap-3 rounded-2xl border bg-card p-3 shadow-lg shadow-foreground/[0.035] sm:p-4 lg:grid-cols-4">
+    <section aria-label="Statistik jaringan langsung" className="relative z-10 -mt-2 grid grid-cols-2 gap-3 rounded-2xl border bg-card p-3 shadow-lg shadow-foreground/[0.035] sm:p-4 lg:grid-cols-4">
       <StatTile label="Participant aktif" icon={Users} tone="teal" loading={!s} value={s && formatNumber(s.activeParticipants)} />
       <StatTile label="Market aktif" icon={Store} tone="blue" loading={!s} value={s && formatNumber(s.activeMarkets)} />
       <StatTile label="Opportunity terdeteksi" icon={Activity} tone="lime" loading={!s} value={s && formatNumber(s.opportunitiesDetected)} />
@@ -86,9 +86,9 @@ function LiveStats() {
 }
 
 const CONCEPT: [typeof Network, Tone, string, string][] = [
-  [Network, 'blue', 'Supply + demand + jaringan', 'Kapasitas, aset, kebutuhan, dan lokasi setiap peserta membentuk satu economic graph.'],
-  [Sparkles, 'lime', 'Opportunity', 'Engine menemukan celah: demand yang belum terlayani, supply yang menganggur, pembeli yang bisa bergabung.'],
-  [Store, 'teal', 'Market', 'Opportunity yang matang dijadikan market dengan mekanisme dan aturan yang paling cocok.'],
+  [Network, 'blue', 'Supply + demand + jaringan', 'Kapasitas, aset, kebutuhan, dan lokasi setiap peserta membentuk satu peta ekonomi.'],
+  [Sparkles, 'lime', 'Opportunity', 'Mesin menemukan celah: demand yang belum terpenuhi, supply yang belum dimanfaatkan, dan pembeli yang bisa bergabung.'],
+  [Store, 'teal', 'Market', 'Opportunity yang matang dijadikan market dengan mekanisme dan aturan yang paling sesuai.'],
 ]
 
 function Concept() {
@@ -111,8 +111,8 @@ function Concept() {
 
 const STEPS: [string, string][] = [
   ['Daftarkan kapasitas', 'Isi skill, aset, supply, atau kebutuhanmu. Cukup beberapa menit.'],
-  ['Sistem mendeteksi opportunity', 'Engine mencocokkan kamu dengan demand, supply, dan peserta lain di sekitarmu.'],
-  ['Market terbentuk, auction berjalan', 'Ikut market, ajukan bid, atau gabungkan demand untuk harga skala.'],
+  ['Sistem mendeteksi opportunity', 'Mesin mencocokkanmu dengan demand, supply, dan peserta lain di sekitarmu.'],
+  ['Market terbentuk, auction berjalan', 'Ikuti market, ajukan bid, atau gabungkan demand untuk mendapat harga lebih baik.'],
   ['Transaksi & reputasi', 'Transaksi tercatat lengkap; reputasimu tumbuh dari kinerja nyata.'],
 ]
 
@@ -146,7 +146,7 @@ function EngineDemo({ id }: { id: string }) {
         <div className="mt-5 flex flex-wrap gap-1.5">
           {['Supply', 'Demand', 'Jaringan', 'Lokasi', 'Histori'].map((t) => <Tag key={t}>{t}</Tag>)}
           <ArrowRight className="size-4 self-center text-muted-foreground" />
-          <Tag tone="lime">Opportunity · confidence 87%</Tag>
+          <Tag tone="lime">Opportunity · tingkat keyakinan 87%</Tag>
         </div>
       </div>
     )
@@ -241,18 +241,18 @@ function Featured() {
   const skel = <div className="flex gap-3">{Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-52 w-[19rem] shrink-0 rounded-xl" />)}</div>
   return (
     <>
-      <Section eyebrow="Featured opportunities" title="Peluang terbesar yang sedang terbuka">
+      <Section eyebrow="Opportunity pilihan" title="Peluang terbesar yang sedang terbuka">
         <AsyncView query={opp} skeleton={skel} isEmpty={(p) => !p.data.length} empty={<EmptyState icon={Sparkles} tone="lime" title="Belum ada opportunity terbuka" description="Peluang akan muncul saat engine menemukan kebutuhan dan supply yang bisa dipertemukan." action={<Button variant="outline" render={<Link to="/opportunities" />}>Jelajahi opportunities <ArrowRight /></Button>} />}>
           {(p) => <div className="grid gap-3 md:grid-cols-3">{p.data.map((o) => <OpportunityCard key={o.id} o={o} />)}</div>}
         </AsyncView>
         <Button variant="outline" className="mt-6" render={<Link to="/opportunities" />}>Semua opportunity <ArrowRight /></Button>
       </Section>
-      <Section eyebrow="Active auctions" title="Auction yang sedang berjalan" className="pt-0 md:pt-0">
+      <Section eyebrow="Auction aktif" title="Auction yang sedang berjalan" className="pt-0 md:pt-0">
         <AsyncView query={auctions} skeleton={skel} isEmpty={(p) => !p.data.length} empty={<EmptyState icon={Gavel} tone="orange" title="Belum ada auction yang berjalan" description="Auction aktif akan tampil di sini saat market membuka sesi penawaran." action={<Button variant="outline" render={<Link to="/auctions" />}>Lihat semua auction <ArrowRight /></Button>} />}>
           {(p) => <Rail>{p.data.map((a) => <AuctionCard key={a.id} a={a} />)}</Rail>}
         </AsyncView>
       </Section>
-      <Section eyebrow="Active markets" title="Market yang aktif" className="pt-0 md:pt-0">
+      <Section eyebrow="Market aktif" title="Market yang aktif" className="pt-0 md:pt-0">
         <AsyncView query={markets} skeleton={skel} isEmpty={(p) => !p.data.length} empty={<EmptyState icon={Store} tone="blue" title="Belum ada market aktif" description="Market baru akan tampil setelah opportunity dibentuk dan mulai beroperasi." action={<Button variant="outline" render={<Link to="/markets" />}>Jelajahi market <ArrowRight /></Button>} />}>
           {(p) => <Rail>{p.data.map((m) => <MarketCard key={m.id} m={m} />)}</Rail>}
         </AsyncView>
@@ -303,7 +303,7 @@ export function LandingPage() {
 
       <Featured />
 
-      <Section eyebrow="Economic activity" title="Aktivitas di seluruh jaringan" className="pt-0 md:pt-0">
+      <Section eyebrow="Aktivitas ekonomi" title="Aktivitas di seluruh jaringan" className="pt-0 md:pt-0">
         <div className="rounded-xl border bg-card px-4 md:px-5">
           <AsyncView query={activity} skeleton={<Skeleton className="my-4 h-64" />}>
             {(events) => <ActivityFeed events={events} />}
@@ -321,7 +321,7 @@ export function LandingPage() {
         <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Mulai temukan market-mu</h2>
-            <p className="mt-2 max-w-md text-white/80">Gratis untuk participant. Lihat opportunity di sekitarmu dalam kurang dari 3 menit.</p>
+            <p className="mt-2 max-w-md text-white/80">Gratis untuk Participant. Lihat opportunity di sekitarmu dalam waktu kurang dari 3 menit.</p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Button size="lg" className="h-11 bg-white px-5 text-slate-950 hover:bg-white/90" render={<Link to="/register" />}>

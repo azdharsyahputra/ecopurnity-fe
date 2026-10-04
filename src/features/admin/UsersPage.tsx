@@ -31,7 +31,7 @@ export function AdminUsersPage() {
   const query = useAdminUsers(q, status)
   return (
     <>
-      <PageHeader title="Users" description="Cari akun, lihat riwayat dan laporan dari pengguna lain, lalu ambil keputusan dengan alasan tertulis." icon={Users} tone="orange" />
+      <PageHeader title="Pengguna" description="Cari akun, lihat riwayat dan laporan dari pengguna lain, lalu ambil keputusan dengan alasan tertulis." icon={Users} tone="orange" />
       <section aria-label="Filter pengguna" className="mb-5 rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:p-5">
         <div className="mb-4"><h2 className="font-semibold tracking-tight">Cari dan filter akun</h2><p className="mt-1 text-sm text-muted-foreground">Temukan akun berdasarkan nama, username, email, atau status.</p></div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -131,7 +131,7 @@ export function AdminUserDetailPage() {
   const query = useAdminUser(id)
   return (
     <>
-      <BackLink to="/admin/users">Users</BackLink>
+      <BackLink to="/admin/users">Pengguna</BackLink>
       <AsyncView query={query} skeleton={<Skeleton className="h-96 rounded-xl" />}>
         {(u) => (
           <>
