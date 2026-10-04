@@ -85,7 +85,7 @@ function Content({ a }: { a: AuctionDetail }) {
 
   return (
     <>
-      <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <header className="flex flex-col gap-4 rounded-2xl border bg-linear-to-br from-card to-muted/60 p-5 shadow-sm shadow-foreground/[0.025] sm:p-7 md:flex-row md:items-end md:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-sm font-medium text-muted-foreground">{a.code}</span>
@@ -97,7 +97,7 @@ function Content({ a }: { a: AuctionDetail }) {
             {a.marketName}
           </Link>
         </div>
-        <div className="rounded-xl border bg-card px-4 py-3 md:text-right">
+        <div className="rounded-xl border bg-background/80 px-4 py-3 shadow-sm md:text-right">
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground md:justify-end">
             <Timer className="size-3.5" />
             {live ? (a.status === 'extended' ? 'Diperpanjang · sisa waktu' : 'Sisa waktu') : a.status === 'scheduled' || a.status === 'qualification' ? 'Mulai dalam' : 'Status'}
@@ -112,7 +112,7 @@ function Content({ a }: { a: AuctionDetail }) {
       <div className="mt-6 grid gap-6 lg:grid-cols-[18rem_1fr_19rem]">
         {/* Lot + rules */}
         <aside className="order-3 flex flex-col gap-6 lg:order-1">
-          <section className="rounded-xl border bg-card p-4">
+          <section className="rounded-2xl border bg-card p-5 shadow-sm shadow-foreground/[0.025]">
             <div className="flex items-center gap-2">
               <IconChip icon={Package} tone="blue" size="sm" />
               <h2 className="font-medium">Lot</h2>
@@ -121,7 +121,7 @@ function Content({ a }: { a: AuctionDetail }) {
             <p className="num text-sm">{formatQty(a.lot.quantity)}</p>
             <p className="mt-2 text-sm text-muted-foreground">{a.lot.spec}</p>
           </section>
-          <section className="rounded-xl border bg-card p-4">
+          <section className="rounded-2xl border bg-card p-5 shadow-sm shadow-foreground/[0.025]">
             <h2 className="font-medium">Aturan</h2>
             <div className="mt-2"><RulesList rules={a.rules} /></div>
           </section>
@@ -164,7 +164,7 @@ function Content({ a }: { a: AuctionDetail }) {
             </ChartCard>
           )}
 
-          <section className="rounded-xl border bg-card p-4">
+          <section className="rounded-2xl border bg-card p-5 shadow-sm shadow-foreground/[0.025]">
             <div className="flex items-center justify-between">
               <h2 className="font-medium">Aktivitas bid</h2>
               {live && (
