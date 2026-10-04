@@ -8,7 +8,7 @@ import {
   useVerifyEmail,
 } from './hooks'
 import { AuthHeading, GoogleButton, MockOutbox, OrDivider, StrengthMeter } from './ui'
-import { Field, FormError } from '@/components/form'
+import { Field, FormError, PasswordField } from '@/components/form'
 import { IconChip } from '@/components/IconChip'
 import { Button } from '@/components/ui/button'
 
@@ -17,11 +17,17 @@ export function RegisterPage() {
   const navigate = useNavigate()
   const register = useRegister()
   const setMe = useSetMe()
-  const [form, setForm] = useState({ name: '', email: '', password: '' })
+  const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' })
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [confirmAttempted, setConfirmAttempted] = useState(false)
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [k]: e.target.value })
 
   function submit(e: FormEvent) {
     e.preventDefault()
+    setConfirmAttempted(true)
+    if (form.password !== form.confirmPassword) return
+
     const goal = params.get('goal')
     const returnTo = params.get('returnTo')
     try {
@@ -30,7 +36,7 @@ export function RegisterPage() {
     } catch {
       // optional pre-selection only
     }
-    register.mutate(form, {
+    register.mutate({ name: form.name, email: form.email, password: form.password }, {
       onSuccess: (user) => {
         setMe(user)
         navigate('/verify-email', { replace: true })
@@ -39,40 +45,62 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <AuthHeading title="Buat akun">
-        Sudah punya akun?{' '}
-        <Link to={`/login?${params}`} className="font-medium text-primary hover:underline">Masuk</Link>
-      </AuthHeading>
-      <GoogleButton label="Daftar dengan Google" />
-      <OrDivider />
-      <form onSubmit={submit} className="flex flex-col gap-4">
-        <Field label="Nama lengkap" autoComplete="name" required value={form.name} onChange={set('name')} error={fieldError(register.error, 'name')} />
-        <Field label="Email" type="email" autoComplete="email" required value={form.email} onChange={set('email')} error={fieldError(register.error, 'email')} />
-        <div className="flex flex-col gap-2">
-          <Field
-            label="Password"
-            type="password"
+    <div className="rounded-2xl border bg-card p-5 shadow-sm sm:p-7">
+      <div className="mb-6 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+        <span className="size-2 rounded-full bg-lime" /> Ecopurnity
+      </div>
+      <div className="flex flex-col gap-5">
+        <div>
+          <AuthHeading title="Mulai dari sini">
+            Buat akun untuk menemukan peluang dan terhubung dengan jaringan Ecopurnity.
+          </AuthHeading>
+          <p className="mt-3 text-sm text-muted-foreground">
+            Sudah punya akun?{' '}
+            <Link to={`/login?${params}`} className="font-medium text-primary hover:underline">Masuk</Link>
+          </p>
+        </div>
+        <GoogleButton label="Daftar dengan Google" />
+        <OrDivider />
+        <form onSubmit={submit} className="flex flex-col gap-4">
+          <Field label="Nama lengkap" autoComplete="name" required value={form.name} onChange={set('name')} error={fieldError(register.error, 'name')} />
+          <Field label="Email" type="email" autoComplete="email" required value={form.email} onChange={set('email')} error={fieldError(register.error, 'email')} />
+          <div className="flex flex-col gap-2">
+            <PasswordField
+              label="Password"
+              autoComplete="new-password"
+              required
+              minLength={8}
+              value={form.password}
+              onChange={set('password')}
+              error={fieldError(register.error, 'password')}
+              visible={showPassword}
+              onToggle={() => setShowPassword((shown) => !shown)}
+            />
+            <StrengthMeter password={form.password} />
+          </div>
+          <PasswordField
+            label="Konfirmasi password"
             autoComplete="new-password"
             required
             minLength={8}
-            value={form.password}
-            onChange={set('password')}
-            error={fieldError(register.error, 'password')}
+            value={form.confirmPassword}
+            onChange={set('confirmPassword')}
+            error={confirmAttempted && form.password !== form.confirmPassword ? 'Password belum sama.' : undefined}
+            visible={showConfirmPassword}
+            onToggle={() => setShowConfirmPassword((shown) => !shown)}
           />
-          <StrengthMeter password={form.password} />
-        </div>
-        <FormError error={register.error} />
-        {fieldError(register.error, 'email') && (
-          <p className="text-sm">
-            <Link to={`/login?${params}`} className="font-medium text-primary hover:underline">Masuk dengan email ini</Link>
-          </p>
-        )}
-        <Button type="submit" className="mt-1 h-10" disabled={register.isPending}>
-          {register.isPending ? 'Membuat akun…' : 'Buat akun'}
-        </Button>
-        <p className="text-xs text-muted-foreground">Dengan mendaftar kamu menyetujui Ketentuan Layanan dan Kebijakan Privasi Ecopurnity.</p>
-      </form>
+          <FormError error={register.error} />
+          {fieldError(register.error, 'email') && (
+            <p className="text-sm">
+              <Link to={`/login?${params}`} className="font-medium text-primary hover:underline">Masuk dengan email ini</Link>
+            </p>
+          )}
+          <Button type="submit" className="mt-1 h-10 w-full" disabled={register.isPending}>
+            {register.isPending ? 'Membuat akun…' : 'Buat akun'}
+          </Button>
+          <p className="text-center text-xs leading-relaxed text-muted-foreground">Dengan mendaftar kamu menyetujui Ketentuan Layanan dan Kebijakan Privasi Ecopurnity.</p>
+        </form>
+      </div>
     </div>
   )
 }
@@ -260,4 +288,3 @@ export function GoogleCallbackPage() {
     </div>
   )
 }
-
