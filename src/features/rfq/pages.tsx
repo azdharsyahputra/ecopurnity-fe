@@ -45,44 +45,94 @@ export function RfqListPage() {
         tone="blue"
         featured
         actions={
-          <>
-            <Segmented label="Sisi" value={side} options={[['buyer', 'Dikirim'], ['supplier', 'Masuk']]} onChange={(v) => setParams({ side: v }, { replace: true })} />
-            <Button className="h-9" render={<Link to="/app/rfq/new" />}><Plus /> Buat RFQ</Button>
-          </>
+          <div className="flex flex-wrap items-center gap-2">
+            <div role="group" aria-label="Sisi RFQ" className="inline-flex rounded-xl border bg-muted/55 p-1">
+              {([['buyer', 'Dikirim'], ['supplier', 'Masuk']] as const).map(([value, label]) => (
+                <button key={value} type="button" aria-pressed={side === value} onClick={() => setParams({ side: value }, { replace: true })}
+                  className={cn('inline-flex h-9 items-center rounded-lg border px-3 text-sm font-medium transition-colors', side === value ? 'border-primary/35 bg-background text-foreground shadow-sm ring-1 ring-primary/15' : 'border-transparent text-muted-foreground hover:bg-background/70 hover:text-foreground')}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            <Button className="h-10 shadow-sm hover:bg-primary/90 hover:shadow-md" render={<Link to="/app/rfq/new" />}><Plus /> Buat RFQ</Button>
+          </div>
         }
       />
       <AsyncView
         query={query}
         skeleton={<Skeleton className="h-64 rounded-xl" />}
-        empty={
-          <EmptyState
-            icon={side === 'buyer' ? FileQuestion : Inbox}
-            tone="blue"
-            title={side === 'buyer' ? 'Belum ada RFQ' : 'Belum ada RFQ yang cocok untukmu'}
-            description={side === 'buyer' ? 'Butuh sesuatu cepat tanpa auction? Kirim RFQ ke supplier di kategorinya.' : 'RFQ muncul di sini saat ada pembeli yang mencari barang di kategori supply-mu, atau mengundangmu.'}
-            action={side === 'buyer' ? <Button render={<Link to="/app/rfq/new" />}>Buat RFQ</Button> : <Button variant="outline" render={<Link to="/app/supply/new" />}>Tambah supply</Button>}
-          />
-        }
+        emptyFallback={false}
       >
-        {(rows) => (
-          <DataTable
-            caption="RFQ"
-            rows={rows}
-            rowKey={(r) => r.id}
-            rowHref={(r) => `/app/rfq/${r.id}`}
-            initialSort={{ key: 'created', dir: 'desc' }}
-            columns={[
-              { key: 'item', header: 'Kebutuhan', primary: true, cell: (r) => <span>{r.item} <span className="ml-1 text-xs font-normal text-muted-foreground">{r.code}</span></span> },
-              { key: 'cat', header: 'Kategori', cell: (r) => <CategoryTag id={r.categoryId} /> },
-              { key: 'qty', header: 'Kuantitas', align: 'right', cell: (r) => formatQty(r.quantity, { compact: true }) },
-              ...(side === 'buyer'
-                ? [{ key: 'quotes', header: 'Penawaran', align: 'right' as const, cell: (r: (typeof rows)[number]) => formatNumber(r.quotes.length), sortValue: (r: (typeof rows)[number]) => r.quotes.length }]
-                : [{ key: 'buyer', header: 'Pembeli', cell: (r: (typeof rows)[number]) => r.buyer.name }]),
-              { key: 'status', header: 'Status', cell: (r) => <Tag tone={RFQ_STATUS[r.status][1]}>{RFQ_STATUS[r.status][0]}</Tag> },
-              { key: 'created', header: 'Dibuat', cell: (r) => <span className="text-muted-foreground">{formatRelative(r.createdAt)}</span>, sortValue: (r) => r.createdAt },
-            ]}
-          />
-        )}
+        {(rows) => {
+          const openCount = rows.filter((row) => row.status === 'open').length
+          const quoteCount = rows.reduce((total, row) => total + row.quotes.length, 0)
+          const emptyTitle = side === 'buyer' ? 'Belum ada RFQ terkirim' : 'Belum ada RFQ masuk'
+          const emptyDescription = side === 'buyer'
+            ? 'Buat permintaan penawaran agar supplier yang sesuai bisa mengirim harga dan ketersediaan.'
+            : 'Permintaan dari pembeli akan muncul di sini. Lengkapi supply agar lebih mudah ditemukan.'
+          return (
+            <div className="grid gap-6">
+              <section aria-label="Ringkasan RFQ" className="grid gap-3 sm:grid-cols-3">
+                {[
+                  { label: 'Total RFQ', value: formatNumber(rows.length), note: side === 'buyer' ? 'Permintaan yang kamu kirim' : 'Permintaan yang ditujukan kepadamu', icon: FileQuestion, tone: 'blue' },
+                  { label: 'Masih terbuka', value: formatNumber(openCount), note: 'Masih menerima penawaran', icon: Inbox, tone: 'teal' },
+                  { label: 'Penawaran', value: formatNumber(quoteCount), note: 'Dari seluruh RFQ', icon: MessagesSquare, tone: 'violet' },
+                ].map(({ label, value, note, icon: Icon, tone }) => (
+                  <article key={label} className="group relative overflow-hidden rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] transition-colors hover:bg-muted/20 sm:p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">{label}</p>
+                        <p className="mt-2 text-2xl font-semibold tracking-tight tabular-nums">{value}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{note}</p>
+                      </div>
+                      <span className={cn('grid size-10 place-items-center rounded-xl', tone === 'blue' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-300' : tone === 'teal' ? 'bg-teal-500/10 text-teal-700 dark:text-teal-300' : 'bg-violet-500/10 text-violet-700 dark:text-violet-300')}>
+                        <Icon className="size-5" aria-hidden="true" />
+                      </span>
+                    </div>
+                  </article>
+                ))}
+              </section>
+              <section className="grid gap-4">
+                <div className="flex flex-wrap items-end justify-between gap-3 border-b pb-3">
+                  <div>
+                    <h2 className="text-lg font-semibold tracking-tight">{side === 'buyer' ? 'RFQ yang dikirim' : 'RFQ yang masuk'}</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">{side === 'buyer' ? 'Pantau respons supplier dan kelola permintaanmu.' : 'Tinjau kebutuhan pembeli dan siapkan penawaran yang sesuai.'}</p>
+                  </div>
+                  <span className="rounded-full border bg-muted/40 px-3 py-1 text-xs font-medium text-muted-foreground">{rows.length} RFQ</span>
+                </div>
+                {rows.length > 0 ? (
+                  <DataTable
+                    caption="RFQ"
+                    rows={rows}
+                    rowKey={(r) => r.id}
+                    rowHref={(r) => `/app/rfq/${r.id}`}
+                    initialSort={{ key: 'created', dir: 'desc' }}
+                    columns={[
+                      { key: 'item', header: 'Kebutuhan', primary: true, cell: (r) => <span>{r.item} <span className="ml-1 text-xs font-normal text-muted-foreground">{r.code}</span></span> },
+                      { key: 'cat', header: 'Kategori', cell: (r) => <CategoryTag id={r.categoryId} /> },
+                      { key: 'qty', header: 'Kuantitas', align: 'right', cell: (r) => formatQty(r.quantity, { compact: true }) },
+                      ...(side === 'buyer'
+                        ? [{ key: 'quotes', header: 'Penawaran', align: 'right' as const, cell: (r: (typeof rows)[number]) => formatNumber(r.quotes.length), sortValue: (r: (typeof rows)[number]) => r.quotes.length }]
+                        : [{ key: 'buyer', header: 'Pembeli', cell: (r: (typeof rows)[number]) => r.buyer.name }]),
+                      { key: 'status', header: 'Status', cell: (r) => <Tag tone={RFQ_STATUS[r.status][1]}>{RFQ_STATUS[r.status][0]}</Tag> },
+                      { key: 'created', header: 'Dibuat', cell: (r) => <span className="text-muted-foreground">{formatRelative(r.createdAt)}</span>, sortValue: (r) => r.createdAt },
+                    ]}
+                  />
+                ) : (
+                  <div className="rounded-2xl border border-dashed bg-muted/10 p-5 sm:p-7">
+                    <EmptyState
+                      icon={side === 'buyer' ? FileQuestion : Inbox}
+                      tone="blue"
+                      title={emptyTitle}
+                      description={emptyDescription}
+                      action={side === 'buyer' ? <Button render={<Link to="/app/rfq/new" />}>Buat RFQ</Button> : <Button variant="outline" render={<Link to="/app/supply/new" />}>Tambah supply</Button>}
+                    />
+                  </div>
+                )}
+              </section>
+            </div>
+          )
+        }}
       </AsyncView>
     </>
   )
@@ -426,28 +476,47 @@ export function MessagesPage() {
   return (
     <>
       <PageHeader title="Pesan" description="Percakapan dengan pembeli, supplier, dan match." icon={MessagesSquare} tone="purple" featured />
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
-        <AsyncView query={list} skeleton={<Skeleton className="h-64 rounded-xl" />} empty={<EmptyState icon={MessagesSquare} title="Belum ada percakapan" description="Percakapan dibuat saat kamu mengirim RFQ atau menekan Connect di Matches." />}>
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[19rem_minmax(0,1fr)]">
+        <AsyncView query={list} skeleton={<Skeleton className="h-80 rounded-2xl" />} emptyFallback={false}>
           {(cs) => (
-            <ul className={cn('flex flex-col gap-1', id && 'max-lg:hidden')}>
-              {cs.map((c) => (
-                <li key={c.id}>
-                  <Link to={`/app/messages/${c.id}`} className={cn('block rounded-lg p-3 hover:bg-hover', c.id === id && 'bg-hover')}>
-                    <p className="truncate text-sm font-medium">{c.subject}</p>
-                    <p className="truncate text-xs text-muted-foreground">{c.messages.at(-1)?.text ?? 'Belum ada pesan'} · {formatRelative(c.updatedAt)}</p>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <section className={cn('overflow-hidden rounded-2xl border bg-card shadow-sm shadow-foreground/[0.025]', id && 'max-lg:hidden')}>
+              <header className="flex items-end justify-between gap-2 border-b bg-muted/15 px-4 py-4">
+                <div><h2 className="font-semibold tracking-tight">Percakapan</h2><p className="mt-1 text-xs text-muted-foreground">Pesan terkait RFQ, match, dan transaksi.</p></div>
+                <span className="shrink-0 rounded-full border bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground">{cs.length}</span>
+              </header>
+              {cs.length ? (
+                <ul className="grid gap-1 p-2">
+                  {cs.map((c) => (
+                    <li key={c.id}>
+                      <Link to={`/app/messages/${c.id}`} aria-current={c.id === id ? 'page' : undefined} className={cn('block rounded-xl border border-transparent p-3 transition-colors hover:border-border hover:bg-muted/45', c.id === id && 'border-primary/20 bg-primary/5 shadow-sm')}>
+                        <p className="truncate text-sm font-semibold">{c.subject}</p>
+                        <p className="mt-1 truncate text-sm text-muted-foreground">{c.messages.at(-1)?.text ?? 'Belum ada pesan'}</p>
+                        <p className="mt-2 text-xs text-muted-foreground">{formatRelative(c.updatedAt)}</p>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="p-4">
+                  <EmptyState icon={MessagesSquare} tone="purple" title="Belum ada percakapan" description="Percakapan muncul saat kamu mengirim RFQ atau terhubung melalui Matches." />
+                </div>
+              )}
+            </section>
           )}
         </AsyncView>
         {id ? (
-          <div className="flex flex-col gap-2">
-            <Link to="/app/messages" className="text-sm text-muted-foreground hover:text-foreground lg:hidden">← Semua percakapan</Link>
+          <div className="flex min-w-0 flex-col gap-3">
+            <Link to="/app/messages" className="inline-flex min-h-9 items-center self-start rounded-lg px-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:hidden">← Semua percakapan</Link>
             <ThreadWithLink id={id} />
           </div>
         ) : (
-          <p className="hidden rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground lg:block">Pilih percakapan.</p>
+          <section className="hidden min-h-[26rem] items-center justify-center rounded-2xl border border-dashed bg-muted/10 p-8 text-center lg:flex">
+            <div className="max-w-sm">
+              <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-purple-500/10 text-purple-700 dark:text-purple-300"><MessagesSquare className="size-5" aria-hidden="true" /></span>
+              <h2 className="mt-4 font-semibold">Pilih percakapan</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Pilih dari daftar untuk membaca pesan dan melanjutkan diskusi dengan mitramu.</p>
+            </div>
+          </section>
         )}
       </div>
     </>
