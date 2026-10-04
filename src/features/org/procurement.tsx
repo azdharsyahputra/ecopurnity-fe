@@ -41,7 +41,7 @@ export function ProcurementListPage() {
   const add = <GuardedLink to={`${access.base}/procurement/new`} reason={access.deny('procurement', 'create')}><Plus /> Buat procurement</GuardedLink>
   return (
     <>
-      <PageHeader title="Procurement" description="Permintaan pengadaan tim: dari draft, approval, publish, sampai auction dan PO." icon={ClipboardList} tone="blue" actions={add} />
+      <PageHeader title="Procurement" description="Permintaan pengadaan tim: dari draft, approval, publish, sampai auction dan PO." icon={ClipboardList} tone="blue" actions={add} featured />
       <AsyncView query={query} skeleton={<Skeleton className="h-64 rounded-xl" />}
         empty={<EmptyState icon={ClipboardList} tone="blue" title="Belum ada procurement" description="Catat kebutuhan tim; aturan approval berjalan otomatis sesuai nilai." action={add} />}>
         {(rows) => {
@@ -125,7 +125,7 @@ export function ProcurementFormPage() {
 
   return (
     <>
-      <PageHeader title="Buat procurement" description="Kebutuhan, budget, dan siapa yang boleh menawar. Approval mengikuti aturan tim." icon={ClipboardList} tone="blue" />
+      <PageHeader title="Buat procurement" description="Kebutuhan, budget, dan siapa yang boleh menawar. Approval mengikuti aturan tim." icon={ClipboardList} tone="blue" featured />
       <Wizard
         submitLabel={approvers.length ? 'Ajukan untuk approval' : 'Ajukan'}
         submitting={create.isPending}
@@ -255,6 +255,7 @@ export function ProcurementDetailPage() {
               description={<span className="flex flex-wrap items-center gap-1.5">{r.code} <ProcurementBadge status={r.status} /> <CategoryTag id={r.categoryId} /> <Tag>{VISIBILITY[r.visibility].label}</Tag></span>}
               icon={ClipboardList}
               tone="blue"
+              featured
               actions={
                 <>
                   {actions.includes('submit') && <Button className="h-9" disabled={act.isPending} onClick={() => act.mutate({ action: 'submit' }, { onSuccess: done('Diajukan') })}><Send /> Ajukan</Button>}
