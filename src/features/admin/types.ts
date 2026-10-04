@@ -2,8 +2,8 @@ import type { Auction, AuditEntry, Capability, LabeledValue, Market, PartyRef, T
 import type { DisputeStatus } from '@/domain/status'
 import type { Resolution } from '@/domain/dispute'
 
-// Admin governance API contract (PRD §11). Admins inspect, freeze and decide; they never edit
-// transaction or bid data directly. Every action below is recorded in the audit trail.
+
+
 
 export type AccountStatus = 'active' | 'restricted' | 'suspended'
 
@@ -15,7 +15,7 @@ export interface AdminUser {
   location?: string
   kind: 'person' | 'business'
   capabilities: Capability[]
-  /** Identity verified by an admin. */
+
   verified: boolean
   status: AccountStatus
   joinedAt: string
@@ -49,32 +49,32 @@ export interface Appeal {
   decision?: { at: string; by: string; note: string }
 }
 
-// ── Business verification ──
+
 
 export type DocKind = 'nib' | 'npwp' | 'akta' | 'ktp' | 'selfie'
 export type VerificationStatus = 'pending' | 'approved' | 'rejected' | 'reupload'
 
 export interface VerificationRequest {
   id: string
-  /** Business documents (default) or a person's KTP + selfie (PRD F6). */
+
   kind?: 'business' | 'personal'
   business: string
   owner: string
   submittedAt: string
   status: VerificationStatus
-  /** What the applicant typed into the form. */
+
   form: LabeledValue[]
-  /** What the uploaded documents say (OCR in the real BE). Labels that also appear in `form` are compared. */
-  /** `url`: short-lived download link, detail only. */
+
+
   documents: { kind: DocKind; fileName: string; fields: LabeledValue[]; url?: string }[]
-  /** Decrypted NIK of a personal request, detail only (every view is audited). */
+
   nik?: string
   decision?: { at: string; by: string; note: string }
 }
 
 export type VerificationAction = 'approve' | 'reject' | 'reupload'
 
-// ── Markets ──
+
 
 export interface MarketFlag {
   id: string
@@ -92,7 +92,7 @@ export interface AdminMarket extends Market {
 
 export type MarketAction = 'review' | 'flag' | 'suspend' | 'restore'
 
-// ── Auctions ──
+
 
 export interface Finding {
   id: string
@@ -103,7 +103,7 @@ export interface Finding {
 
 export interface AdminBid {
   id: string
-  /** Real identity; participants only ever see the masked label. */
+
   bidder: string
   masked: string
   priceIdr: number
@@ -116,7 +116,7 @@ export interface AdminAuction extends Auction {
 
 export interface AdminAuctionDetail extends AdminAuction {
   minStepIdr: number
-  /** Null while a sealed auction is still open: bids are only unsealed after close. */
+
   bids: AdminBid[] | null
   caseId?: string
   audit: AuditEntry[]
@@ -124,7 +124,7 @@ export interface AdminAuctionDetail extends AdminAuction {
 
 export type AuctionAction = 'freeze' | 'unfreeze' | 'open_case'
 
-// ── Disputes ──
+
 
 export interface DisputeParty extends PartyRef {
   role: 'buyer' | 'supplier'
@@ -137,7 +137,7 @@ export interface Evidence {
   by: string
   text: string
   file?: string
-  /** Short-lived presigned link of the attached file. */
+
   url?: string
   at: string
 }
@@ -164,7 +164,7 @@ export type DisputeActionInput =
   | { action: 'start_review'; reason?: string }
   | { action: 'resolve'; resolution: Resolution; reason: string }
 
-// ── Fraud ──
+
 
 export type AlertType =
   | 'bid_manipulation'
@@ -187,18 +187,18 @@ export interface FraudAlert {
   id: string
   code: string
   type: AlertType
-  /** 'system' = engine recommendation; 'manual' = case opened by an admin. */
+
   source: 'system' | 'manual'
   title: string
-  /** Risk score 0–100. */
+
   score: number
-  /** Engine confidence 0–1. */
+
   confidence: number
   status: AlertStatus
   detectedAt: string
   subjects: Subject[]
   evidence: string[]
-  /** Relation graph for network-type alerts. */
+
   graph?: { nodes: { id: string; label: string; kind: 'person' | 'business' | 'auction' | 'device'; flagged?: boolean }[]; edges: { source: string; target: string; label?: string }[] }
   investigation?: { openedAt: string; by: string; notes: { at: string; by: string; text: string }[] }
   resolution?: { at: string; by: string; outcome: string; reason: string }
@@ -212,21 +212,21 @@ export type AlertActionInput =
   | { action: 'dismiss' | 'close'; reason: string }
   | { action: 'escalate'; subjectId: string; escalation: EscalationAction; reason: string }
 
-// ── Overview ──
 
-// ── Manual payouts ──
+
+
 
 export type WithdrawalStatus = 'processing' | 'paid' | 'rejected'
 
-/** A withdrawal in the payout queue; the admin transfers it by hand and records it. Account number masked. */
+
 export interface AdminWithdrawal {
   id: string
-  /** "WDR-…", for the transfer description. */
+
   code: string
   status: WithdrawalStatus
   amountIdr: number
   requestedAt: string
-  /** SLA hint: one working day after the request. */
+
   dueAt: string
   requester: { id: string; name: string; email: string }
   party: { id: string; name: string }
@@ -242,12 +242,12 @@ export interface AdminWithdrawal {
 }
 
 export interface AdminWithdrawalDetail extends AdminWithdrawal {
-  /** Full account number, only while processing; every view is audited. */
+
   accountNo?: string
-  /** Name on the requester's approved KTP. */
+
   identityName?: string
   nameMismatch: boolean
-  /** Other withdrawals of the same party, newest first. */
+
   recent: AdminWithdrawal[]
 }
 
@@ -259,6 +259,6 @@ export interface AdminOverview {
   queues: { users: number; verification: number; markets: number; auctions: number; disputes: number; fraud: number; withdrawals: number }
   newAlerts: FraudAlert[]
   openDisputes: DisputeSummary[]
-  /** Items waiting longer than their review SLA. */
+
   sla: { module: 'verification' | 'disputes' | 'withdrawals'; label: string; slaHours: number; total: number; breached: number; oldestAt?: string }[]
 }

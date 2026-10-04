@@ -13,7 +13,7 @@ import { ThemeToggle } from '@/components/ThemeToggle'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 
-/** Latest public event under the nav; swaps in as events arrive. */
+
 function LiveTicker() {
   const { data } = usePublicActivity(1)
   const e = data?.[0]

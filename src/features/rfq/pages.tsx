@@ -30,7 +30,7 @@ const QUOTE_STATUS: Record<Quote['status'], [string, 'blue' | 'orange' | 'green'
 }
 const TERM_OPTIONS = Object.entries(TERMS).map(([k, v]) => [k, v.label]) as [PaymentTerms, string][]
 
-// ── List ─────────────────────────────────────────────────────────
+
 
 export function RfqListPage() {
   const [params, setParams] = useSearchParams()
@@ -138,7 +138,7 @@ export function RfqListPage() {
   )
 }
 
-// ── New ──────────────────────────────────────────────────────────
+
 
 function RfqForm({ initial }: { initial: { item: string; categoryId: CategoryId; qty: string; unit: string; target: string; inviteName?: string; inviteUserId?: string; spec: string; source?: { kind: 'repeat' | 'listing' | 'logistics'; id: string } } }) {
   const navigate = useNavigate()
@@ -240,7 +240,7 @@ export function RfqNewPage() {
   )
 }
 
-// ── Conversation thread (used in RFQ detail and Messages) ────────
+
 
 export function Thread({ id, className }: { id: string; className?: string }) {
   const { data: me } = useMe()
@@ -283,7 +283,7 @@ export function Thread({ id, className }: { id: string; className?: string }) {
   )
 }
 
-// ── Detail ───────────────────────────────────────────────────────
+
 
 function PriceDialog({ title, description, label, onSubmit, onClose, pending, error }: { title: string; description: string; label: string; onSubmit: (price: number, note: string) => void; onClose: () => void; pending: boolean; error: unknown }) {
   const [price, setPrice] = useState('')
@@ -468,7 +468,7 @@ export function RfqDetailPage() {
   )
 }
 
-// ── Messages ─────────────────────────────────────────────────────
+
 
 export function MessagesPage() {
   const { id } = useParams()

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { formatCountdown, formatDateTime } from '@/domain/format'
 import { cn } from '@/lib/utils'
 
-/** Ticks every second. Not announced each tick (PRD §14); the closing time is in the label. */
+
 export function Countdown({ to, className }: { to: string; className?: string }) {
   const [now, setNow] = useState(Date.now)
   const left = new Date(to).getTime() - now

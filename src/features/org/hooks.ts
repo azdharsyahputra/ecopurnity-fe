@@ -12,14 +12,14 @@ import {
 } from '@/domain/org'
 import { useMe } from '@/features/auth/hooks'
 
-// Business workspace data (PRD §9). Keys start with ['org', orgId] so one invalidation refreshes the workspace.
+
 
 const json = (method: string, body?: unknown) => ({ method, json: body })
 
 export const useOrgId = () => useParams().orgId ?? ''
 const base = (orgId: string) => `/orgs/${orgId}`
 
-/** Mutations touch several views (overview, pipeline, activity); refresh the whole org plus public auctions. */
+
 function useOrgMutation<V, R = unknown>(fn: (orgId: string, v: V) => Promise<R>) {
   const orgId = useOrgId()
   const qc = useQueryClient()
@@ -34,7 +34,7 @@ export const useOrgSettings = () => {
   return useQuery({ queryKey: ['org', orgId, 'settings'], queryFn: () => api<OrgSettings>(base(orgId)) })
 }
 
-/** The signed-in user's role in this org and what it may do (PRD §9.2 role awareness). */
+
 export function useOrgAccess() {
   const orgId = useOrgId()
   const me = useMe().data
@@ -44,9 +44,9 @@ export function useOrgAccess() {
   return {
     orgId, role, roleLabel, base: `/org/${orgId}`, settings,
     can: (m: Module, a: Action) => can(settings?.permissions, role, m, a),
-    /** Reason to show on a disabled control, or undefined when allowed. */
+
     deny: (m: Module, a: Action) => (can(settings?.permissions, role, m, a) ? undefined : deniedReason(roleLabel, m, a)),
-    /** Same for one transaction step (per-action roles, PRD §9.8). */
+
     txDeny: (a: TradeAction) => txDeniedReason(settings?.permissions, role, roleLabel, a),
   }
 }
@@ -56,7 +56,7 @@ export const useOverview = () => {
   return useQuery({ queryKey: ['org', orgId, 'overview'], queryFn: () => api<OrgOverview>(`${base(orgId)}/overview`), refetchInterval: 10_000 })
 }
 
-// ── Profile & team ──
+
 export const useSaveProfile = () => useOrgMutation((orgId, p: OrgProfile) => api<OrgProfile>(`${base(orgId)}/profile`, json('PUT', p)))
 export const useUploadDocument = () =>
   useOrgMutation(async (orgId, d: { file: File; kind: OrgProfile['documents'][number]['kind'] }) =>
@@ -76,7 +76,7 @@ export const useMemberAction = () =>
 export const useSaveTeamSettings = () =>
   useOrgMutation((orgId, s: Pick<OrgSettings, 'roles' | 'permissions' | 'departments' | 'approvalRules'>) => api<OrgSettings>(`${base(orgId)}/team/settings`, json('PUT', s)))
 
-// ── Inventory ──
+
 export const useInventory = () => {
   const orgId = useOrgId()
   return useQuery({ queryKey: ['org', orgId, 'inventory'], queryFn: () => api<InventoryData>(`${base(orgId)}/inventory`) })
@@ -87,7 +87,7 @@ export const useImportItems = () =>
 export const useAddSchedule = () =>
   useOrgMutation((orgId, s: Omit<InventoryData['schedules'][number], 'id'>) => api(`${base(orgId)}/inventory/schedules`, json('POST', s)))
 
-// ── Procurement ──
+
 export const useProcurements = () => {
   const orgId = useOrgId()
   return useQuery({ queryKey: ['org', orgId, 'procurement'], queryFn: () => api<ProcurementRequest[]>(`${base(orgId)}/procurement`), refetchInterval: 8_000 })
@@ -104,7 +104,7 @@ export const useCreateProcurement = () =>
 export const useProcurementAction = (id: string) =>
   useOrgMutation((orgId, b: { action: ProcurementAction; note?: string; quantity?: number; optIn?: boolean }) => api<ProcurementRequest>(`${base(orgId)}/procurement/${id}/actions`, json('POST', b)))
 
-// ── Collective ──
+
 export type PoolView = CollectivePool & { match: boolean }
 export const usePools = () => {
   const orgId = useOrgId()
@@ -119,7 +119,7 @@ export const useCreatePool = () =>
     api<CollectivePool>(`${base(orgId)}/collective`, json('POST', b)),
   )
 
-// ── Auctions ──
+
 export const useOrgAuctions = () => {
   const orgId = useOrgId()
   return useQuery({ queryKey: ['org', orgId, 'auctions'], queryFn: () => api<OrgAuctionView[]>(`${base(orgId)}/auctions`), refetchInterval: 8_000 })
@@ -136,7 +136,7 @@ export const useOrgAward = (id: string) =>
 export const useIssuePo = (id: string) =>
   useOrgMutation<void, { poNumber: string; transactionIds: string[] }>((orgId) => api<{ poNumber: string; transactionIds: string[] }>(`${base(orgId)}/auctions/${id}/po`, json('POST')))
 
-// ── Suppliers ──
+
 export const useSuppliers = (search: string) => {
   const orgId = useOrgId()
   return useQuery({ queryKey: ['org', orgId, 'suppliers', search], queryFn: () => api<OrgSupplier[]>(`${base(orgId)}/suppliers${search ? `?${search}` : ''}`) })
@@ -149,19 +149,19 @@ export const useSupplier = (id: string) => {
 export const useSupplierAction = () =>
   useOrgMutation((orgId, b: { id: string; action: SupplierAction; rating?: number; reason?: string }) => api<OrgSupplier>(`${base(orgId)}/suppliers/${b.id}/actions`, json('POST', b)))
 
-// ── Transactions ──
+
 export const useOrgTransactions = () => {
   const orgId = useOrgId()
   return useQuery({ queryKey: ['org', orgId, 'transactions'], queryFn: () => api<Transaction[]>(`${base(orgId)}/transactions`) })
 }
-/** Trade detail plus team activity and, for a pool sub-PO, the pool's pro-rata split. */
+
 export type OrgTransactionPage = TransactionDetail & { activity: AuditEntry[]; collective?: PoolSettlement & { poolId: string; title: string; unit: string } }
 export const useOrgTransaction = (id: string) => {
   const orgId = useOrgId()
-  // Fictional counterparties move on a timer, so keep the page fresh.
+
   return useQuery({ queryKey: ['org', orgId, 'transactions', id], queryFn: () => api<OrgTransactionPage>(`${base(orgId)}/transactions/${id}`), refetchInterval: 6_000 })
 }
-/** Where this org's trade actions go (shared F6 trade UI). */
+
 export function useOrgTradeScope(): TradeScope {
   const orgId = useOrgId()
   return {
@@ -175,7 +175,7 @@ export function useOrgTradeScope(): TradeScope {
   }
 }
 
-// ── Analytics ──
+
 export const useAnalytics = (months: number, category: string) => {
   const orgId = useOrgId()
   return useQuery({

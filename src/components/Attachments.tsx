@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 
 const ACCEPT = 'image/jpeg,image/png,image/webp,application/pdf'
 
-/** Multi-file picker for listing photos and PDFs: each file uploads right away; remove and reorder before saving. */
+
 export function AttachmentsField({ value, onChange, label, error }: {
   value: AttachmentDraft[]
   onChange: (update: (list: AttachmentDraft[]) => AttachmentDraft[]) => void
@@ -79,7 +79,7 @@ export function AttachmentsField({ value, onChange, label, error }: {
   )
 }
 
-/** Images as a thumbnail grid (opens the full file in a new tab), PDFs as links, legacy names without a file as chips. */
+
 export function AttachmentGallery({ attachments, className }: { attachments: ListingAttachment[]; className?: string }) {
   if (!attachments.length) return null
   const images = attachments.filter((a) => a.url && isImage(a))

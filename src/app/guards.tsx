@@ -17,10 +17,10 @@ export function RequireAuth() {
   return <Outlet />
 }
 
-/**
- * Bounces users who arrive already signed in. Signing in *on* these pages doesn't trigger it:
- * the page itself decides where to go next (verify email, onboarding, or returnTo).
- */
+
+
+
+
 export function GuestOnly() {
   const me = useMe()
   const [params] = useSearchParams()
@@ -44,13 +44,13 @@ function Forbidden() {
   )
 }
 
-/** Must sit under RequireAuth. */
+
 export function RequireCapability({ cap }: { cap: Capability }) {
   const { data: me } = useMe()
   return me?.capabilities.includes(cap) ? <Outlet /> : <Forbidden />
 }
 
-/** Must sit under RequireAuth. Checks membership of the org in the URL. */
+
 export function RequireOrg() {
   const { data: me } = useMe()
   const { orgId } = useParams()

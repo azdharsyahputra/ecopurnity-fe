@@ -3,14 +3,14 @@ import type { AuctionStatus, Tone } from './status'
 import { suggestAllocation } from './auction'
 import { TRADE_ACTION_LABEL, type TradeAction } from './trade'
 
-// Business / organization workspace (PRD §9): contract types plus the branching rules shared by
-// the UI (what to show/enable) and the mock API (what to accept). BE should enforce the same tables.
 
-// ── Roles & permissions ──────────────────────────────────────────
+
+
+
 
 export type Module = 'procurement' | 'auctions' | 'collective' | 'suppliers' | 'inventory' | 'transactions' | 'analytics' | 'team' | 'profile'
 export type Action = 'view' | 'create' | 'approve' | 'manage'
-/** roleId → module → allowed actions. Built-in role ids are `OrgRole`; custom roles get `custom-…` ids. */
+
 export type Permissions = Record<string, Partial<Record<Module, Action[]>>>
 
 export const MODULES: Record<Module, string> = {
@@ -34,18 +34,18 @@ export const DEFAULT_PERMISSIONS: Record<OrgRole, Record<Module, Action[]>> = {
   sales: { procurement: V, auctions: V, collective: V, suppliers: V, inventory: V, transactions: V, analytics: V, team: V, profile: V },
 }
 
-/** Owner always has everything so an org can never lock itself out of its own settings. */
+
 export function can(perms: Permissions | undefined, role: string, module: Module, action: Action): boolean {
   if (role === 'owner') return true
   const p = perms?.[role] ?? DEFAULT_PERMISSIONS[role as OrgRole]
   return !!p?.[module]?.includes(action)
 }
 
-/** Why an action is unavailable, for disabled buttons. */
+
 export const deniedReason = (roleLabel: string, module: Module, action: Action) =>
   `Peran ${roleLabel} tidak punya izin ${ACTIONS[action].toLowerCase()} ${MODULES[module]}`
 
-/** Who may take each step of an org trade (PRD §9.8, F6): money moves by Finance, goods by Operations, commitments by Procurement/Sales. */
+
 export const TX_ACTION_ROLES: Record<TradeAction, OrgRole[]> = {
   accept_agreement: ['owner', 'procurement', 'sales'],
   issue_invoice: ['owner', 'finance', 'sales'],
@@ -59,29 +59,29 @@ export const TX_ACTION_ROLES: Record<TradeAction, OrgRole[]> = {
   review: ['owner', 'procurement'],
 }
 
-/** Built-in roles follow TX_ACTION_ROLES; custom roles fall back to their `transactions.manage` permission. */
+
 export function canTransact(perms: Permissions | undefined, role: string, action: TradeAction): boolean {
   if (Object.hasOwn(ROLE_LABEL, role)) return TX_ACTION_ROLES[action].includes(role as OrgRole)
   return can(perms, role, 'transactions', 'manage')
 }
 
-/** Reason for a disabled transaction step, or undefined when the role may take it. */
+
 export function txDeniedReason(perms: Permissions | undefined, role: string, roleLabel: string, action: TradeAction) {
   if (canTransact(perms, role, action)) return undefined
   if (!Object.hasOwn(ROLE_LABEL, role)) return deniedReason(roleLabel, 'transactions', 'manage')
   return `${TRADE_ACTION_LABEL[action]} hanya untuk ${TX_ACTION_ROLES[action].map((r) => ROLE_LABEL[r]).join(', ')}; peranmu ${roleLabel}`
 }
 
-// ── Approval rules ───────────────────────────────────────────────
+
 
 export type ApprovalSubject = 'procurement' | 'auction'
 
 export interface ApprovalRule {
   id: string
   label: string
-  /** Applies when the value is strictly above this. */
+
   minAmountIdr: number
-  /** Role ids that must each approve. */
+
   approvers: string[]
   appliesTo: ApprovalSubject[]
 }
@@ -94,7 +94,7 @@ export interface Approval {
   note?: string
 }
 
-/** Every role that must sign off, in rule order, without duplicates. */
+
 export function requiredApprovers(amountIdr: number, subject: ApprovalSubject, rules: ApprovalRule[]): string[] {
   const roles = rules.filter((r) => r.appliesTo.includes(subject) && amountIdr > r.minAmountIdr).flatMap((r) => r.approvers)
   return [...new Set(roles)]
@@ -106,11 +106,11 @@ export function approvalState(required: string[], approvals: Approval[]) {
   return { pending, rejected, approved: !rejected && pending.length === 0 }
 }
 
-/**
- * Still-pending required roles that `role` signs now, its own first. Deadlock rule: the owner also signs every pending
- * role no active member holds (`activeRoles`, OrgSettings.activeRoles), so "above Rp 50 jt: Finance + Owner" still
- * completes in an org without Finance. `activeRoles` undefined = every role staffed.
- */
+
+
+
+
+
 export function signingRoles(role: string, required: string[], approvals: Approval[], activeRoles?: string[]): string[] {
   const s = approvalState(required, approvals)
   if (s.rejected) return []
@@ -122,17 +122,17 @@ export function signingRoles(role: string, required: string[], approvals: Approv
 export const canApprove = (role: string, required: string[], approvals: Approval[], activeRoles?: string[]) =>
   signingRoles(role, required, approvals, activeRoles).length > 0
 
-/** Approval `by` label: "Name (Role)", or "Name · Owner (atas nama Finance)" when an owner signs for a role nobody holds. */
+
 export const approvalBy = (name: string, actorRoleLabel: string, signedRoleLabel: string, onBehalf: boolean) =>
   onBehalf ? `${name} · ${actorRoleLabel} (atas nama ${signedRoleLabel})` : `${name} (${actorRoleLabel})`
 
-/** Users to ask for a sign-off: members who sign a still-pending role (owners for roles nobody holds), except whoever just acted. */
+
 export function approverUserIds(required: string[], approvals: Approval[], members: { userId: string; role: string }[], actorId?: string): string[] {
   const active = members.map((m) => m.role)
   return [...new Set(members.filter((m) => m.userId !== actorId && canApprove(m.role, required, approvals, active)).map((m) => m.userId))]
 }
 
-// ── Procurement (PRD §9.4) ───────────────────────────────────────
+
 
 export type ProcurementStatus =
   | 'draft' | 'pending_approval' | 'approved' | 'published' | 'in_auction' | 'in_collective' | 'awarded' | 'po_issued' | 'rejected' | 'cancelled'
@@ -183,7 +183,7 @@ export interface ProcurementRequest {
 
 export type ProcurementInput = Pick<ProcurementRequest, 'need' | 'categoryId' | 'quantity' | 'budgetIdr' | 'deadline' | 'spec' | 'deliveryLocation' | 'visibility' | 'invitedSupplierIds'>
 
-/** Status right after submit (or after a decision): approvals decide whether it can move on. */
+
 export function statusAfterApproval(required: string[], approvals: Approval[]): ProcurementStatus {
   const s = approvalState(required, approvals)
   return s.rejected ? 'rejected' : s.approved ? 'approved' : 'pending_approval'
@@ -211,7 +211,7 @@ export function pipelineCounts(statuses: ProcurementStatus[]): Record<PipelineSt
   return counts
 }
 
-/** Actions a role can take on a request now; the mock API accepts exactly these. */
+
 export type ProcurementAction = 'submit' | 'approve' | 'reject' | 'publish' | 'cancel' | 'collective'
 
 export function procurementActions(r: Pick<ProcurementRequest, 'status' | 'requiredApprovers' | 'approvals'>, role: string, perms?: Permissions, activeRoles?: string[]): ProcurementAction[] {
@@ -228,7 +228,7 @@ export function procurementActions(r: Pick<ProcurementRequest, 'status' | 'requi
 export const canConvertToAuction = (r: Pick<ProcurementRequest, 'status'>, role: string, perms?: Permissions) =>
   (r.status === 'approved' || r.status === 'published') && can(perms, role, 'auctions', 'create')
 
-// ── Suppliers (PRD §9.7) ─────────────────────────────────────────
+
 
 export interface ScorePoint {
   month: string
@@ -243,12 +243,12 @@ export interface Supplier {
   name: string
   categories: CategoryId[]
   region: string
-  /** 0–5 stars from all buyers. */
+
   rating: number
   verified: boolean
   documents: string[]
   capacity: string
-  /** Monthly 0–100 scorecard, oldest first. */
+
   scorecard: ScorePoint[]
 }
 
@@ -260,7 +260,7 @@ export const RELATION: Record<SupplierRelation, [label: string, tone: Tone]> = {
 
 export interface OrgSupplier extends Supplier {
   relation: SupplierRelation
-  /** This org's own rating, 1–5. */
+
   myRating?: number
   transactions: number
   spendIdr: number
@@ -274,7 +274,7 @@ export type SupplierAction = 'shortlist' | 'invite' | 'verify' | 'block' | 'unbl
 
 export const scoreOf = (p: Omit<ScorePoint, 'month'>) => Math.round((p.price + p.reliability + p.quality + p.delivery) / 4)
 
-// ── Weighted scoring & award rules (PRD §9.6) ────────────────────
+
 
 export interface Weights {
   price: number
@@ -287,19 +287,19 @@ export const DEFAULT_WEIGHTS: Weights = { price: 60, quality: 20, delivery: 10, 
 
 export interface LotOffer extends Offer {
   supplierId: string
-  /** 0–100 from the supplier scorecard. */
+
   quality: number
   delivery: number
   reliability: number
 }
 
-/** Selling auctions (forward/Dutch): the highest price is the best one. */
+
 export const higherWins = (t: AuctionType) => t === 'forward' || t === 'dutch'
 
-/**
- * 0–100 per offer. Price scores relative to the best price: the cheapest (= 100) when buying,
- * the highest (= 100) when selling. Weights need not sum to 100.
- */
+
+
+
+
 export function weightedScores(offers: Pick<LotOffer, 'priceIdr' | 'quality' | 'delivery' | 'reliability'>[], w: Weights, higher = false): number[] {
   if (!offers.length) return []
   const prices = offers.map((o) => o.priceIdr)
@@ -328,17 +328,17 @@ const SELLING_AWARD_RULES: Record<AwardRule, { label: string; hint: string }> = 
   bundled: { label: 'Bundled', hint: 'Semua lot ke satu pembeli dengan total tertinggi.' },
 }
 
-/** Label and hint of a rule, worded for selling (highest wins) when `higher`. */
+
 export const awardRuleInfo = (rule: AwardRule, higher = false) => (higher ? SELLING_AWARD_RULES : AWARD_RULES)[rule]
 
-/** One award line, never above the offer's capacity (the API refuses more: "Melebihi kapasitas penawaran"). */
+
 const line = (o: LotOffer, quantity: number): AllocationLine => ({ offerId: o.id, supplier: o.supplier.name, quantity: Math.min(quantity, o.capacity.value), priceIdr: o.priceIdr })
 
-/**
- * Award lines per lot under a rule. Bundled falls back to empty lots when no supplier bid on every lot.
- * `higher` (selling: forward/Dutch) flips every rule to the best *highest* price: lowest → highest bid,
- * split → highest bids first up to each buyer's capacity, bundled → highest total.
- */
+
+
+
+
+
 export function awardLines(lots: { quantity: number; offers: LotOffer[] }[], rule: AwardRule, w: Weights = DEFAULT_WEIGHTS, higher = false): AllocationLine[][] {
   const better = (x: LotOffer, y: LotOffer) => (higher ? y.priceIdr - x.priceIdr : x.priceIdr - y.priceIdr)
   if (rule === 'bundled') {
@@ -366,7 +366,7 @@ export function awardLines(lots: { quantity: number; offers: LotOffer[] }[], rul
   })
 }
 
-/** Selling mirror of `suggestAllocation`: highest prices first (reputation breaks ties), each up to the buyer's capacity. */
+
 function splitHighest(offers: LotOffer[], quantity: number): AllocationLine[] {
   const lines: AllocationLine[] = []
   let left = quantity
@@ -379,7 +379,7 @@ function splitHighest(offers: LotOffer[], quantity: number): AllocationLine[] {
   return lines
 }
 
-/** Summary of an award, for the simulation table and the confirm dialog. */
+
 export function awardSummary(lots: { quantity: number }[], lines: AllocationLine[][]) {
   const totalIdr = lines.flat().reduce((s, l) => s + l.quantity * l.priceIdr, 0)
   const asked = lots.reduce((s, l) => s + l.quantity, 0)
@@ -387,12 +387,12 @@ export function awardSummary(lots: { quantity: number }[], lines: AllocationLine
   return { totalIdr, suppliers: new Set(lines.flat().map((l) => l.supplier)).size, coverage: asked ? covered / asked : 0 }
 }
 
-// ── Collective procurement (PRD §9.5) ────────────────────────────
 
-/**
- * Volume discount from aggregation: 6% per doubling above the reference lot, capped at 25%.
- * ponytail: one log curve for every category; per-category supplier tiers come with real price data.
- */
+
+
+
+
+
 export function scaleDiscount(totalQty: number, refQty: number) {
   if (totalQty <= refQty || refQty <= 0) return 0
   return Math.min(0.25, 0.06 * Math.log2(totalQty / refQty))
@@ -403,7 +403,7 @@ export const projectedUnitPrice = (baseIdr: number, totalQty: number, refQty: nu
 export type PoolStatus = 'open' | 'market_requested' | 'market_live' | 'settled'
 
 export interface PoolMember {
-  /** Shown only when `optIn`; otherwise masked as "Bisnis lain". */
+
   name: string
   quantity: number
   optIn: boolean
@@ -419,22 +419,22 @@ export interface CollectivePool {
   deadline: string
   unit: string
   baseUnitPriceIdr: number
-  /** Lot size suppliers quote the base price for. */
+
   refQty: number
-  /** Total demand that justifies its own market. */
+
   thresholdQty: number
   status: PoolStatus
   members: PoolMember[]
   marketRequestedAt?: string
-  /** Set once a market maker forms the market and opens its round (PRD F6). */
+
   marketId?: string
   auctionId?: string
-  /** The round's live state, for display. */
+
   round?: { status: AuctionStatus; endsAt: string }
   settlement?: PoolSettlement
 }
 
-/** Round result split pro-rata over the pool; each business member's line links its own sub-PO. */
+
 export interface PoolSettlement {
   at: string
   by: string
@@ -455,11 +455,11 @@ export function poolTotals(pool: Pick<CollectivePool, 'members' | 'baseUnitPrice
   }
 }
 
-/** Members as another business sees them: names only for those who opted in. */
+
 export const maskMembers = (members: PoolMember[]) =>
   members.map((m, i) => (m.mine || m.optIn ? m : { ...m, name: `Bisnis lain #${i + 1}` }))
 
-// ── Business auctions (PRD §9.6) ─────────────────────────────────
+
 
 export type AuctionObjective = 'procurement' | 'selling'
 export type WithdrawRule = 'anytime' | 'before_last_30' | 'never'
@@ -479,9 +479,9 @@ export interface OrgLot {
   item: string
   quantity: Quantity
   spec: string
-  /** Reverse: target/max price per unit; forward: reserve per unit. Also the opening price. */
+
   reservePriceIdr: number
-  /** Economy auction this lot runs as once live. */
+
   auctionId?: string
 }
 
@@ -512,14 +512,14 @@ export interface OrgAuction extends Omit<OrgAuctionInput, 'lots'> {
   award?: { lines: AllocationLine[][]; reason: string; at: string; by: string; poNumber?: string; transactionIds?: string[] }
 }
 
-/** Per-lot live facts merged from the economy auction. */
+
 export interface OrgAuctionView extends OrgAuction {
   live: { auctionId: string; status: AuctionStatus; bidCount: number; participants: number; bestPriceIdr?: number; endsAt: string }[]
 }
 
 export const auctionValue = (lots: Pick<OrgLot, 'quantity' | 'reservePriceIdr'>[]) => lots.reduce((s, l) => s + l.quantity.value * l.reservePriceIdr, 0)
 
-/** Org-level status from its lots: live while any lot runs, closed when all are done. */
+
 export function orgAuctionStatus(a: Pick<OrgAuction, 'status' | 'award'>, lots: AuctionStatus[]): OrgAuctionStatus {
   if (a.status === 'pending_approval' || a.status === 'rejected') return a.status
   if (a.award) return 'awarded'
@@ -541,7 +541,7 @@ export interface OrgAuctionEvaluation {
   org: { name: string; location: string; npwp: string }
 }
 
-// ── Inventory (PRD §9.3) ─────────────────────────────────────────
+
 
 export interface InventoryItem {
   id: string
@@ -563,7 +563,7 @@ export interface InventoryData {
   schedules: { id: string; item: string; quantity: Quantity; every: 'weekly' | 'monthly'; counterparty: string; direction: 'in' | 'out'; nextAt: string }[]
 }
 
-/** RFC 4180-ish: quoted fields, escaped quotes, CRLF. */
+
 export function parseCsv(text: string): string[][] {
   const rows: string[][] = []
   let row: string[] = []
@@ -595,7 +595,7 @@ export function toCsv(rows: (string | number)[][]): string {
 
 export const INVENTORY_CSV_HEADER = ['sku', 'nama', 'kategori', 'gudang', 'jumlah', 'satuan', 'moq', 'lead_time_hari', 'spesifikasi']
 
-/** Rows from an inventory CSV (header row required) plus per-row errors; invalid rows are skipped. */
+
 export function inventoryFromCsv(rows: string[][], categories: CategoryId[]) {
   const [head, ...body] = rows
   const idx = Object.fromEntries((head ?? []).map((h, i) => [h.trim().toLowerCase(), i]))
@@ -619,7 +619,7 @@ export function inventoryFromCsv(rows: string[][], categories: CategoryId[]) {
   return { items, errors }
 }
 
-// ── Org profile, team, overview, analytics ───────────────────────
+
 
 export type VerificationStatus = 'unverified' | 'pending' | 'verified' | 'rejected'
 
@@ -657,7 +657,7 @@ export interface OrgSettings {
   permissions: Permissions
   departments: string[]
   approvalRules: ApprovalRule[]
-  /** Role ids held by at least one active member (input of the approval deadlock rule, `signingRoles`). */
+
   activeRoles: string[]
 }
 
@@ -691,15 +691,15 @@ export interface OrgOverview {
 
 export interface OrgAnalytics {
   categories: CategoryId[]
-  /** Spend per month per category (Rupiah), oldest first. */
+
   spend: ({ month: string } & Partial<Record<CategoryId, number>>)[]
-  /** Paid vs budget vs market per month. */
+
   savings: { month: string; spendIdr: number; budgetIdr: number; marketIdr: number }[]
-  /** Average unit price per item, ours vs market. */
+
   unitPrices: { item: string; unit: string; avgIdr: number; marketIdr: number }[]
-  /** Our unit price vs market for the biggest item, indexed to its first month = 100. */
+
   priceTrend: { item: string; points: { month: string; ours: number; market: number }[] }
-  /** Purchased quantity of the biggest item per month. */
+
   demand: { item: string; unit: string; points: { month: string; quantity: number; requests: number }[] }
   suppliers: { id: string; name: string; score: number; onTime: number; spendIdr: number }[]
   auctions: { code: string; title: string; bidders: number; openingIdr: number; clearingIdr: number }[]

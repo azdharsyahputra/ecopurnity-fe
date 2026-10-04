@@ -2,22 +2,22 @@ import type { Auction, CategoryId, Identity, Market, Quantity } from '@/domain/t
 import type { MatchParts } from '@/domain/matching'
 import type { ReputationCounts } from '@/domain/reputation'
 
-// Smart Matching inbox + public profiles API contract (PRD §8.6, public profiles).
+
 
 export type MatchState = 'new' | 'saved' | 'connected' | 'dismissed'
 
 export interface Match {
   id: string
-  /** What the user brings: a supply listing or an identity item. */
+
   have: { source: 'supply' | 'identity'; id: string; label: string; detail: string }
-  /** What the opportunity is short of. */
+
   need: { opportunityId: string; title: string; region: string; categoryId: CategoryId; gap: Quantity; detail: string }
   distanceKm: number
   estimatedValueIdr: number
   score: number
   parts: MatchParts
   state: MatchState
-  /** Opened when the user connects (PRD F6). */
+
   conversationId?: string
 }
 

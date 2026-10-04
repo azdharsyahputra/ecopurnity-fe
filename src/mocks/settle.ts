@@ -11,8 +11,8 @@ import { ops, operatedIds } from './mm'
 import { createTrade } from './trade'
 import { SUPPLIERS, makeTx, org, orgAudit, orgUserIds, pools, saveOrg, type StoredPool } from './org'
 
-// Aggregated settlement of market rounds (PRD F6): the winning offer is split pro-rata across the
-// members who contributed to the lot (demand in procurement markets, supply in selling markets).
+
+
 
 const api = (path: string) => `/api/v1${path}`
 const fail = (status: number, code: string, message: string) => HttpResponse.json({ error: { code, message } }, { status })
@@ -36,7 +36,7 @@ const save = () => {
 
 export const settlementOf = (auctionId: string) => settled[auctionId]
 
-/** Listings on platform accounts that sit in this market (demand or supply side). */
+
 export function contributions(marketId: string, kind: 'demand' | 'supply') {
   return allPersonal().flatMap(([userId, p]) =>
     p.listings
@@ -45,7 +45,7 @@ export function contributions(marketId: string, kind: 'demand' | 'supply') {
   )
 }
 
-/** Bot bidders ("Supplier 3") stand for a directory supplier in the pool's category, like org auction offers do. */
+
 function directorySupplier(bidder: string, categoryId: CategoryId) {
   const dir = SUPPLIERS.filter((s) => s.categories.includes(categoryId))
   const n = Number(bidder.match(/\d+/)?.[0] ?? 1)
@@ -65,7 +65,7 @@ function preview(a: AuctionDetail): Omit<Settlement, 'settled'> & { winnerUserId
   const bidder = winnerUserId ? db.users.find((u) => u.id === winnerUserId)!.name : winBid?.bidder ?? (side === 'procurement' ? 'Supplier terpilih' : 'Pembeli terpilih')
   const winner = pool && !winnerUserId ? directorySupplier(bidder, pool.categoryId)?.name ?? bidder : bidder
   const base = { auctionId: a.id, title: a.title, side, unit: a.lot.quantity.unit, lotQty: a.lot.quantity.value, priceIdr: best, winner, winnerUserId }
-  // Collective pool round: the lot goes back to the pool's member businesses (names masked unless they opted in).
+
   if (pool) {
     const lines = splitPool(pool.members, a.lot.quantity.value, best).map((l, i) => ({
       memberId: `pool:${i}`, member: l.optIn ? l.name : `Bisnis lain #${i + 1}`, orgId: l.orgId, quantity: l.quantity, share: l.share, amountIdr: l.amountIdr,
@@ -85,11 +85,11 @@ function preview(a: AuctionDetail): Omit<Settlement, 'settled'> & { winnerUserId
   return { ...base, lines }
 }
 
-/**
- * Settles a pool round: each member business gets its own escrow sub-PO with the winner for its pro-rata share,
- * delivered to its own drop point. Fictional members only appear in the split; nothing is stored for them.
- * ponytail: a winner who is a personal platform account gets no supplier-side record; the org side is bot-driven like other org trades.
- */
+
+
+
+
+
 function settlePool(p: StoredPool, a: AuctionDetail, pv: ReturnType<typeof preview>, by: string) {
   const sup = pv.winnerUserId ? undefined : SUPPLIERS.find((s) => s.name === pv.winner)
   const counterparty = { name: pv.winner, kind: pv.winnerUserId ? 'person' as const : 'business' as const, verified: sup?.verified ?? true }
@@ -97,7 +97,7 @@ function settlePool(p: StoredPool, a: AuctionDetail, pv: ReturnType<typeof previ
     if (!l.orgId || !l.quantity) return l
     const o = org(l.orgId)
     const req = o.procurements.find((r) => r.poolId === p.id && r.status === 'in_collective')
-    // Drop point: the procurement's delivery location, else the org's main warehouse, else its address.
+
     const w = o.inventory.warehouses[0]
     const t = makeTx({
       title: `${p.title} · ${l.quantity.toLocaleString('id-ID')} ${p.unit} (${a.code})`, role: 'buyer', counterparty, supplierId: sup?.id,

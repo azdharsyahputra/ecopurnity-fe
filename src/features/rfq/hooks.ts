@@ -4,7 +4,7 @@ import { useChannel } from '@/lib/realtime'
 import type { Conversation, Quote, Rfq, TradeParty } from '@/domain/types'
 import type { QuoteAction } from '@/domain/rfq'
 
-// RFQ + conversations (PRD F6). Keys start with 'me' so live notifications refresh them.
+
 
 export type RfqView = Rfq & { side: 'buyer' | 'supplier' }
 export type NewRfq = Pick<Rfq, 'item' | 'categoryId' | 'quantity' | 'targetPriceIdr' | 'deadline' | 'location' | 'spec' | 'source'> & {
@@ -51,7 +51,7 @@ export function useRfqAction(id: string) {
 const MOCKS = import.meta.env.VITE_USE_MOCKS !== 'false'
 type Message = Conversation['messages'][number]
 
-// Against the API, threads update live from `conversation:{id}`; the mock has no chat feed, so it polls.
+
 export const useConversations = () =>
   useQuery({ queryKey: ['me', 'conversations'], queryFn: () => api<Conversation[]>('/me/conversations'), refetchInterval: MOCKS ? 10_000 : 30_000 })
 
@@ -75,7 +75,7 @@ export function useConversation(id: string) {
 export function useSendMessage(id: string) {
   const qc = useQueryClient()
   return useMutation({
-    // clientMsgId makes a retried send idempotent on the server.
+
     mutationFn: (text: string) => api<Conversation>(`/me/conversations/${id}/messages`, json('POST', { text, clientMsgId: crypto.randomUUID() })),
     onSuccess: (c) => {
       qc.setQueryData(['me', 'conversations', id], c)

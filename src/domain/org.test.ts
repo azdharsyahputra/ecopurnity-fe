@@ -138,7 +138,7 @@ describe('scoring and award rules', () => {
 
   it('awards per rule', () => {
     const lots = [{ quantity: 100, offers: [offer('a', 100, 60, 50), offer('b', 105, 100, 100)] }]
-    // Never above an offer's capacity (the API refuses it); the rest of the lot stays uncovered.
+
     expect(awardLines(lots, 'lowest')[0]).toEqual([{ offerId: 'a', supplier: 'a', quantity: 60, priceIdr: 100 }])
     expect(awardLines(lots, 'weighted', { price: 20, quality: 80, delivery: 0, reliability: 0 })[0][0].offerId).toBe('b')
     expect(awardLines(lots, 'split')[0].map((l) => l.quantity)).toEqual([60, 40])

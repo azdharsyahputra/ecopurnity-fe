@@ -1,5 +1,5 @@
-// Generates docs/api-contract.md from the MSW handlers: every endpoint the frontend calls, grouped by area.
-// Run: npm run contract
+
+
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 
 const AREAS = {
@@ -20,7 +20,7 @@ const AREAS = {
 const rows = []
 for (const file of readdirSync('src/mocks').filter((f) => f in AREAS)) {
   const src = readFileSync(`src/mocks/${file}`, 'utf8')
-  // Each file's `api()` helper may add its own prefix, e.g. `/api/v1/orgs/:orgId${path}`.
+
   const prefix = src.match(/const api = \(path: string\) => `([^`$]*)\$\{path\}`/)?.[1] ?? '/api/v1'
   for (const m of src.matchAll(/http\.(get|post|put|patch|delete)\(api\('([^']*)'\)/g)) {
     rows.push({ area: AREAS[file], method: m[1].toUpperCase(), path: `${prefix}${m[2]}` })

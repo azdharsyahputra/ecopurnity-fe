@@ -60,7 +60,7 @@ export function OrgTransactionsPage() {
   )
 }
 
-/** How the pool's winning lot was split over its members; this org's line links back here (PRD F6 settlement agregasi). */
+
 function PoolSplit({ c }: { c: NonNullable<OrgTransactionPage['collective']> }) {
   const access = useOrgAccess()
   return (

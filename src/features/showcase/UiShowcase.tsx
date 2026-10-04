@@ -29,7 +29,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   )
 }
 
-/** Living reference for the design system (PRD §5). Every core component in both themes. */
+
 export function UiShowcase() {
   const gate = useAuthGate()
   const [volume, setVolume] = useState(8_400_000_000)

@@ -5,15 +5,15 @@ import type {
 } from '@/features/admin/types'
 import { economy } from './economy'
 
-// Governance mock store (PRD §11). Seeded once, then persisted as one blob like personal.ts.
-// ponytail: seeds are written with relative times on first load and then frozen in storage; clear the key to reseed.
+
+
 
 const KEY = 'ecp-mock-admin'
 const ago = (min: number) => new Date(Date.now() - min * 60_000).toISOString()
 const H = 60
 const D = 1440
 
-/** Accounts that exist only for governance demos (no login). Ids never start with `usr-new-`. */
+
 export interface ExtraAccount {
   id: string
   name: string
@@ -25,7 +25,7 @@ export interface ExtraAccount {
   bio: string
 }
 
-/** Seeded dispute: carries its own transaction snapshot. Real disputes live in users' personal stores. */
+
 export interface SeedDispute {
   id: string
   parties: DisputeParty[]
@@ -48,12 +48,12 @@ interface AdminState {
   reports: Record<string, UserReport[]>
   verifications: VerificationRequest[]
   markets: Record<string, { flags: MarketFlag[]; reports: UserReport[]; reviewedAt?: string; status?: MarketStatus }>
-  /** auctionId → status before the freeze. */
+
   frozen: Record<string, AuctionStatus>
   alerts: FraudAlert[]
   seedDisputes: SeedDispute[]
   disputes: Record<string, DisputeOverlay>
-  /** userId → suspension appeal (PRD F6). */
+
   appeals?: Record<string, Appeal>
 }
 
@@ -316,7 +316,7 @@ export function saveAdmin() {
   }
 }
 
-// Governance decisions survive reloads: re-apply them to the shared economy.
+
 for (const [id, m] of Object.entries(admin.markets)) {
   const market = economy.markets.find((x) => x.id === id)
   if (market && m.status) market.status = m.status

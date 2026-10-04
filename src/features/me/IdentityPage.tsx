@@ -34,7 +34,7 @@ type ItemDraft = { name: string; detail: string; categoryId: CategoryId | '' }
 const blankItem = (): ItemDraft => ({ name: '', detail: '', categoryId: '' })
 const selectClass = 'h-9 rounded-lg border border-input bg-background px-2.5 text-sm dark:bg-input/30'
 
-/** Category for Smart Matching; empty = let the engine guess from the name. */
+
 function CategorySelect({ label, value, onChange, className }: { label: string; value: CategoryId | ''; onChange: (v: CategoryId | '') => void; className?: string }) {
   return (
     <select aria-label={label} value={value} onChange={(e) => onChange(e.target.value as CategoryId | '')} className={cn(selectClass, className)}>

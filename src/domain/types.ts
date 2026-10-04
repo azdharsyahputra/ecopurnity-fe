@@ -1,5 +1,5 @@
-// API contract types (PRD §13). camelCase JSON, ISO 8601 UTC times, money as integer Rupiah.
-// Feature-specific entities are added here as each feature is built.
+
+
 
 import type {
   AuctionStatus, BidStatus, DemandStatus, DisputeStatus, MarketStatus, OpportunityStatus, QualificationStatus, SupplyStatus,
@@ -20,9 +20,9 @@ export interface ApiErrorBody {
   error: { code: string; message: string; fields?: Record<string, string> }
 }
 
-// ── Identity & access ────────────────────────────────────────────
 
-/** Capabilities on top of the base Participant account (PRD §3). */
+
+
 export type Capability = 'market_maker' | 'admin'
 
 export type OrgRole = 'owner' | 'procurement' | 'finance' | 'operations' | 'sales'
@@ -47,7 +47,7 @@ export interface User {
   onboarded: boolean
 }
 
-// ── Public economy ───────────────────────────────────────────────
+
 
 export interface PublicStats {
   activeParticipants: number
@@ -72,7 +72,7 @@ export interface ActivityEvent {
   at: string
 }
 
-// ── Real-time (PRD §12.2) ────────────────────────────────────────
+
 
 export interface RealtimeMessage<T = unknown> {
   channel: string
@@ -81,7 +81,7 @@ export interface RealtimeMessage<T = unknown> {
   ts: string
 }
 
-// ── Catalog ──────────────────────────────────────────────────────
+
 
 export type CategoryId = 'agri' | 'food' | 'packaging' | 'manufacturing' | 'logistics' | 'it' | 'energy'
 
@@ -106,7 +106,7 @@ export interface PartyRef {
   verified: boolean
 }
 
-// ── Opportunities (PRD §6.3) ─────────────────────────────────────
+
 
 export type OpportunityKind = 'collective_demand' | 'supply_gap' | 'market_gap' | 'capacity_match'
 
@@ -118,14 +118,14 @@ export interface Opportunity {
   categoryId: CategoryId
   region: string
   status: OpportunityStatus
-  /** Potential demand per month. */
+
   demand: Quantity
-  /** Current supply per month, same unit as demand. */
+
   supply: Quantity
   participants: number
   potentialValueIdr: number
   suggestedMechanism: MarketMechanism
-  /** Engine confidence, 0–1. */
+
   confidence: number
   detectedAt: string
 }
@@ -134,14 +134,14 @@ export interface OpportunityDetail extends Opportunity {
   description: string
   requiredContribution: string
   mechanismReason: string
-  /** Monthly demand vs supply, oldest first. */
+
   history: { month: string; demand: number; supply: number }[]
-  /** Visitors see a masked list; members see names (PRD §6.3). */
+
   participantsPreview: (PartyRef & { role: 'buyer' | 'supplier' })[]
   markets: Market[]
 }
 
-// ── Markets (PRD §6.4) ───────────────────────────────────────────
+
 
 export interface Market {
   id: string
@@ -157,7 +157,7 @@ export interface Market {
   supply: Quantity
   buyers: number
   suppliers: number
-  /** Rupiah per unit over the last 30 days. */
+
   priceRange: { minIdr: number; maxIdr: number; unit: string }
   volume30dIdr: number
   activeAuctions: number
@@ -166,13 +166,13 @@ export interface Market {
 export interface MarketDetail extends Market {
   description: string
   rules: LabeledValue[]
-  /** Weekly median price with its low–high band, oldest first. */
+
   priceHistory: { week: string; medianIdr: number; lowIdr: number; highIdr: number }[]
   activity: ActivityEvent[]
   auctions: Auction[]
 }
 
-// ── Auctions (PRD §6.5) ──────────────────────────────────────────
+
 
 export type AuctionType = 'forward' | 'reverse' | 'sealed' | 'dutch'
 export type BidVisibility = 'full' | 'rank_only' | 'sealed'
@@ -193,17 +193,17 @@ export interface Auction {
   bidCount: number
   visibility: BidVisibility
   openingPriceIdr: number
-  /** Best bid per unit so far (lowest for reverse, highest for forward); absent for sealed. Current ask for Dutch. */
+
   currentPriceIdr?: number
 }
 
 export interface PublicBid {
   id: string
-  /** Masked per visibility rule, e.g. "Supplier 3". */
+
   bidder: string
   priceIdr: number
   at: string
-  /** Only ever true for the signed-in user's own bids. */
+
   mine?: boolean
 }
 
@@ -211,27 +211,27 @@ export interface AuctionDetail extends Auction {
   rules: LabeledValue[]
   minStepIdr: number
   extension: { windowMinutes: number; extendMinutes: number }
-  /** Newest first; empty for sealed auctions. */
+
   bids: PublicBid[]
 }
 
-/** Payloads on the `auction:{id}` channel. */
+
 export type AuctionEvent =
   | { kind: 'bid'; bid: PublicBid; currentPriceIdr?: number; bidCount: number; participants: number }
   | { kind: 'extended'; endsAt: string }
   | { kind: 'price'; currentPriceIdr: number }
   | { kind: 'closed'; status: AuctionStatus }
 
-// ── Explorer (PRD §6.2) ──────────────────────────────────────────
+
 
 export type ExplorerRange = '7d' | '30d' | '90d'
 
 export interface ExplorerOverview {
   stats: PublicStats
-  /** Change vs the previous period of the same length, as fractions. */
+
   deltas: { participants: number; markets: number; opportunities: number; volume: number }
   volume: { date: string; volumeIdr: number }[]
-  /** Price index (start of range = 100) per category. */
+
   priceIndex: ({ date: string } & Partial<Record<CategoryId, number>>)[]
   demandSupply: { categoryId: CategoryId; demandIdr: number; supplyIdr: number }[]
 }
@@ -242,11 +242,11 @@ export interface AggregateRow {
   region: string
   quantity: Quantity
   listings: number
-  /** 30-day change, fraction. */
+
   trend: number
 }
 
-// ── Search (PRD §6.6) ────────────────────────────────────────────
+
 
 export type SearchType = 'product' | 'service' | 'business' | 'market' | 'opportunity' | 'auction'
 
@@ -255,11 +255,11 @@ export interface SearchHit {
   id: string
   title: string
   subtitle: string
-  /** In-app path. */
+
   href: string
 }
 
-// ── Onboarding (PRD §7) ──────────────────────────────────────────
+
 
 export type OnboardingGoal = 'sell' | 'buy' | 'business' | 'market_maker'
 
@@ -275,7 +275,7 @@ export interface OnboardingInput {
   marketMakerApplication?: { organization: string; reason: string }
 }
 
-// ── Personal workspace: identity (PRD §8.2) ──────────────────────
+
 
 export type CapacityKind = 'skill' | 'asset' | 'capacity' | 'resource'
 
@@ -283,9 +283,9 @@ export interface CapacityItem {
   id: string
   kind: CapacityKind
   name: string
-  /** Level, quantity per period, condition… e.g. "500 unit/bulan". */
+
   detail: string
-  /** What Smart Matching pairs it with; older items fall back to a keyword guess. */
+
   categoryId?: CategoryId
 }
 
@@ -298,7 +298,7 @@ export interface Identity {
     verification: { email: boolean; identity: 'none' | 'pending' | 'verified' }
   }
   items: CapacityItem[]
-  /** Days 0 = Senin … 6 = Minggu; hours as HH:mm. */
+
   availability: { days: number[]; from: string; to: string }
   preferences: {
     locations: string[]
@@ -307,26 +307,26 @@ export interface Identity {
     maxBudgetIdr?: number
     deliveryRadiusKm: number
   }
-  /** 0–1, drives the "lengkapi profil" prompt. */
+
   completeness: number
 }
 
-// ── Supply & demand (PRD §8.3–8.4) ───────────────────────────────
+
 
 export type DeliveryMode = 'pickup' | 'deliver' | 'both'
 
-/** A photo or document attached to a listing. */
+
 export interface ListingAttachment {
   id: string
   fileName: string
-  /** image/jpeg, image/png, image/webp or application/pdf (legacy rows may have another type). */
+
   contentType: string
   sizeBytes?: number
-  /** Presigned GET URL, valid for 1 hour. Absent for legacy name-only attachments (no stored file). */
+
   url?: string
 }
 
-/** Exactly one of uploadId (add a file, purpose listing_attachment) or id (keep an existing attachment). */
+
 export type ListingAttachmentInput = { uploadId: string; id?: never } | { id: string; uploadId?: never }
 
 interface ListingBase {
@@ -338,7 +338,7 @@ interface ListingBase {
   location: string
   spec: string
   delivery: DeliveryMode
-  /** Photos and documents in the owner's order. */
+
   attachments: ListingAttachment[]
   marketId?: string
   createdAt: string
@@ -348,7 +348,7 @@ interface ListingBase {
 export interface SupplyListing extends ListingBase {
   kind: 'supply'
   status: SupplyStatus
-  /** Expected price per unit. */
+
   priceIdr: number
   availableFrom: string
   expiresAt?: string
@@ -357,7 +357,7 @@ export interface SupplyListing extends ListingBase {
 export interface DemandListing extends ListingBase {
   kind: 'demand'
   status: DemandStatus
-  /** Total budget for the whole quantity. */
+
   budgetIdr: number
   deadline: string
   auctionId?: string
@@ -365,16 +365,16 @@ export interface DemandListing extends ListingBase {
 
 export type Listing = SupplyListing | DemandListing
 
-/** A listing in the public catalog (PRD F6): who posted it, never their contact details. */
+
 export type PublicListing = Pick<Listing, 'id' | 'code' | 'kind' | 'item' | 'categoryId' | 'quantity' | 'location' | 'spec' | 'delivery' | 'marketId' | 'createdAt'> & {
-  /** Per unit: the supplier's asking price, or the buyer's budget divided by quantity. */
+
   unitPriceIdr: number
   owner: { name: string; username?: string; userId?: string; verified: boolean }
-  /** The listing's photos and documents in the owner's order (the card shows the first image). */
+
   attachments: ListingAttachment[]
 }
 
-/** `attachments` is the complete ordered set (at most 8); attachments not listed are removed. */
+
 export type ListingInput =
   | (Omit<SupplyListing, 'id' | 'code' | 'status' | 'createdAt' | 'updatedAt' | 'marketId' | 'attachments'> & { attachments: ListingAttachmentInput[] })
   | (Omit<DemandListing, 'id' | 'code' | 'status' | 'createdAt' | 'updatedAt' | 'marketId' | 'auctionId' | 'attachments'> & { attachments: ListingAttachmentInput[] })
@@ -385,7 +385,7 @@ export type ListingDetail = Listing & {
   markets: Market[]
 }
 
-// ── Personal opportunities & markets (PRD §8.5–8.7) ──────────────
+
 
 export interface MatchReason {
   label: string
@@ -395,7 +395,7 @@ export interface MatchReason {
 export interface PersonalOpportunity extends Opportunity {
   reasons: MatchReason[]
   distanceKm: number
-  /** Estimated monthly value for this user if they take part. */
+
   personalValueIdr: number
   relation: 'none' | 'following' | 'joined'
   contribution?: { kind: 'supply' | 'demand'; listingId: string; quantity: Quantity }
@@ -403,14 +403,14 @@ export interface PersonalOpportunity extends Opportunity {
 
 export interface MyMarket extends Market {
   joined: boolean
-  /** Membership state in markets that require the market maker's approval. */
+
   approval?: 'pending' | 'active' | 'rejected' | 'suspended'
-  /** Alert when the median price crosses this value. */
+
   watchPriceIdr?: number
   myListings: number
 }
 
-// ── Auctions as participant (PRD §8.8) ───────────────────────────
+
 
 export interface Qualification {
   auctionId: string
@@ -422,12 +422,12 @@ export interface MyBid {
   auction: Auction
   priceIdr: number
   status: BidStatus
-  /** 1 = best. Absent for sealed auctions until they close. */
+
   rank?: number
   submittedAt: string
   updatedAt: string
   canWithdraw: boolean
-  /** Reverse/sealed: the capacity stated with this bid (the whole lot when none). Own view only. */
+
   capacity?: Quantity
 }
 
@@ -435,7 +435,7 @@ export interface Offer {
   id: string
   supplier: PartyRef & { reputation: number }
   priceIdr: number
-  /** Most this supplier can deliver. */
+
   capacity: Quantity
   submittedAt: string
 }
@@ -451,7 +451,7 @@ export interface AuctionEvaluation {
   auction: AuctionDetail
   demand?: DemandListing
   offers: Offer[]
-  /** Smart Allocation: cheapest reliable split that covers the lot. */
+
   suggestion: { lines: AllocationLine[]; totalIdr: number; savingsIdr: number; reason: string }
 }
 
@@ -465,7 +465,7 @@ export interface CreateAuctionInput {
   invite: string[]
 }
 
-// ── Transactions (PRD §8.9) ──────────────────────────────────────
+
 
 export interface Transaction {
   id: string
@@ -482,13 +482,13 @@ export interface Transaction {
   dueAt: string
   auctionId?: string
   terms?: PaymentTerms
-  /** The same trade as seen by the other party, when they are a platform account. */
+
   peer?: { userId: string; txId: string }
 }
 
 export interface TransactionDetail extends Transaction {
   timeline: { status: TransactionStatus; at?: string; note?: string }[]
-  /** `url`: short-lived presigned link of an uploaded file (delivery proofs); absent for generated documents. */
+
   documents: { id: string; kind: 'order' | 'agreement' | 'invoice' | 'proof'; name: string; url?: string; at: string }[]
   payment: { status: 'unpaid' | 'escrow' | 'released' | 'refunded'; paidAt?: string }
   delivery: { address: string; eta?: string; proof?: string }
@@ -496,18 +496,18 @@ export interface TransactionDetail extends Transaction {
     status: DisputeStatus
     reason: string
     openedAt: string
-    /** Evidence from either party (F6); the opening reason is the first entry. */
+
     evidence?: { id: string; by: 'buyer' | 'supplier'; name: string; text: string; file?: string; url?: string; at: string }[]
   }
-  // ── F6 settlement fields; optional so records from before F6 still read ──
+
   agreement?: { buyerAcceptedAt?: string; supplierAcceptedAt?: string }
-  /** Market maker commission rate for trades formed inside a market (0 otherwise). */
+
   makerFeeRate?: number
   invoice?: { number: string; issuedAt: string; dueAt: string }
   shipments?: Shipment[]
   qc?: { outcome: 'accepted' | 'partial' | 'rejected'; acceptedQty: number; note?: string; at: string }
   reviews?: Partial<Record<'buyer' | 'supplier', Review>>
-  /** Part of an aggregated (collective) settlement. */
+
   group?: { id: string; label: string; share: number }
 }
 
@@ -522,12 +522,12 @@ export interface Shipment {
   status: 'scheduled' | 'in_transit' | 'delivered'
   deliveredAt?: string
   proof?: string
-  /** Short-lived presigned link of the proof file (absent for name-only demo proofs). */
+
   proofUrl?: string
 }
 
 export interface Review {
-  /** 1–5 */
+
   rating: number
   quality: number
   timeliness: number
@@ -537,7 +537,7 @@ export interface Review {
   at: string
 }
 
-// ── Notifications (PRD §8.11) ────────────────────────────────────
+
 
 export type NotificationType =
   | 'opportunity_detected'
@@ -563,7 +563,7 @@ export interface AppNotification {
 
 export type NotificationPrefs = Record<NotificationType, { inApp: boolean; email: boolean }>
 
-// ── Dashboard (PRD §8.1) ─────────────────────────────────────────
+
 
 export interface DashboardSummary {
   stats: {
@@ -583,23 +583,23 @@ export interface DashboardSummary {
   connections: { count: number; sample: PartyRef[] }
 }
 
-// ── Audit trail (PRD §12.6) ──────────────────────────────────────
+
 
 export interface AuditEntry {
   id: string
-  /** Who did it, e.g. "Sari Kusuma (Admin)" or "Sistem". */
+
   actor: string
-  /** Verb phrase, e.g. "Suspend market". */
+
   action: string
   entity: { type: 'user' | 'business' | 'opportunity' | 'market' | 'auction' | 'alert' | 'transaction' | 'dispute' | 'rule' | 'procurement' | 'supplier'; id: string; label: string }
   at: string
-  /** Required for punitive actions (suspend, freeze, reject…). */
+
   reason?: string
-  /** Field-level diff: what changed, before → after. */
+
   changes?: { field: string; before?: string; after?: string }[]
 }
 
-// ── RFQ & direct trade (PRD F6) ──────────────────────────────────
+
 
 export type TradeParty = PartyRef & { userId?: string }
 
@@ -614,7 +614,7 @@ export interface Quote {
   terms: PaymentTerms
   note: string
   status: QuoteStatus
-  /** Buyer's counter-offer price per unit, while status is `countered`. */
+
   counterPriceIdr?: number
   at: string
   history: { at: string; by: string; text: string }[]
@@ -627,7 +627,7 @@ export interface Rfq {
   item: string
   categoryId: CategoryId
   quantity: Quantity
-  /** Buyer's target price per unit (optional, shown to suppliers). */
+
   targetPriceIdr?: number
   deadline: string
   location: string

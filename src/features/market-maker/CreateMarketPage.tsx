@@ -46,7 +46,7 @@ function initial(o?: OpportunityDetail): CreateMarketInput {
   }
 }
 
-/** Native radios styled as cards: keyboard and screen-reader behaviour for free. */
+
 function Choice<T extends string>({ name, legend, value, options, onChange }: {
   name: string
   legend: string

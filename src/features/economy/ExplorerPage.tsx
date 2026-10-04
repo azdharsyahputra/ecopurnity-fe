@@ -24,7 +24,7 @@ const TAB_LABEL: Record<(typeof TABS)[number], string> = {
   overview: 'Overview', opportunities: 'Opportunities', markets: 'Markets', auctions: 'Auctions', demand: 'Demand', supply: 'Supply',
 }
 
-/** Color follows the category, never its rank (dataviz). Categories past slot 4 only ever appear alone. */
+
 const CATEGORY_SERIES: Record<CategoryId, string> = {
   agri: SERIES[0], food: SERIES[1], packaging: SERIES[2], logistics: SERIES[3], energy: SERIES[4], it: SERIES[4], manufacturing: SERIES[4],
 }

@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 import { Button } from './ui/button'
 import { IconChip } from './IconChip'
 
-/** Never a dead end: always say what to do next (PRD §5 principle 7). */
+
 export function EmptyState({
   icon = Inbox,
   tone = 'gray',
@@ -54,9 +54,9 @@ export function FullPageLoader() {
   )
 }
 
-/**
- * Renders the three states every data view needs (PRD §14): loading → skeleton, error → retry, empty → next step.
- */
+
+
+
 export function AsyncView<T>({
   query,
   skeleton,
@@ -68,7 +68,7 @@ export function AsyncView<T>({
   query: UseQueryResult<T>
   skeleton: ReactNode
   empty?: ReactNode
-  /** Set false when the child deliberately renders its own empty layout. */
+
   emptyFallback?: boolean
   isEmpty?: (data: T) => boolean
   children: (data: T) => ReactNode

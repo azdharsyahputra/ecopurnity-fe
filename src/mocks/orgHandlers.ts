@@ -33,14 +33,14 @@ interface Ctx {
   o: OrgData
   role: string
   roleLabel: string
-  /** "Ajar Pratama (Owner)" for audit entries. */
+
   actor: string
   allowed: (m: Module, a: Action) => boolean
   params: Record<string, string | readonly string[] | undefined>
   request: Request
 }
 
-/** Session + membership of the org in the URL (401 / 403 otherwise). */
+
 const orgAuthed = (fn: (ctx: Ctx) => Response | Promise<Response>) =>
   async ({ params, request }: { params: Ctx['params']; request: Request }) => {
     await delay(250)
@@ -59,7 +59,7 @@ const deny = (c: Ctx, m: Module, a: Action) => fail(403, 'forbidden', deniedReas
 const body = async <T>(r: Request) => (await r.json()) as T
 const roleLabelOf = (o: OrgData, role: string) => o.settings.roles.find((r) => r.id === role)?.label ?? role
 
-// ── Auctions ↔ economy ───────────────────────────────────────────
+
 
 function lotAuctions(oa: OrgAuction) {
   return oa.lots.map((l) => economy.auctions.find((a) => a.id === l.auctionId)).filter((a): a is AuctionDetail => !!a)
@@ -87,12 +87,12 @@ function goLive(o: OrgData, oa: OrgAuction) {
   if (p) Object.assign(p, { status: 'in_auction', auctionId: oa.id, updatedAt: now() })
 }
 
-// ponytail: the realtime mock has no scheduled → live step, so org lots start here; a BE scheduler replaces this.
+
 setInterval(() => {
   for (const a of economy.auctions) if (a.status === 'scheduled' && a.id.startsWith('oau-') && new Date(a.startsAt).getTime() <= Date.now()) a.status = 'live'
 }, 5_000)
 
-/** One offer per bidder (their best price for the org: lowest when buying, highest when selling), mapped onto the supplier directory for scoring. */
+
 function lotOffers(a: AuctionDetail, categoryId: CategoryId, higher: boolean): LotOffer[] {
   const better = (x: number, y: number) => (higher ? x > y : x < y)
   const list = SUPPLIERS.filter((s) => s.categories.includes(categoryId))
@@ -104,7 +104,7 @@ function lotOffers(a: AuctionDetail, categoryId: CategoryId, higher: boolean): L
       if (!prev || better(b.priceIdr, prev.priceIdr)) best.set(b.bidder, { priceIdr: b.priceIdr, at: b.at, userId: economy.bidOwners.get(b.id) })
     }
   } else {
-    // Hidden bids (sealed / rank only) aren't kept by the mock; the owner sees a plausible ladder behind the best price.
+
     const top = economy.bestPrice.get(a.id) ?? a.openingPriceIdr
     for (let k = 0; k < Math.min(a.bidCount, 6); k++) best.set(`Supplier ${k + 1}`, { priceIdr: Math.round(top * (1 + (higher ? -1 : 1) * k * 0.012)), at: a.endsAt })
   }
@@ -116,7 +116,7 @@ function lotOffers(a: AuctionDetail, categoryId: CategoryId, higher: boolean): L
     const offer: LotOffer = {
       id: `${a.id}-${bidder}`, supplierId: s.id, priceIdr: b.priceIdr, submittedAt: b.at,
       supplier: { name: s.name, kind: 'business', verified: s.verified, reputation: scoreOf(card) },
-      // Platform bidders' stated capacity (whole lot by default); bots get a plausible share.
+
       capacity: { value: b.userId ? personal(b.userId).bids[a.id]?.quantity ?? a.lot.quantity.value : Math.round(a.lot.quantity.value * (0.35 + (hash(bidder + a.id) % 50) / 100)), unit: a.lot.quantity.unit },
       quality: card.quality, delivery: card.delivery, reliability: card.reliability,
     }
@@ -126,7 +126,7 @@ function lotOffers(a: AuctionDetail, categoryId: CategoryId, higher: boolean): L
   return [...bySupplier.values()].sort((x, y) => (higher ? y.priceIdr - x.priceIdr : x.priceIdr - y.priceIdr))
 }
 
-// ── Approvals ────────────────────────────────────────────────────
+
 
 type Approvable = { status: string; requiredApprovers: string[]; approvals: Approval[] }
 
@@ -139,12 +139,12 @@ function settle(o: OrgData, kind: 'procurement' | 'auction', target: Approvable 
   if (s.approved) goLive(o, target as OrgAuction)
   if (!s.rejected) return
   target.status = 'rejected'
-  // A rejected auction hands its procurement back so it can be re-run or sourced another way.
+
   const p = o.procurements.find((r) => r.auctionId === target.id && r.status === 'in_auction')
   if (p) Object.assign(p, { status: 'approved', auctionId: undefined, updatedAt: now() })
 }
 
-/** In-app notification for every teammate whose sign-off is still needed (PRD §9.2). */
+
 function askApprovers(c: Ctx, kind: 'procurement' | 'auction', target: Approvable & { id: string; code: string }, title: string, valueIdr: number) {
   const members = db.users.flatMap((u) => u.orgs.filter((m) => m.orgId === c.orgId).map((m) => ({ userId: u.id, role: m.role })))
   const href = kind === 'procurement' ? `/org/${c.orgId}/procurement/${target.id}` : `/org/${c.orgId}/auctions?review=${target.id}`
@@ -157,7 +157,7 @@ function askApprovers(c: Ctx, kind: 'procurement' | 'auction', target: Approvabl
 }
 
 function decide(c: Ctx, kind: 'procurement' | 'auction', target: Approvable & { id: string; code: string }, decision: 'approved' | 'rejected', note?: string) {
-  // The owner also signs required roles nobody holds (deadlock rule); a rejection counts once.
+
   const roles = signingRoles(c.role, target.requiredApprovers, target.approvals, activeRoles(c.o))
   if (!roles.length) return fail(403, 'forbidden', `Approval ini tidak menunggu peran ${c.roleLabel}`)
   if (decision === 'rejected' && !note?.trim()) return fail(422, 'validation', 'Tulis alasan penolakan', { note: 'Alasan wajib diisi saat menolak' })
@@ -169,12 +169,12 @@ function decide(c: Ctx, kind: 'procurement' | 'auction', target: Approvable & { 
   return null
 }
 
-// ── Suppliers ────────────────────────────────────────────────────
 
-/**
- * One rating for a supplier everywhere (PRD F6): the directory's seed rating counts as 10 reviews,
- * plus buyers' post-transaction reviews on the platform and this org's own rating.
- */
+
+
+
+
+
 function platformRating(name: string, seed: number, myRating?: number) {
   const reviews = allPersonal().flatMap(([, p]) =>
     p.transactions.flatMap((t) => (t.role === 'buyer' && t.counterparty.name === name && t.reviews?.buyer ? [t.reviews.buyer.rating] : [])),
@@ -195,9 +195,9 @@ function orgSuppliers(o: OrgData): OrgSupplier[] {
   })
 }
 
-// ── Pools ────────────────────────────────────────────────────────
 
-/** A pool as one member org sees it: other businesses masked unless they opted in, own sub-PO linked after settlement. */
+
+
 const viewPool = (p: StoredPool, orgId: string) => {
   const mask = <M extends { name: string; optIn: boolean }>({ orgId: owner, ...m }: M & { orgId?: string }, i: number) =>
     owner === orgId ? { ...m, mine: true } : m.optIn ? m : { ...m, name: `Bisnis lain #${i + 1}` }
@@ -220,9 +220,9 @@ function joinPool(o: OrgData, orgId: string, p: StoredPool, quantity: number, op
   else p.members.push({ name: o.settings.profile.name, quantity, optIn, orgId })
 }
 
-// ── Analytics ────────────────────────────────────────────────────
 
-/** Seeded purchase history plus every procurement auction awarded since, oldest month first (PRD §9.9). */
+
+
 function purchases(o: OrgData): HistoryRow[] {
   const awarded = o.auctions.flatMap((a) => {
     if (!a.award || a.objective === 'selling') return []
@@ -234,7 +234,7 @@ function purchases(o: OrgData): HistoryRow[] {
       return [{
         code: `${award.poNumber ?? a.code}-${i + 1}${lot.length > 1 ? String.fromCharCode(97 + k) : ''}`, month: award.at.slice(0, 7), item: def.item,
         categoryId: a.categoryId, supplierId: s.id, quantity: { value: l.quantity, unit: def.quantity.unit }, unitPriceIdr: l.priceIdr,
-        // ponytail: the lot's target price stands in for budget and market until awards carry a market reference.
+
         budgetUnitIdr: def.reservePriceIdr, marketUnitIdr: def.reservePriceIdr, via: 'auction',
         bidders: economy.auctions.find((x) => x.id === def.auctionId)?.participants, openingIdr: def.reservePriceIdr,
       }]
@@ -289,13 +289,13 @@ function analytics(o: OrgData, months: number, category?: string): OrgAnalytics 
 
 const orgSink = (o: OrgData): TradeSink => ({ save: saveOrg, audit: (e) => orgAudit(o, e) })
 
-/** Org trade with the pool split it came from (collective procurement), for the detail page. */
+
 function txPage(o: OrgData, orgId: string, t: TransactionDetail) {
   const p = t.group && pools().find((x) => x.id === t.group!.id)
   return { ...ensureF6(t), activity: o.activity.filter((e) => e.entity.id === t.id), collective: p?.settlement ? { poolId: p.id, title: p.title, unit: p.unit, ...viewPool(p, orgId).settlement! } : undefined }
 }
 
-// Fictional suppliers/buyers on org trades are played by the same bot as personal ones (PRD F6).
+
 setInterval(() => {
   for (const [orgId, o] of allOrgs()) {
     for (const t of o.transactions) {
@@ -310,12 +310,12 @@ const NPWP = /^\d{2}\.\d{3}\.\d{3}\.\d-\d{3}\.\d{3}$/
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const ACTIVE_PROCUREMENT = ['pending_approval', 'approved', 'published', 'in_auction', 'in_collective']
 
-// ── Handlers ─────────────────────────────────────────────────────
+
 
 export const orgHandlers = [
   http.get(api(''), orgAuthed(({ o }) => HttpResponse.json(settingsView(o)))),
 
-  // Overview (PRD §9.1)
+
   http.get(api('/overview'), orgAuthed(({ o, role }) => {
     const active = activeRoles(o)
     const month = new Date().toISOString().slice(0, 7)
@@ -344,7 +344,7 @@ export const orgHandlers = [
     return HttpResponse.json(overview)
   })),
 
-  // Profile (PRD §9.2)
+
   http.put(api('/profile'), orgAuthed(async (c) => {
     if (!c.allowed('profile', 'manage')) return deny(c, 'profile', 'manage')
     const next = await body<OrgProfile>(c.request)
@@ -386,7 +386,7 @@ export const orgHandlers = [
     return HttpResponse.json(p)
   })),
 
-  // Team (PRD §9.2)
+
   http.get(api('/team'), orgAuthed(({ o }) => HttpResponse.json({ ...settingsView(o), members: o.members.map(({ userId: _u, ...m }) => m) }))),
   http.post(api('/team/invite'), orgAuthed(async (c) => {
     if (!c.allowed('team', 'manage')) return deny(c, 'team', 'manage')
@@ -398,7 +398,7 @@ export const orgHandlers = [
     const id = newId('mem')
     c.o.members.push({ id, name: e, email: e, role, department, status: 'invited', joinedAt: now() })
     orgAudit(c.o, { actor: c.actor, action: 'Undang anggota', entity: { type: 'user', id: e, label: e }, changes: [{ field: 'Peran', after: roleLabelOf(c.o, role) }] })
-    // Existing accounts get it in-app; new ones see it after registering with this email (GET /me/invitations).
+
     const invitee = db.users.find((u) => u.email === e)
     if (invitee) notify(invitee.id, { type: 'transaction_update', title: `Undangan bergabung ke ${c.o.settings.profile.name}`, body: `${c.actor} mengundangmu sebagai ${roleLabelOf(c.o, role)}.`, href: `/app?invitation=${id}` })
     return new HttpResponse(null, { status: 204 })
@@ -452,7 +452,7 @@ export const orgHandlers = [
     return HttpResponse.json(settingsView(c.o))
   })),
 
-  // Inventory (PRD §9.3)
+
   http.get(api('/inventory'), orgAuthed(({ o }) => HttpResponse.json(o.inventory))),
   http.post(api('/inventory/items'), orgAuthed(async (c) => {
     if (!c.allowed('inventory', 'create')) return deny(c, 'inventory', 'create')
@@ -468,7 +468,7 @@ export const orgHandlers = [
   http.post(api('/inventory/import'), orgAuthed(async (c) => {
     if (!c.allowed('inventory', 'create')) return deny(c, 'inventory', 'create')
     const { items, fileName } = await body<{ items: Omit<InventoryItem, 'id'>[]; fileName: string }>(c.request)
-    // Re-validate server side: never trust the client parse.
+
     const checked = inventoryFromCsv([['sku', 'nama', 'kategori', 'gudang', 'jumlah', 'satuan'], ...items.map((i) => [i.sku, i.name, i.categoryId, i.warehouse, String(i.quantity.value), i.quantity.unit])], Object.keys(CATEGORIES) as CategoryId[])
     if (checked.errors.length) return fail(422, 'validation', checked.errors[0])
     c.o.inventory.items.unshift(...items.map((i) => ({ ...i, id: newId('inv') })))
@@ -485,7 +485,7 @@ export const orgHandlers = [
     return new HttpResponse(null, { status: 201 })
   })),
 
-  // Procurement (PRD §9.4)
+
   http.get(api('/procurement'), orgAuthed(({ o }) => HttpResponse.json([...o.procurements].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))))),
   http.get(api('/procurement/:id'), orgAuthed(({ o, params, orgId }) => {
     const r = o.procurements.find((x) => x.id === params.id)
@@ -550,7 +550,7 @@ export const orgHandlers = [
     return HttpResponse.json(r)
   })),
 
-  // Collective procurement (PRD §9.5)
+
   http.get(api('/collective'), orgAuthed(({ o, orgId }) => {
     const cats = o.settings.profile.categories
     return HttpResponse.json(pools().map((p) => ({ ...viewPool(p, orgId), match: cats.includes(p.categoryId) })))
@@ -604,9 +604,9 @@ export const orgHandlers = [
     return HttpResponse.json(viewPool(p, c.orgId))
   })),
 
-  // Business auctions (PRD §9.6)
+
   http.get(api('/auctions'), orgAuthed(({ o }) => {
-    saveOrg() // bots mutate live lots in place
+    saveOrg()
     return HttpResponse.json(o.auctions.map(toView))
   })),
   http.post(api('/auctions'), orgAuthed(async (c) => {
@@ -673,7 +673,7 @@ export const orgHandlers = [
     const { lines, reason } = await body<{ lines: AllocationLine[][]; reason: string }>(c.request)
     if (!reason?.trim()) return fail(422, 'validation', 'Tulis alasan award', { reason: 'Alasan award wajib diisi (tercatat di audit trail)' })
     if (lines.length !== oa.lots.length || lines.some((l) => !l.length || l.some((x) => !(x.quantity > 0)))) return fail(422, 'validation', 'Setiap lot harus punya pemenang')
-    // An allocation may not exceed the offer's capacity (stated with the bid).
+
     const over: Record<string, string> = {}
     lines.forEach((lot, i) => {
       const a = economy.auctions.find((x) => x.id === oa.lots[i].auctionId)
@@ -715,7 +715,7 @@ export const orgHandlers = [
     return HttpResponse.json({ poNumber, transactionIds: oa.award.transactionIds })
   })),
 
-  // Suppliers (PRD §9.7)
+
   http.get(api('/suppliers'), orgAuthed(({ o, request }) => {
     const p = new URL(request.url).searchParams
     const term = p.get('q')?.toLowerCase()
@@ -753,7 +753,7 @@ export const orgHandlers = [
     return HttpResponse.json(orgSuppliers(c.o).find((x) => x.id === s.id))
   })),
 
-  // Transactions (PRD §9.8)
+
   http.get(api('/transactions'), orgAuthed(({ o }) =>
     HttpResponse.json(o.transactions.map(ensureF6).map(({ timeline: _t, documents: _d, payment: _p, delivery: _v, dispute: _x, shipments: _s, reviews: _r, ...t }) => t)))),
   http.get(api('/transactions/:tid'), orgAuthed(({ o, orgId, params }) => {
@@ -770,7 +770,7 @@ export const orgHandlers = [
     const res = applyUserAction(ensureF6(t), c.userId, c.actor, input, orgSink(c.o))
     return res.ok ? HttpResponse.json(txPage(c.o, c.orgId, t)) : fail(res.status, res.code, res.message, res.fields)
   })),
-  // Payments through the gateway, gated like the `pay` step
+
   http.post(api('/transactions/:tid/payments'), orgAuthed(async (c) => {
     const t = c.o.transactions.find((x) => x.id === c.params.tid)
     if (!t) return fail(404, 'not_found', 'Transaksi tidak ditemukan')
@@ -792,7 +792,7 @@ export const orgHandlers = [
     return res.ok ? HttpResponse.json(res.payment) : fail(res.status, res.code, res.message, res.fields)
   })),
 
-  // Analytics (PRD §9.9)
+
   http.get(api('/analytics'), orgAuthed(({ o, request }) => {
     const p = new URL(request.url).searchParams
     return HttpResponse.json(analytics(o, Number(p.get('months') ?? 12), p.get('category') || undefined))

@@ -1,5 +1,5 @@
-// Single source of truth for entity statuses (PRD §12.1).
-// Keys are the API enum values BE must return; labels/tones are UI-only.
+
+
 
 export type Tone = 'gray' | 'teal' | 'green' | 'blue' | 'yellow' | 'orange' | 'red' | 'purple' | 'pink' | 'lime'
 

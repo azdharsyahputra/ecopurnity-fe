@@ -1,7 +1,7 @@
 import type { AuctionType, CategoryId, MarketMechanism, MarketObjective, OpportunityKind, SearchType } from './types'
 import type { Tone } from './status'
 
-// Display labels for enum values. ponytail: static until BE serves a taxonomy endpoint.
+
 
 export const CATEGORIES: Record<CategoryId, { label: string; tone: Tone }> = {
   agri: { label: 'Pertanian', tone: 'green' },

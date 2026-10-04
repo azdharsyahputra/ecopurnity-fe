@@ -4,7 +4,7 @@ import type { User } from '@/domain/types'
 import type { InvitationAction, MmApplication, MmApplicationInput, NewOrgInput, OrgInvitation } from '@/domain/roles'
 import { useSetMe } from '@/features/auth/hooks'
 
-// Role activation (PRD F6). Writes that change the account return the fresh user so the switcher updates at once.
+
 
 export const useMmApplication = () => useQuery({ queryKey: ['me', 'mm-application'], queryFn: () => api<MmApplication | null>('/me/mm-application') })
 
@@ -38,5 +38,5 @@ export function useCreateOrg() {
   })
 }
 
-/** Admin review queue; the 'admin' prefix lets useAdminAction refresh it. */
+
 export const useMmApplications = () => useQuery({ queryKey: ['admin', 'mm-applications'], queryFn: () => api<MmApplication[]>('/admin/mm-applications') })

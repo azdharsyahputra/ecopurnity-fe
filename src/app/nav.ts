@@ -8,7 +8,7 @@ import type { Tone } from '@/domain/status'
 
 export interface NavItem {
   label: string
-  /** Relative to the workspace base; '' = workspace home. */
+
   path: string
   icon: LucideIcon
 }
@@ -16,7 +16,7 @@ export interface NavItem {
 export interface Workspace {
   id: string
   label: string
-  /** Sub-label in the switcher, e.g. the user's org role. */
+
   caption: string
   base: string
   icon: LucideIcon
@@ -25,7 +25,7 @@ export interface Workspace {
   footer?: NavItem[]
 }
 
-// Routes follow the PRD §4 route map.
+
 const personal: Workspace = {
   id: 'personal', label: 'Personal', caption: 'My Economy', base: '/app', icon: UserRound, tone: 'teal',
   items: [
@@ -50,7 +50,7 @@ const personal: Workspace = {
   ],
 }
 
-// Custom org roles (accepted invitations) fall back to their id.
+
 const ORG_ROLE_LABEL: Record<string, string> = { owner: 'Owner', procurement: 'Procurement', finance: 'Finance', operations: 'Operations', sales: 'Sales' }
 
 function orgWorkspace(org: User['orgs'][number]): Workspace {
@@ -100,7 +100,7 @@ const governance: Workspace = {
   ],
 }
 
-/** Workspaces this account can switch to, in switcher order (PRD §3). */
+
 export function workspacesFor(user: User): Workspace[] {
   return [
     personal,
@@ -110,7 +110,7 @@ export function workspacesFor(user: User): Workspace[] {
   ]
 }
 
-/** Every workspace shape, for building routes (guards decide access). */
+
 export const ROUTE_WORKSPACES = [personal, orgWorkspace({ orgId: ':orgId', orgName: '', role: 'owner', verified: false }), marketOps, governance]
 
 export const href = (ws: Workspace, item: NavItem) => (item.path ? `${ws.base}/${item.path}` : ws.base)

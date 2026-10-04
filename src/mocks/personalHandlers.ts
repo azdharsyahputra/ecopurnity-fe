@@ -28,7 +28,7 @@ const fail = (status: number, code: string, message: string, fields?: Record<str
   HttpResponse.json({ error: { code, message, fields } }, { status })
 const now = () => new Date().toISOString()
 
-// The economy resets on reload but users' data persists: re-attach their auctions and re-apply their bids.
+
 for (const [userId, p] of allPersonal()) {
   for (const a of p.ownedAuctions ?? []) {
     if (!economy.auctions.some((x) => x.id === a.id)) economy.auctions.unshift(a)
@@ -55,7 +55,7 @@ for (const [userId, p] of allPersonal()) {
 
 type Ctx = { userId: string; p: PersonalData; params: Record<string, string | readonly string[] | undefined>; request: Request }
 
-/** Wraps a handler that needs a session (401 otherwise). */
+
 const authed = (fn: (ctx: Ctx) => Response | Promise<Response>) =>
   async ({ params, request }: { params: Ctx['params']; request: Request }) => {
     await delay(250)
@@ -64,7 +64,7 @@ const authed = (fn: (ctx: Ctx) => Response | Promise<Response>) =>
     return fn({ userId, p: personal(userId), params, request })
   }
 
-/** The listing's new attachment set (same rules as the API), or field errors on `attachments`. */
+
 function resolveAttachments(userId: string, current: ListingAttachment[], refs: ListingAttachmentInput[]): ListingAttachment[] | Record<string, string> {
   if (refs.length > MAX_LISTING_ATTACHMENTS) return { attachments: `Maksimal ${MAX_LISTING_ATTACHMENTS} lampiran` }
   const left = new Map(current.map((a) => [a.id, a]))
@@ -78,7 +78,7 @@ function resolveAttachments(userId: string, current: ListingAttachment[], refs: 
     } else if (r.uploadId && !r.id) kept.push(r.uploadId)
     else return { attachments: 'Setiap lampiran berisi uploadId atau id.' }
   }
-  // ponytail: uploads claimed before a later one fails stay used (the API rolls the whole save back).
+
   const out: ListingAttachment[] = []
   for (const k of kept) {
     if (typeof k !== 'string') { out.push(k); continue }
@@ -89,7 +89,7 @@ function resolveAttachments(userId: string, current: ListingAttachment[], refs: 
   return out
 }
 
-// ── Personal opportunities ───────────────────────────────────────
+
 
 const hash = (s: string) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7)
 
@@ -118,12 +118,12 @@ function personalOpportunities(p: PersonalData): PersonalOpportunity[] {
 
 const score = (o: PersonalOpportunity) => o.reasons.length * 10 - o.distanceKm / 100 + o.confidence
 
-// ── Bids ─────────────────────────────────────────────────────────
+
 
 function myBid(p: PersonalData, a: AuctionDetail): MyBid | undefined {
   const b = p.bids[a.id]
   if (!b) return undefined
-  // Everyone else's best price: per masked bidder when bids are public, otherwise just the hidden best.
+
   const others = new Map<string, number>()
   for (const x of a.bids) if (!x.mine && (!others.has(x.bidder) || (lowerWins(a.type) ? x.priceIdr < others.get(x.bidder)! : x.priceIdr > others.get(x.bidder)!))) others.set(x.bidder, x.priceIdr)
   const best = economy.bestPrice.get(a.id)
@@ -137,7 +137,7 @@ function myBid(p: PersonalData, a: AuctionDetail): MyBid | undefined {
   }
 }
 
-/** Org lots: members whose role can view auctions act as the owner (evaluate the business auction); personal: the buyer. */
+
 function ownerView(a: AuctionDetail, userId: string) {
   const lot = lotOwner(a.id)
   if (!lot) return economy.owners.get(a.id) === userId
@@ -160,12 +160,12 @@ function qualification(p: PersonalData, auctionId: string, userId: string): Qual
   }
 }
 
-// ── Transactions ─────────────────────────────────────────────────
 
-/**
- * Creates a trade through the settlement engine. With `peerUserId` the other side is a platform account
- * and gets its own linked record; otherwise the counterparty is fictional and played by the bot.
- */
+
+
+
+
+
 export function createTransaction(
   userId: string,
   t: Pick<TransactionDetail, 'title' | 'role' | 'counterparty' | 'quantity' | 'unitPriceIdr' | 'auctionId'> & Partial<TransactionDetail>,
@@ -181,20 +181,20 @@ export function createTransaction(
 }
 
 
-/** Restricted or suspended accounts can browse but not trade (PRD §11 user governance). */
+
 const restricted = (userId: string) => ['restricted', 'suspended'].includes(admin.users[userId]?.status ?? 'active')
 
-/** The user's membership state in a market's participant list, if the market maker tracks it. */
+
 function approvalOf(marketId: string) {
   return ops(marketId).participants.find((x) => x.userId === db.sessionUserId)?.status
 }
 
 const actorName = (userId: string) => db.users.find((u) => u.id === userId)?.name ?? 'Pengguna'
 
-// ── Handlers ─────────────────────────────────────────────────────
+
 
 export const personalHandlers = [
-  // Dashboard (PRD §8.1)
+
   http.get(api('/me/dashboard'), authed(({ p }) => {
     const opps = personalOpportunities(p)
     const bids = economy.auctions.map((a) => myBid(p, a)).filter((b): b is MyBid => !!b)
@@ -238,7 +238,7 @@ export const personalHandlers = [
     return HttpResponse.json(summary)
   })),
 
-  // Identity (PRD §8.2)
+
   http.get(api('/me/identity'), authed(({ p }) => HttpResponse.json(p.identity))),
   http.put(api('/me/identity'), authed(async ({ p, userId, request }) => {
     const next = (await request.json()) as Identity
@@ -250,7 +250,7 @@ export const personalHandlers = [
     return HttpResponse.json(p.identity)
   })),
 
-  // Listings (PRD §8.3–8.4)
+
   http.get(api('/me/listings'), authed(({ p, request }) => {
     const q = new URL(request.url).searchParams
     return HttpResponse.json(
@@ -313,7 +313,7 @@ export const personalHandlers = [
     return HttpResponse.json(s.listing)
   })),
 
-  // Opportunities (PRD §8.5)
+
   http.get(api('/me/opportunities'), authed(({ p, request }) => {
     const tab = new URL(request.url).searchParams.get('tab') ?? 'for_you'
     const all = personalOpportunities(p)
@@ -353,7 +353,7 @@ export const personalHandlers = [
     return new HttpResponse(null, { status: 204 })
   })),
 
-  // Markets (PRD §8.7)
+
   http.get(api('/me/markets'), authed(({ p }) => {
     const list: MyMarket[] = economy.markets.map(({ description: _d, rules: _r, priceHistory: _h, activity: _a, auctions: _u, ...m }) => ({
       ...m, joined: !!p.markets[m.id]?.joined, watchPriceIdr: p.markets[m.id]?.watchPriceIdr,
@@ -366,7 +366,7 @@ export const personalHandlers = [
     const id = String(params.id)
     if (!economy.markets.some((m) => m.id === id)) return fail(404, 'not_found', 'Market tidak ditemukan')
     p.markets[id] = { ...p.markets[id], joined: true }
-    // Joining lands in the market maker's participant queue (auto-approved when the market allows it).
+
     const o = ops(id)
     if (!o.participants.some((x) => x.userId === userId)) {
       const user = db.users.find((u) => u.id === userId)!
@@ -391,7 +391,7 @@ export const personalHandlers = [
     return new HttpResponse(null, { status: 204 })
   })),
 
-  // Auctions as participant (PRD §8.8)
+
   http.get(api('/me/auctions'), authed(({ p, userId }) => {
     const bids = economy.auctions.map((a) => myBid(p, a)).filter((b): b is MyBid => !!b)
     const bidIds = new Set(bids.map((b) => b.auction.id))
@@ -490,7 +490,7 @@ export const personalHandlers = [
     return HttpResponse.json({ transactionId: tx.id })
   })),
 
-  // Buyer flow: create → evaluate → award (PRD §8.8 buyer)
+
   http.post(api('/me/auctions'), authed(async ({ p, userId, request }) => {
     if (restricted(userId)) return fail(403, 'account_restricted', 'Akunmu dibatasi tim governance: belum bisa bid atau membuat auction.')
     const input = (await request.json()) as CreateAuctionInput
@@ -531,7 +531,7 @@ export const personalHandlers = [
   http.get(api('/auctions/:id/evaluation'), authed(({ p, params, userId }) => {
     const a = economy.auctions.find((x) => x.id === params.id)
     if (!a || economy.owners.get(a.id) !== userId || lotOwner(a.id)) return fail(404, 'not_found', 'Auction tidak ditemukan')
-    // One offer per bidder: their best price; capacity as stated by platform bidders, else (bots) and reputation are mock supplier facts.
+
     const best = new Map<string, Offer>()
     for (const b of a.bids) {
       const prev = best.get(b.bidder)
@@ -574,7 +574,7 @@ export const personalHandlers = [
       actor: actorName(userId), action: 'Tetapkan pemenang', entity: { type: 'auction', id: a.id, label: a.title },
       changes: lines.map((l) => ({ field: l.supplier, after: `${l.quantity.toLocaleString('id-ID')} × ${formatIdr(l.priceIdr)}` })),
     })
-    // A line whose offer came from a platform account becomes a linked two-sided trade (PRD F6).
+
     const ownerOf = (offerId: string) => {
       const bidder = offerId.slice(a.id.length + 1)
       const bid = a.bids.find((b) => b.bidder === bidder && economy.bidOwners.has(b.id))
@@ -608,7 +608,7 @@ export const personalHandlers = [
     return HttpResponse.json({ transactionIds: ids })
   })),
 
-  // Transactions (PRD §8.9)
+
   http.get(api('/me/transactions'), authed(({ p, request }) => {
     const q = new URL(request.url).searchParams
     return HttpResponse.json(
@@ -631,7 +631,7 @@ export const personalHandlers = [
     return res.ok ? HttpResponse.json(res.tx) : fail(res.status, res.code, res.message, res.fields)
   })),
 
-  // Payments through the gateway (Midtrans Core API in the API; src/mocks/payments.ts here)
+
   http.post(api('/me/transactions/:id/payments'), authed(async ({ p, params, userId, request }) => {
     const t = p.transactions.find((x) => x.id === params.id)
     if (!t) return fail(404, 'not_found', 'Transaksi tidak ditemukan')
@@ -649,7 +649,7 @@ export const personalHandlers = [
     return res.ok ? HttpResponse.json(res.payment) : fail(res.status, res.code, res.message, res.fields)
   })),
 
-  // Finance: escrow, payouts, withdrawals (PRD F6)
+
   http.get(api('/me/finance'), authed(({ userId }) => HttpResponse.json(financeOf(userId)))),
   http.put(api('/me/finance/bank'), authed(async ({ userId, request }) => {
     const bank = (await request.json()) as { bank: string; accountNo: string; holder: string }
@@ -670,7 +670,7 @@ export const personalHandlers = [
     return HttpResponse.json(financeOf(userId), { status: 201 })
   })),
 
-  // Notifications (PRD §8.11)
+
   http.get(api('/me/notifications'), authed(({ p }) => HttpResponse.json(p.notifications))),
   http.post(api('/me/notifications/read'), authed(async ({ p, request }) => {
     const { ids } = (await request.json()) as { ids?: string[] }
@@ -686,7 +686,7 @@ export const personalHandlers = [
   })),
 ]
 
-/** Bot bids beat a user's leading bid: mark it outbid and tell them (called by the realtime mock). */
+
 export function onCompetitorBid(auctionId: string, priceIdr: number) {
   const a = economy.auctions.find((x) => x.id === auctionId)
   if (!a) return
@@ -702,18 +702,18 @@ export function onCompetitorBid(auctionId: string, priceIdr: number) {
   }
 }
 
-/** Settle users' bids and owned auctions when an auction closes. */
+
 export function onAuctionClosed(auctionId: string) {
   const a = economy.auctions.find((x) => x.id === auctionId)
   if (!a) return
-  // Org lots: the team is told once, when the business auction's last lot closes; bids settle at the org's award.
+
   if (notifyOrgLotsClosed(a.id)) return
   const ownerId = economy.owners.get(a.id)
   if (ownerId) {
     notify(ownerId, { type: 'auction_ending', title: `${a.title} sudah ditutup`, body: `${a.bidCount} bid masuk. Bandingkan penawaran dan tetapkan pemenang.`, href: `/app/auctions/${a.id}/evaluate` })
-    return // participants' bids on a buyer's auction are settled when the buyer awards
+    return
   }
-  // Rounds of a market run by a market maker account are settled per member (PRD F6, mocks/settle.ts).
+
   const collective = db.users.some((u) => isMaker(u.id) && operatedIds(u.id).includes(a.marketId))
   for (const [userId, p] of allPersonal()) {
     const b = p.bids[auctionId]

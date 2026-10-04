@@ -29,7 +29,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 
 type Filter = '' | PipelineStage | 'closed'
 
-// ── List ─────────────────────────────────────────────────────────
+
 
 export function ProcurementListPage() {
   const access = useOrgAccess()
@@ -83,7 +83,7 @@ export function ProcurementListPage() {
   )
 }
 
-// ── Create ───────────────────────────────────────────────────────
+
 
 interface Draft {
   need: string
@@ -212,7 +212,7 @@ export function ProcurementFormPage() {
   )
 }
 
-// ── Detail ───────────────────────────────────────────────────────
+
 
 function CollectiveDialog({ r }: { r: ProcurementRequest }) {
   const act = useProcurementAction(r.id)

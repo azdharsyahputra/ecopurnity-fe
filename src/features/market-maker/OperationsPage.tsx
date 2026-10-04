@@ -18,13 +18,13 @@ import { ActivityFeed } from '@/components/ActivityFeed'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 
-/** Server events plus whatever arrives live: this maker's own operations and bids on their live rounds. */
+
 function EventFeed({ initial, liveAuctions }: { initial: ActivityEvent[]; liveAuctions: MmOverview['liveAuctions'] }) {
   const { data: me } = useMe()
   const [live, setLive] = useState<ActivityEvent[]>([])
   const push = (e: ActivityEvent) => setLive((l) => [e, ...l].slice(0, 20))
   useChannel<ActivityEvent>(me ? `user:${me.id}` : undefined, ({ type, payload }) => type === 'mm.activity' && push(payload))
-  // Resubscribe only when the set of live rounds changes, not on every refetch.
+
   const key = JSON.stringify(liveAuctions)
   useEffect(() => {
     const push = (e: ActivityEvent) => setLive((l) => [e, ...l].slice(0, 20))

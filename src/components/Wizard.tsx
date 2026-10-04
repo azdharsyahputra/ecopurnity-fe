@@ -8,11 +8,11 @@ export interface WizardStep {
   title: string
   description?: string
   content: ReactNode
-  /** Message explaining why Next is blocked; undefined = step is valid. */
+
   blocker?: string
 }
 
-/** Stepper + content + summary rail (PRD §5 principle 5). Submit lives on the last step. */
+
 export function Wizard({
   steps,
   summary,

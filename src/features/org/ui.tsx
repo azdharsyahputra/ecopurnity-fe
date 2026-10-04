@@ -18,7 +18,7 @@ export const ProcurementBadge = ({ status }: { status: ProcurementStatus }) => <
 export const OrgAuctionBadge = ({ status }: { status: OrgAuctionStatus }) => <Tag tone={ORG_AUCTION_STATUS[status][1]}>{ORG_AUCTION_STATUS[status][0]}</Tag>
 export const RelationBadge = ({ relation }: { relation: SupplierRelation }) => <Tag tone={RELATION[relation][1]}>{RELATION[relation][0]}</Tag>
 
-/** A button the role can't use: disabled, with the reason as tooltip and for screen readers. */
+
 export function GuardedButton({ reason, children, ...props }: ComponentProps<typeof Button> & { reason?: string }) {
   if (!reason) return <Button {...props}>{children}</Button>
   return (
@@ -31,7 +31,7 @@ export function GuardedButton({ reason, children, ...props }: ComponentProps<typ
   )
 }
 
-/** Primary navigation action that the role may not be allowed to take. */
+
 export function GuardedLink({ to, reason, variant, children }: { to: string; reason?: string; variant?: ComponentProps<typeof Button>['variant']; children: ReactNode }) {
   if (reason) return <GuardedButton reason={reason} variant={variant} className="h-9">{children}</GuardedButton>
   return <Button variant={variant} className="h-9" render={<Link to={to} />}>{children}</Button>
@@ -58,7 +58,7 @@ export function Stars({ value, label }: { value: number; label?: string }) {
   )
 }
 
-/** Required approvers and who signed, in rule order (PRD §9.2 approval rules). */
+
 export function ApprovalTrail({ required, approvals, roles }: { required: string[]; approvals: Approval[]; roles: OrgRoleDef[] }) {
   const label = (r: string) => roles.find((x) => x.id === r)?.label ?? r
   const state = approvalState(required, approvals)
@@ -84,14 +84,14 @@ export function ApprovalTrail({ required, approvals, roles }: { required: string
   )
 }
 
-/** Approval deadlock rule: which roles without an active member an owner's decision also covers. */
+
 export function OnBehalfNote({ signing, own, roles }: { signing: string[]; own: string; roles: OrgRoleDef[] }) {
   const others = signing.filter((r) => r !== own).map((r) => roles.find((x) => x.id === r)?.label ?? r)
   if (!others.length) return null
   return <p className="mb-2 text-xs text-muted-foreground">Keputusanmu juga berlaku atas nama {others.join(', ')}: belum ada anggota aktif dengan peran itu.</p>
 }
 
-/** Approve (with impact summary) or reject (reason required) — shared by procurement and auctions. */
+
 export function DecisionButtons({ subject, impact, onDecide, error }: { subject: string; impact: ReactNode; onDecide: (action: 'approve' | 'reject', note?: string) => Promise<unknown>; error: unknown }) {
   const [open, setOpen] = useState(false)
   const [note, setNote] = useState('')
@@ -123,7 +123,7 @@ export function DecisionButtons({ subject, impact, onDecide, error }: { subject:
   )
 }
 
-/** Labelled checkbox chips for multi-select (categories, roles, regions). */
+
 export function CheckChips<T extends string>({ label, options, value, onChange, disabled }: { label: string; options: [T, string][]; value: T[]; onChange: (v: T[]) => void; disabled?: boolean }) {
   return (
     <fieldset className="flex flex-col gap-1.5" disabled={disabled}>
@@ -143,7 +143,7 @@ export function CheckChips<T extends string>({ label, options, value, onChange, 
   )
 }
 
-/** Pill filter row with counts (same look as the F2 listing filters). */
+
 export function FilterPills<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: [T, string, number?][]; onChange: (v: T) => void }) {
   return (
     <div className="mb-4 flex flex-wrap gap-1.5" role="radiogroup" aria-label={label}>

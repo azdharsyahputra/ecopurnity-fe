@@ -17,7 +17,7 @@ import { Field, Segmented } from '@/components/form'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 
-// Manual payouts: the admin transfers from the company bank account by hand, then records the transfer reference here.
+
 
 function StatusTag({ w }: { w: AdminWithdrawal }) {
   const [label, tone] = WITHDRAWAL_STATUS[w.status]

@@ -18,12 +18,12 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
 
-// Role activation (PRD F6), opened from the workspace switcher. Open state lives in the URL
-// (`?activate=org|mm`, `?invitation=<memberId>`) so notifications can link straight into a dialog.
+
+
 
 const CATEGORY_OPTIONS = Object.entries(CATEGORIES).map(([id, c]): [CategoryId, string] => [id as CategoryId, c.label])
 
-/** Switcher entries: pending invitations, "Buat organisasi", "Jadi Market Maker". */
+
 export function ActivationMenuItems({ onOpen }: { onOpen?: () => void }) {
   const { data: me } = useMe()
   const invitations = useInvitations().data ?? []
@@ -222,7 +222,7 @@ function InvitationDialog({ id, onClose }: { id: string; onClose: () => void }) 
   )
 }
 
-/** Mounted once in the app layout; renders whichever activation dialog the URL asks for. */
+
 export function ActivationDialogs() {
   const [activate, setActivate] = useParam('activate')
   const [invitation, setInvitation] = useParam('invitation')

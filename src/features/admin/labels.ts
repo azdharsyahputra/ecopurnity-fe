@@ -36,10 +36,10 @@ export const ALERT_STATUS: Record<AlertStatus, [string, Tone]> = {
 
 export const SEVERITY: Record<Finding['severity'], [string, Tone]> = { high: ['Tinggi', 'red'], medium: ['Sedang', 'orange'], low: ['Rendah', 'yellow'] }
 
-/** Risk score → tone, for score pills and graph nodes. */
+
 export const riskTone = (score: number): Tone => (score >= 80 ? 'red' : score >= 60 ? 'orange' : 'yellow')
 
-/** RFC 4180-ish CSV: quote every cell, double inner quotes. */
+
 export function toCsv(rows: (string | number | undefined)[][]) {
   return rows.map((r) => r.map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n')
 }

@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 
 const TONES: Tone[] = ['teal', 'blue', 'purple', 'orange', 'green', 'pink', 'yellow']
 
-/** Stable color per name so the same person/business always looks the same. */
+
 function toneFor(name: string) {
   let h = 0
   for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0

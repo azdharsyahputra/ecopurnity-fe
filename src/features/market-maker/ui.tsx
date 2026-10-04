@@ -9,7 +9,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Field, SelectField, TextareaField } from '@/components/form'
 import { Tag } from '@/components/Tag'
 
-/** ConfirmDialog with a required reason; the mock rejects an empty one with a field error shown under the input. */
+
 export function ReasonConfirm({
   trigger, title, description, impact, confirmLabel, destructive, error, field = 'reason', label = 'Alasan', onConfirm,
 }: {
@@ -54,12 +54,12 @@ export function AlertTags({ alerts }: { alerts: MmAlert[] }) {
   )
 }
 
-/** The rule form shared by the creation wizard and the rule editor. */
+
 export function RulesFields({ value: r, onChange, unit, errors, serverError }: {
   value: MarketRules
   onChange: (r: MarketRules) => void
   unit: string
-  /** Client-side validation (validateRules). */
+
   errors: Record<string, string>
   serverError?: unknown
 }) {

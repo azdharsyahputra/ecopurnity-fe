@@ -8,9 +8,9 @@ export function auctionPriceLabel(a: Auction) {
   return formatIdr(a.currentPriceIdr)
 }
 
-// ── URL-bound filters ────────────────────────────────────────────
 
-/** Filters live in the query string so lists are shareable and survive reloads. */
+
+
 export function useUrlFilters() {
   const [params, setParams] = useSearchParams()
   const get = (k: string) => params.get(k) ?? ''

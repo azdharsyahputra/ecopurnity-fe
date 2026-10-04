@@ -4,9 +4,9 @@ import { breakdown, tradeActions } from '@/domain/trade'
 import { applyAction, ensureF6, tradeState, type TradeSink } from './trade'
 import { newId } from './personal'
 
-// Mock payment gateway (same contract as the API's Midtrans flow, openapi/paths/payments.yaml): plausible VA / bill /
-// QR data, one pending payment per trade, and a pending payment settles ~8 s after it was made, checked whenever its
-// trade's current payment is read (the UI polls it every 10 s), so mock mode completes the flow on its own.
+
+
+
 
 type Stored = Payment & { payer: string }
 const KEY = 'ecp-mock-payments'
@@ -45,7 +45,7 @@ function digits(seed: string, n: number) {
   return out
 }
 
-/** A QR-looking SVG (finder squares and noise from the order id). Nothing to scan: it is fake. */
+
 function fakeQr(seed: string) {
   const n = 25
   const bits = digits(seed, n * n)
@@ -61,7 +61,7 @@ function fakeQr(seed: string) {
   return `data:image/svg+xml;base64,${btoa(svg)}`
 }
 
-/** Settles (through the trade's `pay` step) or expires trade t's pending payment when its time has come. */
+
 function tick(t: TransactionDetail, sink?: TradeSink) {
   const p = store[t.id]?.[0]
   if (!p || p.status !== 'pending') return
@@ -72,7 +72,7 @@ function tick(t: TransactionDetail, sink?: TradeSink) {
   save()
 }
 
-/** The newest payment of t (the caller's own record), or null; only the buyer's side has payments. */
+
 export function currentPayment(t: TransactionDetail, sink?: TradeSink): Payment | null {
   if (t.role !== 'buyer') return null
   tick(t, sink)
@@ -80,7 +80,7 @@ export function currentPayment(t: TransactionDetail, sink?: TradeSink): Payment 
   return p ? view(p) : null
 }
 
-/** Starts a payment for the buyer's record t; a pending one is cancelled first ("Ganti metode"). */
+
 export function createPayment(t: TransactionDetail, input: PaymentInput, payer: string, sink?: TradeSink): PayResult {
   if (t.role !== 'buyer' || !tradeActions(tradeState(t), 'buyer').includes('pay')) return err(409, 'invalid_transition', 'Aksi ini tidak tersedia untuk status sekarang')
   if (!METHODS.includes(input.method)) return err(422, 'validation', 'Pilih metode pembayaran', { method: 'Pilih metode pembayaran' })

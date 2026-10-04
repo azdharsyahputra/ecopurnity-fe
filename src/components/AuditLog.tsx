@@ -3,7 +3,7 @@ import type { AuditEntry } from '@/domain/types'
 import { formatDateTime } from '@/domain/format'
 import { EmptyState } from './States'
 
-/** Who · what · when · before → after (PRD §12.6). One component for every entity's activity tab. */
+
 export function AuditLog({ entries, showEntity = false }: { entries: AuditEntry[]; showEntity?: boolean }) {
   if (!entries.length) return <EmptyState icon={History} title="Belum ada aktivitas tercatat" />
   return (

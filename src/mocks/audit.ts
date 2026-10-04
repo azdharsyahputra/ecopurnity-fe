@@ -1,6 +1,6 @@
 import type { AuditEntry } from '@/domain/types'
 
-// Append-only audit log shared by every workspace's mock handlers (PRD §12.6).
+
 
 const KEY = 'ecp-mock-audit'
 const log: AuditEntry[] = (() => {
@@ -25,6 +25,6 @@ export function audit(entry: Omit<AuditEntry, 'id' | 'at'>): AuditEntry {
   return full
 }
 
-/** Newest first, optionally scoped to one entity. */
+
 export const auditLog = (filter?: { type?: AuditEntry['entity']['type']; id?: string }) =>
   log.filter((e) => (!filter?.type || e.entity.type === filter.type) && (!filter?.id || e.entity.id === filter.id))

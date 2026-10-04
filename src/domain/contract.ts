@@ -1,7 +1,7 @@
 import type { PaymentTerms, TradeParty } from './types'
 
-// Standing supply contracts (PRD F6 post-transaction loop): the same item, quantity, price and
-// terms re-ordered every period. Each run becomes an ordinary two-sided trade.
+
+
 
 export type ContractEvery = 'weekly' | 'biweekly' | 'monthly'
 export type ContractStatus = 'proposed' | 'active' | 'paused' | 'ended' | 'declined'
@@ -19,14 +19,14 @@ export interface Contract {
   unitPriceIdr: number
   terms: PaymentTerms
   every: ContractEvery
-  /** Orders to place in total; the contract ends after the last one. */
+
   runs: number
   nextAt: string
   status: ContractStatus
-  /** Who proposed it; the other side accepts. */
+
   proposedBy: 'buyer' | 'supplier'
   sourceTxId?: string
-  /** Trade ids, oldest first (the proposer's copy). */
+
   orders: { at: string; buyerTxId?: string; supplierTxId?: string }[]
   createdAt: string
 }
@@ -38,7 +38,7 @@ export function nextRun(fromIso: string, every: ContractEvery): string {
   return d.toISOString()
 }
 
-/** Actions open to one side; `run_now` places the next order early (also handy in demos). */
+
 export function contractActions(c: Pick<Contract, 'status' | 'proposedBy'>, side: 'buyer' | 'supplier'): ContractAction[] {
   switch (c.status) {
     case 'proposed':

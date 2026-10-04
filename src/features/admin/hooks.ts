@@ -6,7 +6,7 @@ import type {
   DisputeSummary, FraudAlert, VerificationRequest, WithdrawalStatus,
 } from './types'
 
-// Governance data (PRD §11). Every key starts with 'admin' so one action refreshes the whole workspace.
+
 
 export const useAdminOverview = () => useQuery({ queryKey: ['admin', 'overview'], queryFn: () => api<AdminOverview>('/admin/overview') })
 
@@ -42,7 +42,7 @@ export const useAdminWithdrawals = (status: WithdrawalStatus) =>
     queryFn: () => api<AdminWithdrawal[]>(`/admin/withdrawals${qs({ status })}`),
     placeholderData: keepPreviousData,
   })
-/** Every fetch of a processing withdrawal decrypts the account number and is audited: fetch once per visit. */
+
 export const useAdminWithdrawal = (id: string) =>
   useQuery({
     queryKey: ['admin', 'withdrawals', 'detail', id],
@@ -53,10 +53,10 @@ export const useAdminWithdrawal = (id: string) =>
 
 export const useAuditTrail = () => useQuery({ queryKey: ['admin', 'audit'], queryFn: () => api<AuditEntry[]>('/admin/audit') })
 
-/**
- * POST `/admin/{path}/actions`. Governance actions ripple (a freeze changes the public auction, a dispute
- * decision changes a user's transaction), so refresh admin, public lists and the workspace.
- */
+
+
+
+
 export function useAdminAction<T = unknown>(path: string) {
   const qc = useQueryClient()
   return useMutation({
