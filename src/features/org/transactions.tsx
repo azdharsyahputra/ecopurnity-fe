@@ -26,7 +26,7 @@ export function OrgTransactionsPage() {
   const filter = (params.get('filter') ?? '') as '' | 'buyer' | 'supplier' | 'running'
   return (
     <>
-      <PageHeader title="Transactions" description="Purchase order, agreement, invoice, pembayaran, pengiriman bertahap, QC, dan dispute untuk seluruh tim." icon={ReceiptText} tone="purple" />
+      <PageHeader title="Transactions" description="Purchase order, agreement, invoice, pembayaran, pengiriman bertahap, QC, dan dispute untuk seluruh tim." icon={ReceiptText} tone="purple" featured />
       <AsyncView query={query} skeleton={<Skeleton className="h-64 rounded-xl" />} empty={<EmptyState icon={ReceiptText} tone="purple" title="Belum ada transaksi" description="Transaksi dan PO dibuat saat auction di-award, procurement dipenuhi, atau pool collective di-settle." />}>
         {(rows) => {
           const visible = rows.filter((t) => !filter || (filter === 'running' ? RUNNING.includes(t.status) : t.role === filter))
@@ -90,7 +90,7 @@ export function OrgTransactionDetailPage() {
     <AsyncView query={query} skeleton={<Skeleton className="h-96 rounded-xl" />}>
       {(t) => (
         <>
-          <PageHeader
+            <PageHeader
             title={t.title}
             description={
               <span className="flex flex-wrap items-center gap-1.5">
@@ -100,7 +100,8 @@ export function OrgTransactionDetailPage() {
                 {poOf(t.documents) && <Tag>{poOf(t.documents)}</Tag>}
                 {t.group && <Tag tone="purple"><UsersRound className="size-3" /> {t.group.label}</Tag>}
               </span>
-            }
+              }
+            featured
             icon={ReceiptText}
             tone="purple"
           />
