@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { AlertTriangle, Banknote, Check, Copy } from 'lucide-react'
-import { formatDateTime, formatIdr, formatRelative } from '@/domain/format'
+import { AlertTriangle, Banknote, Check, Clock3, Copy, Wallet } from 'lucide-react'
+import { formatDateTime, formatIdr, formatNumber, formatRelative } from '@/domain/format'
 import { fieldError } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { toast } from '@/stores/toast'
@@ -42,26 +42,54 @@ export function WithdrawalsPage() {
       <AsyncView
         query={query}
         skeleton={<Skeleton className="h-72 rounded-xl" />}
-        empty={<EmptyState icon={Banknote} title={status === 'processing' ? 'Antrean kosong' : 'Belum ada'} description="Permintaan tarik dana dari pengguna akan muncul di sini." />}
+        emptyFallback={false}
       >
-        {(rows) => (
-          <DataTable
-            caption="Antrean pencairan"
-            rows={rows}
-            rowKey={(w) => w.id}
-            rowHref={(w) => `/admin/withdrawals/${w.id}`}
-            columns={[
-              { key: 'requester', header: 'Pengaju', primary: true, cell: (w) => <span>{w.requester.name}<span className="block text-xs text-muted-foreground">{w.code}</span></span> },
-              { key: 'amount', header: 'Jumlah', align: 'right', sortValue: (w) => w.amountIdr, cell: (w) => <span className="num font-medium">{formatIdr(w.amountIdr)}</span> },
-              { key: 'bank', header: 'Rekening', cell: (w) => <span>{masked(w)}<span className="block text-xs text-muted-foreground">a.n. {w.holder}</span></span> },
-              {
-                key: 'at', header: 'Diajukan', sortValue: (w) => w.requestedAt,
-                cell: (w) => <span className={cn(late(w) && 'font-medium text-destructive')}>{formatRelative(w.requestedAt)}{late(w) && ' · lewat SLA'}</span>,
-              },
-              { key: 'status', header: 'Status', cell: (w) => <StatusTag w={w} /> },
-            ]}
-          />
-        )}
+        {(rows) => {
+          const amount = rows.reduce((sum, w) => sum + w.amountIdr, 0)
+          const overdue = rows.filter(late).length
+          return (
+            <>
+              <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:p-5">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground"><span className="grid size-8 place-items-center rounded-xl bg-orange-500/10 text-orange-700 dark:text-orange-300"><Banknote className="size-4" /></span>Permintaan {WITHDRAWAL_STATUS[status][0].toLowerCase()}</div>
+                  <p className="mt-3 text-2xl font-semibold tracking-tight">{formatNumber(rows.length)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Jumlah yang tampil pada status terpilih</p>
+                </div>
+                <div className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:p-5">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground"><span className="grid size-8 place-items-center rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"><Wallet className="size-4" /></span>Total nominal</div>
+                  <p className="num mt-3 text-2xl font-semibold tracking-tight">{formatIdr(amount)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Akumulasi permintaan pada daftar ini</p>
+                </div>
+                <div className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:p-5">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground"><span className="grid size-8 place-items-center rounded-xl bg-rose-500/10 text-rose-700 dark:text-rose-300"><Clock3 className="size-4" /></span>Melewati target</div>
+                  <p className={cn('mt-3 text-2xl font-semibold tracking-tight', overdue > 0 && 'text-destructive')}>{formatNumber(overdue)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Target penyelesaian 1 hari kerja</p>
+                </div>
+              </div>
+              <section className="overflow-hidden rounded-2xl border bg-card shadow-sm shadow-foreground/[0.025]">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-4 sm:px-5">
+                  <div><h2 className="font-semibold">Daftar pencairan</h2><p className="mt-0.5 text-sm text-muted-foreground">Periksa pemilik rekening dan tenggat sebelum memutuskan.</p></div>
+                  <span className="rounded-full border bg-muted/40 px-3 py-1 text-xs font-medium text-muted-foreground">{formatNumber(rows.length)} permintaan</span>
+                </div>
+                {rows.length ? (
+                  <DataTable
+                    caption="Antrean pencairan"
+                    rows={rows}
+                    rowKey={(w) => w.id}
+                    rowHref={(w) => `/admin/withdrawals/${w.id}`}
+                    columns={[
+                      { key: 'requester', header: 'Pengaju', primary: true, cell: (w) => <span>{w.requester.name}<span className="block text-xs text-muted-foreground">{w.code}</span></span> },
+                      { key: 'amount', header: 'Jumlah', align: 'right', sortValue: (w) => w.amountIdr, cell: (w) => <span className="num font-medium">{formatIdr(w.amountIdr)}</span> },
+                      { key: 'bank', header: 'Rekening', cell: (w) => <span>{masked(w)}<span className="block text-xs text-muted-foreground">a.n. {w.holder}</span></span> },
+                      { key: 'at', header: 'Diajukan', sortValue: (w) => w.requestedAt, cell: (w) => <span className={cn(late(w) && 'font-medium text-destructive')}>{formatRelative(w.requestedAt)}{late(w) && ' · lewat SLA'}</span> },
+                      { key: 'status', header: 'Status', cell: (w) => <StatusTag w={w} /> },
+                    ]}
+                  />
+                ) : <EmptyState icon={Banknote} title={status === 'processing' ? 'Antrean pencairan kosong' : 'Belum ada pencairan'} description="Permintaan tarik dana dengan status ini akan muncul di sini." className="m-4 sm:m-5" />}
+              </section>
+            </>
+          )
+        }}
       </AsyncView>
     </>
   )
