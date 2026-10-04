@@ -222,6 +222,7 @@ export function ExplorerPage() {
         description="Lihat ekonomi yang sedang bergerak: opportunity, market, auction, demand, dan supply publik."
         icon={ChartNoAxesCombined}
         tone="teal"
+        featured
       />
 
       {/* One filter row scopes everything below it (dataviz). */}
