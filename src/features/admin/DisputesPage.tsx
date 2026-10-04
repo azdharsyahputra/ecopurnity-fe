@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { Check, FileText, Scale } from 'lucide-react'
+import { BadgeCheck, Check, Clock3, FileText, Scale } from 'lucide-react'
 import { DISPUTE_STEPS, disputeActions, resolveOutcome, validateResolution, type Resolution } from '@/domain/dispute'
 import { statusMeta } from '@/domain/status'
-import { formatDateTime, formatIdr, formatQty, formatRelative } from '@/domain/format'
+import { formatDateTime, formatIdr, formatNumber, formatQty, formatRelative } from '@/domain/format'
 import { fieldError } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { toast } from '@/stores/toast'
@@ -36,16 +36,25 @@ export function DisputesPage() {
         tone="orange"
         actions={<Segmented label="Status" value={status} options={[['open', 'Belum selesai'], ['resolved', 'Selesai'], ['all', 'Semua']]} onChange={(v) => setParams((p) => (p.set('status', v), p), { replace: true })} />}
       />
-      {market && (
-        <p className="mb-4 flex flex-wrap items-center gap-2 text-sm">
-          <Tag tone="blue">Market {market}</Tag>
-          <button type="button" className="text-primary hover:underline" onClick={() => setParams((p) => (p.delete('market'), p), { replace: true })}>Hapus filter</button>
-        </p>
-      )}
-      <AsyncView query={query} skeleton={<Skeleton className="h-72 rounded-xl" />}>
+      <AsyncView query={query} skeleton={<Skeleton className="h-72 rounded-xl" />} emptyFallback={false}>
         {(all) => {
           const rows = all.filter((c) => (status === 'all' || (status === 'resolved') === (c.status === 'resolved')) && (!market || c.marketId === market))
-          return rows.length ? (
+          const unresolved = all.filter((c) => c.status !== 'resolved').length
+          const resolved = all.filter((c) => c.status === 'resolved').length
+          const exposure = rows.filter((c) => c.status !== 'resolved').reduce((sum, c) => sum + c.totalIdr, 0)
+          return (
+            <div className="grid gap-5">
+              <section aria-label="Ringkasan dispute" className="grid gap-3 sm:grid-cols-3">
+                {[
+                  { label: 'Total kasus', value: all.length, note: 'Seluruh dispute tercatat', icon: Scale, color: 'bg-orange-500/10 text-orange-700 dark:text-orange-300' },
+                  { label: 'Belum selesai', value: unresolved, note: 'Menunggu bukti, review, atau putusan', icon: Clock3, color: 'bg-amber-500/10 text-amber-700 dark:text-amber-300' },
+                  { label: 'Selesai', value: resolved, note: 'Sudah diputuskan', icon: BadgeCheck, color: 'bg-teal-500/10 text-teal-700 dark:text-teal-300' },
+                ].map(({ label, value, note, icon: Icon, color }) => <article key={label} className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:p-5"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">{label}</p><p className="mt-2 text-2xl font-semibold tracking-tight tabular-nums">{formatNumber(value)}</p><p className="mt-1 text-xs text-muted-foreground">{note}</p></div><span className={`grid size-10 place-items-center rounded-xl ${color}`}><Icon className="size-5" aria-hidden="true" /></span></div></article>)}
+              </section>
+              {market && <p className="flex flex-wrap items-center gap-2 rounded-xl border border-primary/15 bg-primary/[0.04] px-3 py-2 text-sm"><Tag tone="blue">Market {market}</Tag><span className="text-muted-foreground">Filter aktif · eksposur kasus aktif {formatIdr(exposure, { compact: true })}</span><button type="button" className="ml-auto rounded-md px-2 py-1 font-medium text-primary transition-colors hover:bg-primary/10" onClick={() => setParams((p) => (p.delete('market'), p), { replace: true })}>Hapus filter</button></p>}
+              <section className="grid gap-3">
+                <div className="flex flex-wrap items-end justify-between gap-2 border-b pb-3"><div><h2 className="text-lg font-semibold tracking-tight">Daftar dispute</h2><p className="mt-1 text-sm text-muted-foreground">Periksa nilai transaksi dan bukti sebelum meminta tambahan atau memberi putusan.</p></div><span className="rounded-full border bg-muted/40 px-3 py-1 text-xs font-medium text-muted-foreground">{rows.length} kasus</span></div>
+              {rows.length ? (
             <DataTable
               caption="Dispute"
               rows={rows}
@@ -60,8 +69,9 @@ export function DisputesPage() {
                 { key: 'status', header: 'Status', cell: (c) => <StatusBadge entity="dispute" status={c.status} /> },
               ]}
             />
-          ) : (
-            <EmptyState icon={Scale} title="Tidak ada dispute di filter ini" description="Dispute yang diajukan pengguna dari halaman transaksi akan muncul di sini." />
+          ) : <div className="rounded-2xl border border-dashed bg-muted/10 p-5 sm:p-7"><EmptyState icon={Scale} tone="orange" title="Tidak ada dispute di filter ini" description="Coba ubah status atau hapus filter market. Dispute dari halaman transaksi akan muncul di sini." /></div>}
+              </section>
+            </div>
           )
         }}
       </AsyncView>
