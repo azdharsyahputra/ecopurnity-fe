@@ -77,7 +77,7 @@ export function OrgAuctionsPage() {
   const add = <GuardedLink to={`${access.base}/auctions/new`} reason={access.deny('auctions', 'create')}><Plus /> Buat auction</GuardedLink>
   return (
     <>
-      <PageHeader title="Auctions" description="Reverse, forward, sealed, dan Dutch auction bisnis, termasuk multi-lot dan award terbagi." icon={Gavel} tone="orange" actions={add} />
+      <PageHeader title="Auctions" description="Reverse, forward, sealed, dan Dutch auction bisnis, termasuk multi-lot dan award terbagi." icon={Gavel} tone="orange" actions={add} featured />
       <AsyncView query={query} skeleton={<Skeleton className="h-64 rounded-xl" />} empty={<EmptyState icon={Gavel} tone="orange" title="Belum ada auction" description="Ubah procurement yang sudah disetujui menjadi auction supaya supplier bersaing." action={add} />}>
         {(rows) => {
           const visible = filter ? rows.filter((a) => a.status === filter) : rows
@@ -354,7 +354,7 @@ export function CreateOrgAuctionPage() {
   const pid = params.get('procurement')
   return (
     <>
-      <PageHeader title="Buat auction" description="Enam langkah: tipe, lot, aturan, kualifikasi, undangan & jadwal, lalu ajukan untuk approval." icon={Gavel} tone="orange" />
+      <PageHeader title="Buat auction" description="Enam langkah: tipe, lot, aturan, kualifikasi, undangan & jadwal, lalu ajukan untuk approval." icon={Gavel} tone="orange" featured />
       {deny ? <EmptyState icon={Ban} title="Tidak bisa membuat auction" description={deny} /> : pid ? (
         <AsyncView query={procurements} skeleton={<Skeleton className="h-96 rounded-xl" />}>
           {(rows) => <AuctionWizard source={rows.find((r) => r.id === pid)} />}
@@ -464,6 +464,7 @@ export function OrgEvaluatePage() {
               description={<span className="flex flex-wrap items-center gap-1.5">{a.code} <OrgAuctionBadge status={a.status} /> <Tag>{AUCTION_TYPES[a.type].label}{a.multiLot ? ` · ${a.lots.length} lot` : ''}</Tag> {a.status === 'live' && <>sisa <Countdown to={a.live[0].endsAt} /></>}</span>}
               icon={Scale}
               tone="orange"
+              featured
               actions={room && <Button variant="outline" className="h-9" render={<Link to={`/auctions/${room}`} />}><ExternalLink /> Ruang auction publik</Button>}
             />
             {a.status === 'pending_approval' || a.status === 'rejected' ? (
