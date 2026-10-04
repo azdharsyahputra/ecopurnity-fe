@@ -12,7 +12,7 @@ import { Field, FormError } from '@/components/form'
 import { Logo } from '@/components/Logo'
 import { IconChip } from '@/components/IconChip'
 import { ThemeToggle } from '@/components/ThemeToggle'
-import { AsyncView } from '@/components/States'
+import { AsyncView, EmptyState } from '@/components/States'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -104,7 +104,7 @@ function Done({ categories }: { categories: CategoryId[] }) {
       <h1 className="mt-4 text-2xl font-semibold tracking-tight">Profilmu siap</h1>
       <p className="mt-1 text-sm text-muted-foreground">Ini opportunity yang cocok dengan kategori pilihanmu. Lengkapi profil supaya rekomendasinya makin tepat.</p>
       <div className="mt-6">
-        <AsyncView query={matches} skeleton={<Skeleton className="h-52 rounded-xl" />}>
+        <AsyncView query={matches} skeleton={<Skeleton className="h-52 rounded-xl" />} isEmpty={(p) => !p.data.length} empty={<EmptyState title="Belum ada rekomendasi opportunity" description="Profilmu sudah siap. Rekomendasi akan muncul setelah ada peluang yang sesuai dengan kategori pilihanmu." />}>
           {(p) => <div className="grid gap-3 md:grid-cols-3">{p.data.map((o) => <OpportunityCard key={o.id} o={o} />)}</div>}
         </AsyncView>
       </div>
