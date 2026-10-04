@@ -43,6 +43,7 @@ export function RfqListPage() {
         description="Minta penawaran langsung tanpa auction: supplier menawar, kamu bisa tawar balik, lalu deal jadi transaksi."
         icon={FileQuestion}
         tone="blue"
+        featured
         actions={
           <>
             <Segmented label="Sisi" value={side} options={[['buyer', 'Dikirim'], ['supplier', 'Masuk']]} onChange={(v) => setParams({ side: v }, { replace: true })} />
@@ -108,24 +109,46 @@ function RfqForm({ initial }: { initial: { item: string; categoryId: CategoryId;
   }
 
   return (
-    <form onSubmit={submit} className="grid max-w-2xl gap-4 sm:grid-cols-2">
-      {f.inviteName && <p className="rounded-lg bg-muted p-3 text-sm sm:col-span-2">Diundang langsung: <b>{f.inviteName}</b>. Supplier lain di kategori ini tetap bisa menawar.</p>}
-      <div className="sm:col-span-2"><Field label="Barang / jasa" value={f.item} onChange={(e) => set('item', e.target.value)} error={fieldError(create.error, 'item')} /></div>
-      <SelectField label="Kategori" value={f.categoryId} onChange={(e) => set('categoryId', e.target.value as CategoryId)}>
-        {Object.entries(CATEGORIES).map(([id, c]) => <option key={id} value={id}>{c.label}</option>)}
-      </SelectField>
-      <div className="grid grid-cols-[1fr_6rem] gap-3">
-        <Field label="Kuantitas" type="number" min={0} value={f.qty} onChange={(e) => set('qty', e.target.value)} error={fieldError(create.error, 'quantity')} />
-        <Field label="Satuan" value={f.unit} onChange={(e) => set('unit', e.target.value)} />
+    <form onSubmit={submit} className="grid max-w-4xl gap-5 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-start">
+      <div className="grid gap-5">
+        {f.inviteName && <p className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm leading-relaxed sm:col-span-2">Diundang langsung: <b>{f.inviteName}</b>. Supplier lain di kategori ini tetap bisa menawar.</p>}
+        <section className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:p-5">
+          <div className="mb-4"><h2 className="font-semibold">Detail kebutuhan</h2><p className="mt-1 text-sm text-muted-foreground">Jelaskan barang atau jasa yang ingin dicari supplier.</p></div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2"><Field label="Barang / jasa" value={f.item} onChange={(e) => set('item', e.target.value)} error={fieldError(create.error, 'item')} /></div>
+            <SelectField label="Kategori" value={f.categoryId} onChange={(e) => set('categoryId', e.target.value as CategoryId)}>
+              {Object.entries(CATEGORIES).map(([id, c]) => <option key={id} value={id}>{c.label}</option>)}
+            </SelectField>
+            <div className="grid grid-cols-[minmax(0,1fr)_6rem] gap-3">
+              <Field label="Kuantitas" type="number" min={0} value={f.qty} onChange={(e) => set('qty', e.target.value)} error={fieldError(create.error, 'quantity')} />
+              <Field label="Satuan" value={f.unit} onChange={(e) => set('unit', e.target.value)} />
+            </div>
+            <div className="sm:col-span-2"><TextareaField label="Spesifikasi" rows={4} value={f.spec} onChange={(e) => set('spec', e.target.value)} hint="Tambahkan mutu, ukuran, kemasan, atau detail penting lainnya." /></div>
+          </div>
+        </section>
+        <section className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:p-5">
+          <div className="mb-4"><h2 className="font-semibold">Penawaran & pengiriman</h2><p className="mt-1 text-sm text-muted-foreground">Atur batas waktu dan tujuan penawaran.</p></div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label={`Target harga per ${f.unit || 'unit'} (opsional)`} type="number" min={0} value={f.target} onChange={(e) => set('target', e.target.value)} />
+            <Field label="Butuh penawaran sebelum" type="date" value={f.deadline} onChange={(e) => set('deadline', e.target.value)} error={fieldError(create.error, 'deadline')} />
+            <div className="sm:col-span-2"><SelectField label="Lokasi pengiriman" value={f.location} onChange={(e) => set('location', e.target.value)}>
+              {REGIONS.map((r) => <option key={r}>{r}</option>)}
+            </SelectField></div>
+          </div>
+        </section>
+        <FormError error={create.error} />
+        <div className="flex justify-end"><Button type="submit" className="h-10 px-5" disabled={create.isPending}>{create.isPending ? 'Mengirim…' : 'Kirim RFQ'}</Button></div>
       </div>
-      <Field label={`Target harga per ${f.unit || 'unit'} (opsional)`} type="number" min={0} value={f.target} onChange={(e) => set('target', e.target.value)} />
-      <Field label="Butuh penawaran sebelum" type="date" value={f.deadline} onChange={(e) => set('deadline', e.target.value)} error={fieldError(create.error, 'deadline')} />
-      <SelectField label="Lokasi pengiriman" value={f.location} onChange={(e) => set('location', e.target.value)}>
-        {REGIONS.map((r) => <option key={r}>{r}</option>)}
-      </SelectField>
-      <div className="sm:col-span-2"><TextareaField label="Spesifikasi" rows={3} value={f.spec} onChange={(e) => set('spec', e.target.value)} /></div>
-      <div className="sm:col-span-2"><FormError error={create.error} /></div>
-      <div className="sm:col-span-2"><Button type="submit" className="h-10 px-5" disabled={create.isPending}>{create.isPending ? 'Mengirim…' : 'Kirim RFQ'}</Button></div>
+      <aside className="rounded-2xl border bg-muted/25 p-4 sm:p-5 lg:sticky lg:top-20">
+        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Pratinjau kebutuhan</p>
+        <p className="mt-3 break-words font-semibold">{f.item || 'Nama barang / jasa'}</p>
+        <dl className="mt-2 divide-y divide-border/60 text-sm">
+          <div className="flex justify-between gap-3 py-2"><dt className="text-muted-foreground">Kategori</dt><dd className="text-right font-medium">{CATEGORIES[f.categoryId]?.label}</dd></div>
+          <div className="flex justify-between gap-3 py-2"><dt className="text-muted-foreground">Kuantitas</dt><dd className="text-right font-medium">{f.qty || '—'} {f.unit}</dd></div>
+          <div className="flex justify-between gap-3 py-2"><dt className="text-muted-foreground">Lokasi</dt><dd className="text-right font-medium">{f.location}</dd></div>
+          <div className="flex justify-between gap-3 py-2"><dt className="text-muted-foreground">Batas waktu</dt><dd className="text-right font-medium">{f.deadline || '—'}</dd></div>
+        </dl>
+      </aside>
     </form>
   )
 }
@@ -151,7 +174,7 @@ export function RfqNewPage() {
   const from = p.get('from')
   return (
     <>
-      <PageHeader title={from ? 'Pesan lagi' : 'Buat RFQ'} description="Supplier yang cocok akan mengirim penawaran; kamu bandingkan, tawar balik, lalu terima yang terbaik." icon={FileQuestion} tone="blue" />
+      <PageHeader title={from ? 'Pesan lagi' : 'Buat RFQ'} description="Supplier yang cocok akan mengirim penawaran; kamu bandingkan, tawar balik, lalu terima yang terbaik." icon={FileQuestion} tone="blue" featured />
       {from ? (
         <RepeatForm txId={from} />
       ) : (
@@ -282,24 +305,25 @@ function SupplierQuoteForm({ rfqId, qty, unit }: { rfqId: string; qty: number; u
   const [f, setF] = useState({ priceIdr: '', quantity: String(qty), leadTimeDays: '3', terms: 'escrow' as PaymentTerms, note: '' })
   return (
     <form
-      className="grid gap-3"
+      className="grid gap-4 rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:p-5"
       onSubmit={(e) => {
         e.preventDefault()
         act.mutate({ type: 'quote', quote: { priceIdr: Number(f.priceIdr), quantity: Number(f.quantity), leadTimeDays: Number(f.leadTimeDays), terms: f.terms, note: f.note } }, { onSuccess: () => toast({ title: 'Penawaran terkirim', tone: 'green' }) })
       }}
     >
+      <div><h3 className="font-semibold">Buat penawaran</h3><p className="mt-1 text-sm text-muted-foreground">Isi harga dan kesiapan pasok untuk permintaan ini.</p></div>
       <Field label={`Harga per ${unit} (Rp)`} type="number" min={0} value={f.priceIdr} onChange={(e) => setF({ ...f, priceIdr: e.target.value })} error={fieldError(act.error, 'priceIdr')} />
       <div className="grid grid-cols-2 gap-3">
         <Field label={`Kuantitas (${unit})`} type="number" min={1} value={f.quantity} onChange={(e) => setF({ ...f, quantity: e.target.value })} error={fieldError(act.error, 'quantity')} />
         <Field label="Waktu siap (hari)" type="number" min={0} value={f.leadTimeDays} onChange={(e) => setF({ ...f, leadTimeDays: e.target.value })} />
       </div>
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1.5 rounded-xl bg-muted/35 p-3">
         <span className="text-sm font-medium">Termin bayar</span>
         <Segmented label="Termin bayar" value={f.terms} options={TERM_OPTIONS} onChange={(v) => setF({ ...f, terms: v })} />
       </div>
       <Field label="Catatan" value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} />
       <FormError error={act.error} />
-      <Button type="submit" className="h-9" disabled={act.isPending}>Kirim penawaran</Button>
+      <Button type="submit" className="h-10" disabled={act.isPending}>Kirim penawaran</Button>
     </form>
   )
 }
@@ -320,6 +344,7 @@ export function RfqDetailPage() {
               description={<span className="flex flex-wrap items-center gap-1.5">{r.code} <Tag tone={RFQ_STATUS[r.status][1]}>{RFQ_STATUS[r.status][0]}</Tag> <CategoryTag id={r.categoryId} /> {r.side === 'supplier' && <span>dari {r.buyer.name}</span>}</span>}
               icon={FileQuestion}
               tone="blue"
+              featured
               actions={
                 <>
                   {r.transactionId && <Button className="h-9" render={<Link to={`/app/transactions/${r.transactionId}`} />}>Lihat transaksi <ArrowRight /></Button>}
@@ -400,7 +425,7 @@ export function MessagesPage() {
   const list = useConversations()
   return (
     <>
-      <PageHeader title="Pesan" description="Percakapan dengan pembeli, supplier, dan match." icon={MessagesSquare} tone="purple" />
+      <PageHeader title="Pesan" description="Percakapan dengan pembeli, supplier, dan match." icon={MessagesSquare} tone="purple" featured />
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
         <AsyncView query={list} skeleton={<Skeleton className="h-64 rounded-xl" />} empty={<EmptyState icon={MessagesSquare} title="Belum ada percakapan" description="Percakapan dibuat saat kamu mengirim RFQ atau menekan Connect di Matches." />}>
           {(cs) => (
