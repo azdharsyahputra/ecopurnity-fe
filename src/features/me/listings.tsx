@@ -60,6 +60,7 @@ export function ListingsPage({ kind }: { kind: Kind }) {
         description={c.description}
         icon={c.icon}
         tone={c.tone}
+        featured
         actions={<Button className="h-9" render={<Link to={`/app/${kind}/new`} />}><Plus /> {c.add}</Button>}
       />
       <AsyncView
@@ -69,9 +70,34 @@ export function ListingsPage({ kind }: { kind: Kind }) {
       >
         {(rows) => {
           const visible = status ? rows.filter((r) => r.status === status) : rows
+          const activeStatuses = kind === 'supply' ? ['available', 'reserved', 'in_market'] : ['open', 'matched', 'in_market']
+          const activeCount = rows.filter((r) => activeStatuses.includes(r.status)).length
+          const categoryCount = new Set(rows.map((r) => r.categoryId)).size
           return (
             <>
-              <div className="mb-4 flex flex-wrap gap-1.5" role="radiogroup" aria-label="Status">
+              <section className="mb-5 grid gap-3 sm:grid-cols-3" aria-label="Ringkasan listing">
+                <div className="rounded-2xl border bg-linear-to-br from-card to-primary/5 p-4 shadow-sm shadow-foreground/[0.02]">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Total {c.title.toLowerCase()}</p>
+                  <p className="num mt-2 text-2xl font-semibold tracking-tight">{formatNumber(rows.length)}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">Seluruh listing yang tercatat</p>
+                </div>
+                <div className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.02]">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Sedang aktif</p>
+                  <p className="num mt-2 text-2xl font-semibold tracking-tight">{formatNumber(activeCount)}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">Terbuka untuk peluang dagang</p>
+                </div>
+                <div className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.02]">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Kategori terjangkau</p>
+                  <p className="num mt-2 text-2xl font-semibold tracking-tight">{formatNumber(categoryCount)}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">Kategori berbeda dalam daftar</p>
+                </div>
+              </section>
+              <section className="mb-5 rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:p-5" aria-label="Filter listing">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <div><h2 className="text-sm font-semibold">Daftar listing</h2><p className="mt-0.5 text-xs text-muted-foreground">Filter berdasarkan status untuk menemukan listing dengan cepat.</p></div>
+                  <span className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground"><span className="num font-semibold text-foreground">{visible.length}</span> dari {rows.length}</span>
+                </div>
+                <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Status">
                 {[['', 'Semua'] as const, ...statuses.map(([k, [label]]) => [k, label] as const)].map(([k, label]) => {
                   const count = k ? rows.filter((r) => r.status === k).length : rows.length
                   return (
@@ -81,15 +107,16 @@ export function ListingsPage({ kind }: { kind: Kind }) {
                       role="radio"
                       aria-checked={status === k}
                       onClick={() => setStatus(k)}
-                      className={cn('rounded-full border px-3 py-1 text-sm', status === k ? 'border-foreground bg-foreground text-background' : 'text-muted-foreground hover:bg-hover')}
+                      className={cn('rounded-full border px-3 py-1.5 text-sm transition-colors', status === k ? 'border-primary bg-primary font-medium text-primary-foreground shadow-sm' : 'border-border/80 bg-background text-muted-foreground hover:bg-muted hover:text-foreground')}
                     >
                       {label} <span className="num opacity-70">{count}</span>
                     </button>
                   )
                 })}
-              </div>
+                </div>
+              </section>
               {visible.length === 0 ? (
-                <EmptyState title="Tidak ada listing dengan status ini" />
+                <EmptyState title="Tidak ada listing dengan status ini" description="Coba pilih status lain untuk melihat listing yang tersedia." action={<Button variant="outline" onClick={() => setStatus('')}>Tampilkan semua</Button>} />
               ) : (
                 <DataTable
                   caption={`Daftar ${c.title.toLowerCase()}`}
@@ -157,14 +184,14 @@ function PriceHint({ category, unit, item, perUnit, exclude, onUse }: { category
   if (!s) return null
   const verdict = perUnit > 0 ? priceVerdict(perUnit, s) : null
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border bg-muted/40 px-3 py-2 text-sm sm:col-span-2" role="status">
-      <span>
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-3 text-sm sm:col-span-2" role="status">
+      <span className="min-w-0 flex-1">
         Harga pasar {formatIdr(s.lowIdr)}–{formatIdr(s.highIdr)}/{unit}, median <b className="num">{formatIdr(s.medianIdr)}</b>
         <span className="text-muted-foreground"> · {s.sample} data</span>
       </span>
       {verdict && verdict !== 'fair' && <Tag tone={verdict === 'low' ? 'orange' : 'yellow'}>{verdict === 'low' ? 'Di bawah pasar' : 'Di atas pasar'}</Tag>}
       {verdict === 'fair' && <Tag tone="green">Wajar</Tag>}
-      <Button type="button" size="xs" variant="ghost" className="ml-auto" onClick={() => onUse(s.medianIdr)}>Pakai median</Button>
+      <Button type="button" size="xs" variant="outline" className="border-primary/25 bg-background text-primary hover:bg-primary/10" onClick={() => onUse(s.medianIdr)}>Pakai median</Button>
     </div>
   )
 }
@@ -198,13 +225,13 @@ function ListingForm({ kind, existing }: { kind: Kind; existing?: Listing }) {
   const step1 = (
     <div className="grid gap-4 sm:grid-cols-2">
       <div className="sm:col-span-2">
-        <Field label={kind === 'supply' ? 'Item' : 'Kebutuhan'} placeholder={kind === 'supply' ? 'mis. Green bean arabika grade 1' : 'mis. Karung goni 60 kg'} value={d.item} onChange={(e) => set('item', e.target.value)} error={fieldError(save.error, 'item')} required />
+        <Field label={kind === 'supply' ? 'Item' : 'Kebutuhan'} aside={<span className="text-destructive" aria-label="Wajib diisi">*</span>} placeholder={kind === 'supply' ? 'mis. Green bean arabika grade 1' : 'mis. Karung goni 60 kg'} value={d.item} onChange={(e) => set('item', e.target.value)} error={fieldError(save.error, 'item')} required />
       </div>
       <SelectField label="Kategori" value={d.categoryId} onChange={(e) => set('categoryId', e.target.value as CategoryId)}>
         {Object.entries(CATEGORIES).map(([id, c]) => <option key={id} value={id}>{c.label}</option>)}
       </SelectField>
       <div className="grid grid-cols-[1fr_6rem] gap-3">
-        <Field label="Kuantitas" type="number" min={0} inputMode="decimal" value={d.qty} onChange={(e) => set('qty', e.target.value)} error={fieldError(save.error, 'quantity')} />
+        <Field label="Kuantitas" aside={<span className="text-destructive" aria-label="Wajib diisi">*</span>} type="number" min={0} inputMode="decimal" value={d.qty} onChange={(e) => set('qty', e.target.value)} error={fieldError(save.error, 'quantity')} />
         <Field label="Satuan" value={d.unit} onChange={(e) => set('unit', e.target.value)} />
       </div>
       <div className="sm:col-span-2">
@@ -216,28 +243,30 @@ function ListingForm({ kind, existing }: { kind: Kind; existing?: Listing }) {
   const step2 =
     kind === 'supply' ? (
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label={`Harga ekspektasi per ${d.unit || 'unit'} (Rp)`} type="number" min={0} inputMode="numeric" value={d.price} onChange={(e) => set('price', e.target.value)} />
+        <Field label={`Harga ekspektasi per ${d.unit || 'unit'} (Rp)`} aside={<span className="text-destructive" aria-label="Wajib diisi">*</span>} type="number" min={0} inputMode="numeric" value={d.price} onChange={(e) => set('price', e.target.value)} />
         <PriceHint category={d.categoryId} unit={d.unit} item={d.item} perUnit={Number(d.price)} exclude={existing?.id} onUse={(m) => set('price', String(m))} />
         <SelectField label="Lokasi" value={d.location} onChange={(e) => set('location', e.target.value)}>
           {REGIONS.map((r) => <option key={r}>{r}</option>)}
         </SelectField>
         <Field label="Tersedia mulai" type="date" value={d.availableFrom} onChange={(e) => set('availableFrom', e.target.value)} />
         <Field label="Kedaluwarsa" type="date" hint="Opsional, untuk barang yang punya umur simpan" value={d.expiresAt} onChange={(e) => set('expiresAt', e.target.value)} />
-        <div className="flex flex-col gap-1.5 sm:col-span-2">
-          <span className="text-sm font-medium">Pengiriman</span>
+        <div className="flex flex-col gap-2 rounded-xl border bg-muted/25 p-3.5 sm:col-span-2">
+          <span className="text-sm font-semibold">Pengiriman</span>
+          <span className="text-xs text-muted-foreground">Pilih cara produk diterima oleh pembeli.</span>
           <Segmented label="Pengiriman" value={d.delivery} options={DELIVERY} onChange={(v) => set('delivery', v)} />
         </div>
       </div>
     ) : (
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Budget total (Rp)" type="number" min={0} inputMode="numeric" value={d.budget} onChange={(e) => set('budget', e.target.value)} hint={qty > 0 && Number(d.budget) > 0 ? `≈ ${formatIdr(Math.round(Number(d.budget) / qty))} per ${d.unit}` : undefined} />
-        <Field label="Deadline" type="date" value={d.deadline} onChange={(e) => set('deadline', e.target.value)} />
+        <Field label="Budget total (Rp)" aside={<span className="text-destructive" aria-label="Wajib diisi">*</span>} type="number" min={0} inputMode="numeric" value={d.budget} onChange={(e) => set('budget', e.target.value)} hint={qty > 0 && Number(d.budget) > 0 ? `≈ ${formatIdr(Math.round(Number(d.budget) / qty))} per ${d.unit}` : undefined} />
+        <Field label="Deadline" aside={<span className="text-destructive" aria-label="Wajib diisi">*</span>} type="date" value={d.deadline} onChange={(e) => set('deadline', e.target.value)} />
         {qty > 0 && <PriceHint category={d.categoryId} unit={d.unit} item={d.item} perUnit={Number(d.budget) / qty} exclude={existing?.id} onUse={(m) => set('budget', String(m * qty))} />}
         <SelectField label="Lokasi pengiriman" value={d.location} onChange={(e) => set('location', e.target.value)}>
           {REGIONS.map((r) => <option key={r}>{r}</option>)}
         </SelectField>
-        <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium">Pengiriman</span>
+        <div className="flex flex-col gap-2 rounded-xl border bg-muted/25 p-3.5">
+          <span className="text-sm font-semibold">Pengiriman</span>
+          <span className="text-xs text-muted-foreground">Pilih cara kebutuhanmu dikirim atau diambil.</span>
           <Segmented label="Pengiriman" value={d.delivery} options={DELIVERY} onChange={(v) => set('delivery', v)} />
         </div>
       </div>
@@ -262,13 +291,16 @@ function ListingForm({ kind, existing }: { kind: Kind; existing?: Listing }) {
       onSubmit={submit}
       error={<FormError error={save.error} />}
       steps={[
-        { id: 'item', title: kind === 'supply' ? 'Item & kualitas' : 'Kebutuhan', content: step1, blocker: !d.item.trim() ? 'Isi nama item' : !(qty > 0) ? 'Isi kuantitas' : undefined },
-        { id: 'terms', title: kind === 'supply' ? 'Harga & ketersediaan' : 'Budget & jadwal', content: step2, blocker: kind === 'supply' ? (!(Number(d.price) > 0) ? 'Isi harga ekspektasi' : undefined) : !(Number(d.budget) > 0) ? 'Isi budget' : !d.deadline ? 'Isi deadline' : undefined },
-        { id: 'review', title: 'Lampiran & review', content: step3, blocker: attachmentsBlocker(atts) },
+        { id: 'item', title: kind === 'supply' ? 'Item & kualitas' : 'Kebutuhan', description: `Isi informasi utama ${kind === 'supply' ? 'produk atau jasa' : 'yang kamu cari'}. Kolom bertanda * wajib diisi.`, content: step1, blocker: !d.item.trim() ? 'Isi nama item' : !(qty > 0) ? 'Isi kuantitas' : undefined },
+        { id: 'terms', title: kind === 'supply' ? 'Harga & ketersediaan' : 'Budget & jadwal', description: 'Tentukan nilai dan informasi pengiriman agar calon mitra dapat menilai listing ini.', content: step2, blocker: kind === 'supply' ? (!(Number(d.price) > 0) ? 'Isi harga ekspektasi' : undefined) : !(Number(d.budget) > 0) ? 'Isi budget' : !d.deadline ? 'Isi deadline' : undefined },
+        { id: 'review', title: 'Lampiran & review', description: 'Tambahkan foto atau dokumen pendukung, lalu periksa kembali ringkasan sebelum menyimpan.', content: step3, blocker: attachmentsBlocker(atts) },
       ]}
       summary={
         <>
-          <SummaryRow label="Item" value={d.item} />
+          <div className="mb-3 rounded-xl border border-primary/15 bg-background/70 p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{existing ? 'Mengedit listing' : `Listing baru · ${kind === 'supply' ? 'Supply' : 'Demand'}`}</p>
+            <p className="mt-1.5 break-words font-semibold">{d.item || (kind === 'supply' ? 'Nama produk atau jasa' : 'Nama kebutuhan')}</p>
+          </div>
           <SummaryRow label="Kategori" value={CATEGORIES[d.categoryId].label} />
           <SummaryRow label="Kuantitas" value={qty > 0 ? formatQty({ value: qty, unit: d.unit }) : ''} />
           {kind === 'supply' ? (
@@ -297,7 +329,7 @@ export function ListingFormPage({ kind }: { kind: Kind }) {
   const c = COPY[kind]
   return (
     <>
-      <PageHeader title={id ? `Edit ${c.title.toLowerCase()}` : c.add} icon={c.icon} tone={c.tone} />
+      <PageHeader title={id ? `Edit ${c.title.toLowerCase()}` : c.add} description={id ? 'Perbarui detail listing. Perubahan akan digunakan untuk pencocokan dan ditampilkan ke calon mitra.' : c.description} icon={c.icon} tone={c.tone} featured />
       {id ? (
         <AsyncView query={query} skeleton={<Skeleton className="h-80 rounded-xl" />}>
           {(l) => <ListingForm kind={kind} existing={l} />}
@@ -359,6 +391,7 @@ export function ListingDetailPage({ kind }: { kind: Kind }) {
               description={<span className="flex flex-wrap items-center gap-1.5"><span>{l.code}</span>{supply ? <StatusBadge entity="supply" status={supply.status} /> : <StatusBadge entity="demand" status={demand!.status} />}<CategoryTag id={l.categoryId} /></span>}
               icon={c.icon}
               tone={c.tone}
+              featured
               actions={
                 !closed && (
                   <>
@@ -384,9 +417,12 @@ export function ListingDetailPage({ kind }: { kind: Kind }) {
             />
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
               <div className="flex min-w-0 flex-col gap-6">
-                <section className="rounded-xl border bg-card p-4 md:p-5">
-                  <h2 className="font-medium">Detail</h2>
-                  <dl className="mt-3 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+                <section className="rounded-2xl border bg-linear-to-br from-card via-card to-primary/[0.025] p-4 shadow-sm shadow-foreground/[0.025] md:p-6">
+                  <div className="flex items-start justify-between gap-3">
+                    <div><h2 className="font-semibold tracking-tight">Detail listing</h2><p className="mt-1 text-sm text-muted-foreground">Informasi utama dan ketentuan listing ini.</p></div>
+                    <span className="rounded-lg bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">{kind === 'supply' ? 'Supply' : 'Demand'}</span>
+                  </div>
+                  <dl className="mt-5 grid gap-2.5 sm:grid-cols-2">
                     {[
                       ['Kuantitas', formatQty(l.quantity)],
                       supply ? ['Harga ekspektasi', `${formatIdr(supply.priceIdr)}/${l.quantity.unit}`] : ['Budget', formatIdr(demand!.budgetIdr)],
@@ -395,18 +431,18 @@ export function ListingDetailPage({ kind }: { kind: Kind }) {
                       ['Pengiriman', DELIVERY_LABEL[l.delivery]],
                       supply ? ['Tersedia', `${formatDate(supply.availableFrom)}${supply.expiresAt ? ` – ${formatDate(supply.expiresAt)}` : ''}`] : ['Dibuat', formatDate(l.createdAt)],
                     ].map(([k, v]) => (
-                      <div key={k}>
-                        <dt className="text-muted-foreground">{k}</dt>
-                        <dd className="num font-medium">{v}</dd>
+                      <div key={k} className="min-w-0 rounded-xl border border-border/70 bg-background/75 px-3.5 py-3">
+                        <dt className="text-xs font-medium text-muted-foreground">{k}</dt>
+                        <dd className="num mt-1 break-words text-sm font-semibold">{v}</dd>
                       </div>
                     ))}
                   </dl>
-                  {l.spec && <p className="mt-4 text-sm text-muted-foreground">{l.spec}</p>}
-                  <AttachmentGallery attachments={l.attachments} className="mt-4" />
+                  {l.spec && <p className="mt-4 rounded-xl border-l-2 border-primary/50 bg-primary/5 px-4 py-3 text-sm leading-relaxed text-muted-foreground">{l.spec}</p>}
+                  {l.attachments.length > 0 && <div className="mt-5 border-t pt-4"><p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Lampiran</p><AttachmentGallery attachments={l.attachments} /></div>}
                 </section>
 
                 <section>
-                  <h2 className="mb-3 font-medium">Opportunity yang cocok</h2>
+                  <div className="mb-3 flex items-end justify-between gap-3"><div><h2 className="font-semibold tracking-tight">Opportunity yang cocok</h2><p className="mt-1 text-sm text-muted-foreground">Peluang yang terhubung dengan listing ini.</p></div><span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">{formatNumber(l.matches.length)}</span></div>
                   {l.matches.length ? (
                     <div className="grid gap-3 md:grid-cols-2">{l.matches.map((o) => <OpportunityCard key={o.id} o={o} />)}</div>
                   ) : (
@@ -417,20 +453,21 @@ export function ListingDetailPage({ kind }: { kind: Kind }) {
 
               <aside className="flex flex-col gap-6">
                 {l.marketId && (
-                  <section className="rounded-xl border bg-card p-4">
-                    <h2 className="text-sm font-medium">Di market</h2>
+                    <section className="rounded-2xl border border-primary/15 bg-linear-to-br from-card to-primary/5 p-4 shadow-sm shadow-foreground/[0.025]">
+                    <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Terdaftar di market</h2>
                     <Link to={`/markets/${l.marketId}`} className="mt-1 block font-medium text-primary hover:underline">
                       {l.markets.find((m) => m.id === l.marketId)?.name ?? 'Lihat market'}
                     </Link>
                   </section>
                 )}
-                <section className="rounded-xl border bg-card p-4">
-                  <h2 className="font-medium">Riwayat status</h2>
-                  <ol className="mt-3 flex flex-col gap-3 border-l pl-4">
+                <section className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:p-5">
+                  <h2 className="font-semibold tracking-tight">Riwayat status</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">Jejak perubahan listing.</p>
+                  <ol className="mt-4 flex flex-col gap-4 border-l border-border pl-4">
                     {l.history.map((h, i) => (
                       <li key={i} className="relative text-sm">
-                        <span className="absolute top-1.5 -left-[1.3rem] size-2 rounded-full bg-primary" />
-                        <p className="font-medium">{h.note}</p>
+                        <span className="absolute top-1.5 -left-[1.32rem] size-2 rounded-full bg-primary ring-4 ring-card" />
+                        <p className="font-medium leading-snug">{h.note}</p>
                         <p className="text-xs text-muted-foreground">{formatDateTime(h.at)}</p>
                       </li>
                     ))}
