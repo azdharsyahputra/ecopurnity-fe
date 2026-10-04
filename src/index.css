@@ -150,8 +150,55 @@
   html {
     @apply font-sans antialiased;
   }
+  html,
+  body,
+  #root {
+    min-width: 320px;
+    min-height: 100%;
+    width: 100%;
+  }
   body {
     @apply bg-background text-foreground;
+  }
+  main {
+    min-width: 0;
+  }
+  @media (max-width: 767px) {
+    /* Custom data tables stay usable on narrow screens without widening the page. */
+    main table {
+      display: block;
+      max-width: 100%;
+      overflow-x: auto;
+      overscroll-behavior-inline: contain;
+    }
+  }
+  .opportunity-graph {
+    --xy-controls-button-background-color: var(--card);
+    --xy-controls-button-color: var(--foreground);
+    --xy-controls-button-border-color: var(--border);
+    --xy-controls-button-background-color-hover: var(--accent);
+    --xy-controls-button-color-hover: var(--foreground);
+    --xy-controls-box-shadow: 0 2px 8px rgb(0 0 0 / 0.16);
+  }
+  .opportunity-graph .react-flow__controls {
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+  }
+  .opportunity-graph .react-flow__controls-button {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-bottom-color: var(--border);
+  }
+  .opportunity-graph .react-flow__controls-button svg {
+    max-width: 1rem;
+    max-height: 1rem;
+  }
+  .opportunity-graph .react-flow__controls-button:focus-visible {
+    position: relative;
+    z-index: 1;
+    outline: 2px solid var(--ring);
+    outline-offset: -2px;
   }
   button:not(:disabled),
   [role="button"]:not(:disabled) {
