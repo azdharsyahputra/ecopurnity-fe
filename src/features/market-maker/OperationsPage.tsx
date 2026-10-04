@@ -51,9 +51,10 @@ export function OperationsPage() {
         description="Market yang kamu operasikan, kesehatannya, dan apa yang perlu ditangani sekarang."
         icon={Compass}
         tone="purple"
+        featured
         actions={<Button className="h-9" render={<Link to="/mm/markets/new" />}><Plus /> Buat market</Button>}
       />
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
         <StatTile label="Active markets" icon={Store} tone="purple" loading={!s} value={s && formatNumber(s.activeMarkets)} />
         <StatTile label="Participants" icon={Users} tone="teal" loading={!s} value={s && formatNumber(s.participants)} />
         <StatTile label="Active auctions" icon={Gavel} tone="lime" loading={!s} value={s && formatNumber(s.activeAuctions)} />
@@ -63,9 +64,12 @@ export function OperationsPage() {
 
       <AsyncView query={query} skeleton={<Skeleton className="mt-6 h-72 rounded-xl" />}>
         {(d) => (
-          <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
-            <section className="min-w-0">
-              <h2 className="mb-3 font-medium">Market saya</h2>
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
+            <section className="min-w-0 overflow-hidden rounded-2xl border bg-card shadow-sm shadow-foreground/[0.025]">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-4 sm:px-5">
+                <div><h2 className="font-semibold tracking-tight">Market yang saya operasikan</h2><p className="mt-0.5 text-sm text-muted-foreground">Kesehatan round, likuiditas, dan hal yang perlu ditindaklanjuti.</p></div>
+                <span className="rounded-full border bg-muted/40 px-3 py-1 text-xs font-medium text-muted-foreground">{d.markets.length} market</span>
+              </div>
               {d.markets.length ? (
                 <DataTable
                   caption="Market yang saya operasikan"
@@ -86,9 +90,8 @@ export function OperationsPage() {
                 <EmptyState icon={Store} tone="purple" title="Belum ada market" description="Ubah opportunity jadi market yang berjalan." action={<Button render={<Link to="/mm/opportunities" />}>Buka opportunity pipeline</Button>} />
               )}
             </section>
-            <section className="rounded-xl border bg-card px-4 pt-4 md:px-5" aria-labelledby="mm-feed">
-              <h2 id="mm-feed" className="font-medium">Event market</h2>
-              <p className="text-xs text-muted-foreground">Live dari round dan operasi kamu</p>
+            <section className="rounded-2xl border bg-card p-4 shadow-sm shadow-foreground/[0.025] sm:p-5" aria-labelledby="mm-feed">
+              <div className="border-b pb-3"><h2 id="mm-feed" className="font-semibold tracking-tight">Event market</h2><p className="mt-0.5 text-sm text-muted-foreground">Update live dari round dan operasimu.</p></div>
               <EventFeed initial={d.events} liveAuctions={d.liveAuctions} />
             </section>
           </div>
