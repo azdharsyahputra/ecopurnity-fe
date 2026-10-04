@@ -54,7 +54,7 @@ function Metric({ label, value }: { label: string; value: string }) {
   )
 }
 
-const cardClass = 'group flex flex-col rounded-xl border bg-card p-4 transition-colors hover:border-foreground/20 focus-visible:outline-2 focus-visible:outline-ring'
+const cardClass = 'group relative flex flex-col overflow-hidden rounded-2xl border bg-card p-5 shadow-sm shadow-foreground/[0.025] transition duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-lg hover:shadow-primary/5 focus-visible:outline-2 focus-visible:outline-ring'
 
 export function OpportunityCard({ o }: { o: Opportunity }) {
   return (
@@ -64,11 +64,11 @@ export function OpportunityCard({ o }: { o: Opportunity }) {
         <StatusBadge entity="opportunity" status={o.status} />
         <span className="ml-auto text-xs text-muted-foreground">{o.code}</span>
       </div>
-      <h3 className="mt-3 font-medium leading-snug group-hover:underline">{o.title}</h3>
+      <h3 className="mt-4 font-semibold leading-snug group-hover:text-primary">{o.title}</h3>
       <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
         <MapPin className="size-3" /> {o.region} · {CATEGORIES[o.categoryId].label}
       </p>
-      <dl className="mt-4 grid grid-cols-3 gap-2">
+      <dl className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-muted/70 p-3">
         <Metric label="Demand/bln" value={formatQty(o.demand, { compact: true })} />
         <Metric label="Peserta" value={formatNumber(o.participants)} />
         <Metric label="Nilai potensi" value={formatIdr(o.potentialValueIdr, { compact: true })} />
@@ -86,12 +86,12 @@ export function MarketCard({ m }: { m: Market }) {
         <StatusBadge entity="market" status={m.status} />
         <span className="ml-auto text-xs text-muted-foreground">{m.code}</span>
       </div>
-      <h3 className="mt-3 font-medium leading-snug group-hover:underline">{m.name}</h3>
+      <h3 className="mt-4 font-semibold leading-snug group-hover:text-primary">{m.name}</h3>
       <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
         <EntityAvatar name={m.maker.name} kind="business" verified={m.maker.verified} size={16} />
         <span className="truncate">{m.maker.name}</span>
       </p>
-      <dl className="mt-4 grid grid-cols-3 gap-2">
+      <dl className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-muted/70 p-3">
         <Metric label="Volume 30h" value={formatIdr(m.volume30dIdr, { compact: true })} />
         <Metric label="Harga" value={`${formatNumber(m.priceRange.minIdr, { compact: true })}–${formatNumber(m.priceRange.maxIdr, { compact: true })}`} />
         <Metric label="Pembeli · supplier" value={`${m.buyers} · ${m.suppliers}`} />
@@ -113,9 +113,9 @@ export function AuctionCard({ a }: { a: Auction }) {
         <Tag>{AUCTION_TYPES[a.type].label}</Tag>
         <span className="ml-auto text-xs text-muted-foreground">{a.code}</span>
       </div>
-      <h3 className="mt-3 font-medium leading-snug group-hover:underline">{a.title}</h3>
+      <h3 className="mt-4 font-semibold leading-snug group-hover:text-primary">{a.title}</h3>
       <p className="mt-1 truncate text-xs text-muted-foreground">{a.marketName}</p>
-      <dl className="mt-4 grid grid-cols-3 gap-2">
+      <dl className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-muted/70 p-3">
         <Metric label={a.type === 'dutch' ? 'Harga kini' : 'Harga terbaik'} value={auctionPriceLabel(a)} />
         <Metric label="Bid" value={formatNumber(a.bidCount)} />
         <div className="min-w-0">
@@ -137,7 +137,7 @@ export function ListingCard({ l, action }: { l: PublicListing; action: React.Rea
   const supply = l.kind === 'supply'
   const thumb = thumbnailOf(l.attachments)
   return (
-    <article className="flex flex-col rounded-xl border bg-card p-4">
+    <article className="flex flex-col rounded-2xl border bg-card p-5 shadow-sm shadow-foreground/[0.025] transition duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-lg hover:shadow-primary/5">
       {thumb && (
         <a href={thumb.url} target="_blank" rel="noreferrer" className="-mx-4 -mt-4 mb-3 block aspect-[16/9] overflow-hidden rounded-t-xl border-b bg-muted">
           <img src={thumb.url} alt={`Foto ${l.item}`} loading="lazy" className="size-full object-cover" />
@@ -148,12 +148,12 @@ export function ListingCard({ l, action }: { l: PublicListing; action: React.Rea
         <CategoryTag id={l.categoryId} />
         <span className="ml-auto text-xs text-muted-foreground">{l.code}</span>
       </div>
-      <h3 className="mt-3 font-medium leading-snug">{l.item}</h3>
+      <h3 className="mt-4 font-semibold leading-snug">{l.item}</h3>
       <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
         <EntityAvatar name={l.owner.name} verified={l.owner.verified} size={16} />
         {l.owner.username ? <Link to={`/u/${l.owner.username}`} className="truncate hover:underline">{l.owner.name}</Link> : <span className="truncate">{l.owner.name}</span>}
       </p>
-      <dl className="mt-4 grid grid-cols-2 gap-2">
+      <dl className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-muted/70 p-3">
         <Metric label="Kuantitas" value={formatQty(l.quantity)} />
         <Metric label={supply ? 'Harga minta' : 'Budget'} value={`${formatIdr(l.unitPriceIdr, { compact: true })}/${l.quantity.unit}`} />
       </dl>
